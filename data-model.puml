@@ -1,0 +1,57 @@
+@startuml
+hide circles
+hide empty members
+hide stereotype
+!option handwritten true
+left to right direction
+
+skinparam backgroundColor #FEFEFE
+skinparam shadow false
+
+skinparam class {
+    BackgroundColor White
+    ArrowColor #555555
+    BorderColor #555555
+    FontName Helvetica
+}
+
+skinparam class<<Key>> {
+    BackgroundColor #FFF3E0
+    BorderColor #FB8C00
+    FontColor #E65100
+}
+
+skinparam class<<Data>> {
+    BackgroundColor #F3E5F5
+    BorderColor #8E24AA
+    FontColor #4A148C
+}
+
+class Entity <<Key>> {
+    entity : String
+}
+
+class Type <<Key>> {
+    type : String
+}
+
+class Value <<Key>> {
+    value : String
+}
+
+class Entry <<Data>> {
+    sourceKind : String
+    sourceUrl : String
+    sourceLine : Integer
+}
+class TypeTo<<Data>> {
+    type : String
+    to : String
+}
+
+Entry *- "0..n" TypeTo : meta
+Entity "1" *--> "1..n" Type : types
+Type  "1" *--> "1..n" Value : values
+Value "1" *--> "1..n" Entry : entries
+
+@enduml

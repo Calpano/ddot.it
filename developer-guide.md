@@ -4,11 +4,23 @@ title: Developer Guide
 # ⚇ ddot.it &ndash; Developer Guide
 
 Contents: 
-[Syntax Specification](#syntax)
-| [Architecture](#architecture)
+[Architecture](#architecture)
+| [Syntax Specification](#syntax)
 | [Reader](#reader)
 | [Events](#events)
 | [Collector](#collector)
+
+
+## Architecture
+
+1. A [reader](#reader) knows how to process a kind of source (e.g. Markdown or YAML)
+2. and fires [triple events](#events) to a [collector](#collector).
+3. The [collector](#collector) sends the resulting knowledge graph to a file or a pre-configured destination.
+
+<p style="text-align: center">
+<img src="architecture.svg" style="width: 75%;"  alt="Example"/>
+</p>
+
 
 ## Syntax Specification
 Non-terminals are UPPERCASED.
@@ -83,29 +95,20 @@ META_BLOCK := SPACE? ',,' Newline META_TEXT (Newline META_TEXT)* Newline ',,'
 ```
 
 
-### Example
+### Syntax Example
 ```ddot.it
 Project Eagle..started in.. 2024
 ..doc site .. example.com/docbase/8dcjsid
 John Doe..leads.. Project Eagle ,, ..since.. 2025
 Project Eagle....Moonshot
 ```
-is interpreted as this knowledge graph:
+This text is interpreted as this knowledge graph:
 
 <p style="text-align: center;">
   <img src="triple-structure.svg" alt="Example" style="width: 65%" />
 </p>
 
 
-## Architecture
-
-1. A [reader](#reader) knows how to process a kind of source (e.g. markdown or yaml) 
-2. and fires [triple events](#events) to a [collector](#collector).
-3. The [collector](#collector) sends the resulting knowledge graph to a file or a pre-configured destination.
-
-<p style="text-align: center">
-<img src="architecture.svg" style="width: 75%;"  alt="Example"/>
-</p>
 
 
 ## Reader
@@ -159,7 +162,7 @@ Triple events are JSON-formatted and have the following structure:
 At this level, `ddot.it/this` is just a `from` value.
 The command `ddot.it/on` and `ddot.it/off` have been processed by the reader and are not emitted as events.
 
-### Example
+### Triple Event Example
 ```json
 [
   { "from": "Project Eagle", "type": "started in", "to": "2024",
@@ -182,7 +185,10 @@ The command `ddot.it/on` and `ddot.it/off` have been processed by the reader and
 The collector combines all triple events and represents them as a single knowledge graph, expressed in [**Connected JSON** (CJ)](https://j-s-o-n.org) format.
 At [GraphInOut.com](https://graphinout.com) CJ can be converted in a number of other graph formats.
 
-Triples logically form a tree **entity** -> **type** -> **value** -> Set of entries. 
-A entry contains source information (source kind, source url, source line) and optional triple metadata (string).
+<p style="text-align: center">
+<img src="data-model.svg" style="width: 85%;"  alt="Example"/>
+</p>
 
-Duplicate triples thus result in multiple entries for the same triple.
+Triples logically form a tree: **entity** → **type** → **value** → Set of entries. 
+An entry contains source information (source kind, source url, source line) and optional triple metadata (string).
+Duplicate triples thus result in multiple entries (each with a different source location) for the same triple.
