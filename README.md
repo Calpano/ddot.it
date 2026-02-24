@@ -1,5 +1,3 @@
----
----
 # ⚇ ddot.it &ndash; Connect anything with everything
 <!--
 ddot.it ..author.. Max Völkel ,, ..year.. 2026
