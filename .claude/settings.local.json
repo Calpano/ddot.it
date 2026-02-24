@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dig:*)",
+      "WebFetch(domain:ddot.it)"
+    ]
+  }
+}
