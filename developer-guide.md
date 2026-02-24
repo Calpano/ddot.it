@@ -1,3 +1,6 @@
+---
+title: Developer Guide
+---
 # ⚇ ddot.it &ndash; Developer Guide
 
 Contents: 

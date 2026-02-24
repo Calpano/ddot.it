@@ -3,3 +3,7 @@ description: Connect anything with everything.
 theme: minima
 
 markdown: kramdown
+
+header_pages:
+  - user-guide.md
+  - developer-guide.md

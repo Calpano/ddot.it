@@ -1,3 +1,6 @@
+---
+title: User Guide
+---
 # ⚇ ddot.it &ndash; User Guide
 ## Contents
 
