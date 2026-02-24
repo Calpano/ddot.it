@@ -1,0 +1,14 @@
+@startuml
+hide empty members
+hide circles
+class entityA as "John Doe"
+class entityB as "Project Eagle"
+class entityC as "Moonshot"
+class value1 as "2024"
+class meta as "since: 2025"
+
+entityA -> entityB : **typed link**\n'leads'
+entityB -> entityC : **simple link**
+entityB ---> value1 : **property**\n'started in'
+(entityA, entityB) .. meta
+@enduml

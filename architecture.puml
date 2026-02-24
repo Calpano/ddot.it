@@ -1,0 +1,81 @@
+@startuml
+hide circles
+hide empty members
+hide stereotype
+!option handwritten true
+left to right direction
+
+skinparam backgroundColor #FEFEFE
+skinparam shadow false
+
+skinparam class {
+    BackgroundColor White
+    ArrowColor #555555
+    BorderColor #555555
+    FontName Helvetica
+}
+
+skinparam class<<File>> {
+    BackgroundColor #E3F2FD
+    BorderColor #1E88E5
+    FontColor #0D47A1
+}
+
+skinparam class<<Reader>> {
+    BackgroundColor #E8F5E9
+    BorderColor #43A047
+    FontColor #1B5E20
+}
+
+skinparam class<<Core>> {
+    BackgroundColor #FFF3E0
+    BorderColor #FB8C00
+    FontColor #E65100
+}
+
+skinparam class<<Data>> {
+    BackgroundColor #F3E5F5
+    BorderColor #8E24AA
+    FontColor #4A148C
+}
+
+class kg as "knowledge.cj.json" <<Data>>
+class Collector <<Core>>
+
+class mdReader as "Markdown\nReader" <<Reader>>
+class adocReader as "AsciiDoc\nReader" <<Reader>>
+class xmlReader as "XML\nReader" <<Reader>>
+class ymlReader as "Yaml\nReader" <<Reader>>
+class javaReader as "Java Source\nReader" <<Reader>>
+class txtReader as "Text\nReader" <<Reader>>
+
+class f1 as "architecture.md" <<File>>
+class f2 as "Factory.java" <<File>>
+class f3 as "pom.xml" <<File>>
+class f4 as "README.md" <<File>>
+class f5 as "prompt.txt" <<File>>
+class f6 as "todos.adoc" <<File>>
+class f7 as "requirements.adoc" <<File>>
+class f8 as "CHANGELOG.md" <<File>>
+class f10 as "FactoryTest.java" <<File>>
+class f11 as "compose.yml" <<File>>
+
+Collector --> kg : ③ combine
+'knowledge\ngraph
+Collector <--u mdReader
+Collector <--u adocReader
+Collector <--u xmlReader
+Collector <--u ymlReader : ② triple events
+Collector <--u javaReader
+Collector <--u txtReader
+mdReader <--u f1
+mdReader <--u f4
+mdReader <--u f8
+adocReader <--u f6
+adocReader <--u f7
+txtReader <--u f5
+javaReader <--u f2
+javaReader <--u f10
+xmlReader <--u f3
+ymlReader <--u f11: ① extract
+@enduml
