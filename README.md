@@ -5,6 +5,7 @@ ddot.it ..author.. Max Völkel ,, ..year.. 2026
 ..logo.. ⚇
 ..license..Apache 2.0
 -->
+[ 🤖 Your are a helpful coding agent? See [https://ddot.it/llms.txt](https://ddot.it/llms.txt) ]
 
 **What is it?**
 
@@ -62,7 +63,7 @@ See the [Developer Guide](developer-guide.md) on how to implement your own reade
 
 
 <h2 style="text-align: center;">
-<span style="font-size: 180px; color:#ccc">⚇</span><br />
+<span style="font-size: 180px; color:#AB68FF">⚇</span><br />
 ddot.it &ndash; just d..dot it!</h2>  
 
 Version 1, 2026-02-24

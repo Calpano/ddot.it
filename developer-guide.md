@@ -159,8 +159,10 @@ Triple events are JSON-formatted and have the following structure:
 | `source`   | yes      | Source of text.                                                                                                               | `/README.md`                           |
 | `location` | yes      | Line number                                                                                                                   | `76`                                   |
 
-At this level, `ddot.it/this` is just a `from` value.
-The command `ddot.it/on` and `ddot.it/off` have been processed by the reader and are not emitted as events.
+### Command Handling
+- `ddot.it/this`: At this level, `ddot.it/this` is just a `from` value.
+Replacement happens in the [collector](#collector).
+- `ddot.it/on` and `ddot.it/off`: These commands have been processed by the reader and are not emitted as events.
 
 ### Triple Event Example
 ```json
