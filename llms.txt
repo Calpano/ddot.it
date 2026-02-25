@@ -1,0 +1,143 @@
+# ddot.it
+
+> ddot.it is a minimal, plain-text triple syntax for building a personal or enterprise knowledge graph across any tool or document type. It is token-efficient, Markdown-compatible, and easy to type on any keyboard.
+
+ddot.it lets you embed typed links (triples) directly in any text — source code comments, Markdown, YAML, AsciiDoc, plain text, and more. A **ddot collector** reads those sources, extracts all triples, and combines them into a single knowledge graph in Connected JSON (CJ) format.
+
+## Syntax
+
+### Codepoints
+
+Newline normalisation is applied before parsing: `CR LF` → NL, `LF` → NL, `CR` → NL.
+Space and Tab are stripped from the start and end of names.
+
+### Formal Grammar (EBNF)
+
+```
+SPACE        := (Space | Tab)+
+NAME         := SPACE? ([^ \t]+) SPACE?
+SUBJECT_NAME := NAME | 'ddot.it/this'
+
+TEXT  := BLOCK (Newline Newline Newline BLOCK)*
+BLOCK := LINE (Newline Newline? LINE)*
+
+LINE       := TRIPLE | ADDITIONAL | COMMAND
+
+TRIPLE     :=   SUBJECT_NAME Newline? '..' NAME   '..' NAME META?
+              | SUBJECT_NAME Newline? '..' SPACE? '..' NAME META?
+
+ADDITIONAL :=                '..' NAME   '..' NAME META?
+              |              '..' SPACE? '..' NAME META?
+
+COMMAND    := 'ddot.it[^ \n\t]*' (Space | Tab | Newline)
+
+META       := META_LINE | META_BLOCK
+META_TEXT  := NAME | ( '..' NAME '..' NAME )+
+META_LINE  := SPACE? ',,' SPACE? META_TEXT SPACE?
+META_BLOCK := SPACE? ',,' Newline META_TEXT (Newline META_TEXT)* Newline ',,'
+```
+
+Text is chunked into blocks at three consecutive newlines. Blocks are split into lines. At the end of a block the current subject and meta-mode are reset. Triples cannot span blocks. Incomplete triples are silently ignored.
+
+### Typed Link
+
+- Syntax: `aaa .. bbb .. ccc`
+- Effect: "aaa" links to "ccc" with link type "bbb"
+- With metadata: `aaa .. bbb .. ccc ,, ddd`
+
+### Untyped Link
+
+- Syntax: `aaa .... ccc` (or `aaa .. .. ccc`)
+- Effect: "aaa" links to "ccc" with default link type `links to`
+
+### Additional Properties
+
+Omit the subject to add more properties to the last subject:
+```
+Dirk Hagemann .. works at .. SAP
+.. knows .. Claudia Stern
+.. phone .. 123-456-789
+```
+
+### Metadata
+
+Short form (single triple): `aaa .. bbb .. ccc ,, ..since.. 2010`
+
+Long form (multiple metadata triples):
+```
+aaa .. bbb .. ccc ,,
+..since.. 2010
+..fictive.. yes
+,,
+```
+
+Metadata can also be a plain string: `aaa .. bbb .. ccc ,, see also the appendix`.
+This is treated like ``,, .... see also the appendix`.
+
+### Standard Relation Types
+
+| Name          | Aliases                | Semantics                                                                 |
+|---------------|------------------------|---------------------------------------------------------------------------|
+| `related`     | `rel`, `is related`    | Undirected link between A and B                                           |
+| `same as`     | `is same as`           | A and B refer to the same concept                                         |
+| `is alias of` |                        | Like `same as` but with a clear main concept (symlink semantics)          |
+| `links to`    | `link`, `see also`     | Directed untyped link; default when `....` is used                        |
+| `has tag`     | `tag`                  | A has tag B; not transitive                                               |
+| `has type`    | `type`, `is a`         | A has type B (like rdf:type); inherited via `has subtype`                 |
+| `has subtype` | `subtype`              | Transitive specialisation; cycles imply `same as`                         |
+
+### Example
+
+```
+Project Eagle .. started in .. 2024
+.. doc site .. example.com/docbase/8dcjsid
+
+John Doe .. leads .. Project Eagle ,, .. since .. 2025
+Project Eagle .... Moonshot
+```
+
+## Commands
+
+Commands are URLs starting with `ddot.it` (or abbreviated with `!!`):
+
+- `ddot.it` — marks a document as double-dotted. This is optional but good practice.
+- `ddot.it/this` — refers to the current document as the triple subject
+- `ddot.it/on` — start processing this region (include)
+- `ddot.it/off` — stop processing this region (exclude)
+
+## Output: Triple Events
+
+Each recognized triple fires a JSON event:
+```json
+{ "from": "Project Eagle", "type": "started in", "to": "2024",
+  "kind": "markdown", "source": "/README.md", "location": 1 }
+```
+
+Fields: `from` (subject), `type` (defaults to `links to`), `to` (value), `meta` (array of `{type, to}`), `kind`, `source`, `location` (line number).
+
+## Knowledge Graph Data Model
+
+Triples are stored as a tree: **entity → type → value → entries**. Each entry holds source location (`kind`, `url`, `line`) and optional metadata. Duplicate triples produce multiple entries for the same (entity, type, value) key.
+
+Output is in [Connected JSON](https://j-s-o-n.org) (CJ) format, convertible to other graph formats at [GraphInOut.com](https://graphinout.com).
+
+## Documentation
+
+- [User Guide](https://ddot.it/user-guide.html): Full syntax reference, commands, and standard relation types
+- [Developer Guide](https://ddot.it/developer-guide.html): Architecture, formal syntax grammar, triple event spec, collector spec
+
+## Reader Specs
+
+- [Markdown Reader](https://ddot.it/reader-markdown.html): Plain text, HTML comments, code blocks, section attributes
+- [AsciiDoc Reader](https://ddot.it/reader-asciidoc.html): Line/block comments, listing blocks, block attributes
+- [XML Reader](https://ddot.it/reader-xml.html): XML comments, element text; pom.xml patterns
+- [YAML Reader](https://ddot.it/reader-yaml.html): Comments, string values; docker-compose patterns
+- [Java Reader](https://ddot.it/reader-java.html): Line comments, block comments, Javadoc, `@DdotIt` annotation
+- [Plain Text Reader](https://ddot.it/reader-plaintext.html): Any line of plain text
+- [HTML Reader](https://ddot.it/reader-html.html): HTML comments, element text, `data-ddot` attributes
+- [PowerPoint Reader](https://ddot.it/reader-powerpoint.html): Slide text, speaker notes
+
+## Optional
+
+- [GraphInOut.com](https://graphinout.com): Convert Connected JSON to other graph formats (RDF, GraphML, etc.)
+- [j-s-o-n.org](https://j-s-o-n.org): Connected JSON format specification
