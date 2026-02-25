@@ -1,3 +1,8 @@
+---
+title: Plain Text Reader
+parent: Developer Guide
+nav_order: 5
+---
 # ⚇ ddot.it Plain Text Reader
 
 A ddot.it [reader](developer-guide.md#reader) for plain text files (`.txt` and similar).

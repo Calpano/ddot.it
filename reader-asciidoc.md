@@ -1,3 +1,8 @@
+---
+title: AsciiDoc Reader
+parent: Developer Guide
+nav_order: 2
+---
 # ⚇ ddot.it AsciiDoc Reader
 
 A ddot.it [reader](developer-guide.md#reader) for AsciiDoc text.

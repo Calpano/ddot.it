@@ -1,3 +1,8 @@
+---
+title: XML Reader
+parent: Developer Guide
+nav_order: 7
+---
 # ⚇ ddot.it XML Reader
 
 A ddot.it [reader](developer-guide.md#reader) for XML files, including `pom.xml` (Maven) and other XML-based formats.

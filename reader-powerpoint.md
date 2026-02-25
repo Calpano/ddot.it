@@ -1,3 +1,8 @@
+---
+title: PowerPoint Reader
+parent: Developer Guide
+nav_order: 6
+---
 # ⚇ ddot.it PowerPoint Reader
 
 A ddot.it [reader](developer-guide.md#reader) for PowerPoint files (`.pptx`).

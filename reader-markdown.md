@@ -1,3 +1,8 @@
+---
+title: Markdown Reader
+parent: Developer Guide
+nav_order: 1
+---
 # ⚇ ddot.it Markdown Reader
 
 A ddot.it [reader](developer-guide.md#reader) for Markdown text.

@@ -1,5 +1,7 @@
 ---
 title: Developer Guide
+nav_order: 2
+has_children: true
 ---
 # ⚇ ddot.it &ndash; Developer Guide
 

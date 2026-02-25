@@ -2,7 +2,11 @@
   "permissions": {
     "allow": [
       "Bash(dig:*)",
-      "WebFetch(domain:ddot.it)"
+      "WebFetch(domain:ddot.it)",
+      "WebFetch(domain:just-the-docs.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(head:*)",
+      "Bash(grep:*)"
     ]
   }
 }

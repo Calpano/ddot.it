@@ -1,3 +1,8 @@
+---
+title: HTML Reader
+parent: Developer Guide
+nav_order: 3
+---
 # ⚇ ddot.it HTML Reader
 
 A ddot.it [reader](developer-guide.md#reader) for HTML files.

@@ -1,3 +1,8 @@
+---
+title: Java Reader
+parent: Developer Guide
+nav_order: 4
+---
 # ⚇ ddot.it Java Reader
 
 A ddot.it [reader](developer-guide.md#reader) for Java source files.

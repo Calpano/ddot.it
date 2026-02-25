@@ -1,5 +1,6 @@
 ---
 title: User Guide
+nav_order: 1
 ---
 # ⚇ ddot.it &ndash; User Guide
 ## Contents

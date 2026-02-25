@@ -1,9 +1,31 @@
 title: ddot.it
 description: Connect anything with everything.
-theme: minima
+theme: just-the-docs
 
-markdown: kramdown
+url: https://ddot.it
 
-header_pages:
-  - user-guide.md
-  - developer-guide.md
+favicon_ico: "/assets/images/favicon.svg"
+
+aux_links:
+  GitHub: https://github.com/Calpano/ddot.it
+aux_links_new_tab: true
+
+heading_anchors: true
+back_to_top: true
+back_to_top_text: "Back to top"
+
+plugins:
+  - jekyll-readme-index
+  - jekyll-optional-front-matter
+  - jekyll-titles-from-headings
+  - jekyll-relative-links
+
+defaults:
+  - scope:
+      path: ""
+    values:
+      layout: "default"
+  - scope:
+      path: "README.md"
+    values:
+      nav_exclude: true

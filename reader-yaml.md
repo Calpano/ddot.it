@@ -1,3 +1,8 @@
+---
+title: YAML Reader
+parent: Developer Guide
+nav_order: 8
+---
 # ⚇ ddot.it YAML Reader
 
 A ddot.it [reader](developer-guide.md#reader) for YAML files, including `docker-compose.yml` and other YAML-based formats.
