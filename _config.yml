@@ -5,7 +5,7 @@ theme: just-the-docs
 url: https://ddot.it
 
 favicon_ico: "/assets/images/favicon.svg"
-logo: "/images/icon-128.png"
+# logo: "/images/icon-128.png"
 
 aux_links:
   GitHub: https://github.com/Calpano/ddot.it
