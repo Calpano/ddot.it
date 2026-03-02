@@ -9,8 +9,8 @@ ddot.it ..author.. Max Völkel ,, ..year.. 2026
 
 **What is it?**
 - Double dot (ddot) is a **simple syntax** you can use wherever you can enter text.
-- ⌨️Ergonomic syntax consists only of `..` and `,,`.
-    - ⌨️ Easy to type, even on mobile keyboards.
+- Syntax consists only of `..` and `,,`.
+    - ⌨️ Ergonomic, easy to type, even on mobile keyboards.
     - 🤖 AI ready: Token-efficient and Markdown-compatible.
 - It has a simple, uniform triple structure for **typed links**, **simple links**, and **properties**.
     - In ddot.it, these are the same: (subject - predicate - object), (entity - property - value), (object - key - value)
