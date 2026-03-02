@@ -1,10 +1,11 @@
-title: ddot.it
-description: Connect anything with everything.
+title: ddot.it - Connect anything with everything.
+description: "A minimal plain-text syntax for building a knowledge graph across any tool or document."
 theme: just-the-docs
 
 url: https://ddot.it
 
 favicon_ico: "/assets/images/favicon.svg"
+logo: "/images/icon-128.png"
 
 aux_links:
   GitHub: https://github.com/Calpano/ddot.it

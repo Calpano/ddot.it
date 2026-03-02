@@ -5,7 +5,7 @@ has_children: true
 ---
 # ⚇ ddot.it &ndash; Developer Guide
 
-Contents: 
+Contents:
 [Architecture](#architecture)
 | [Syntax Specification](#syntax)
 | [Reader](#reader)
@@ -46,59 +46,66 @@ Ddot.it syntax assumes newline normalisation:
 ### Syntax
 
 - Space and Tab character are stripped from name start or name end
-- Example: `Dirk Hagemann   .. works at ..  Big Corp` becomes (`Dirk Hagemann`, `works at`, `Big Corp`) 
+- Example: `Dirk Hagemann   .. works at ..  Big Corp` becomes (`Dirk Hagemann`, `works at`, `Big Corp`)
 ```
 SPACE        := (Space | Tab)+
 NAME         := SPACE? ([^ \t]+) SPACE?
 SUBJECT_NAME := NAME | `ddot.it/this`
 ```
- 
+
 - Text is chunked at three newlines into blocks
 - Blocks are split into lines.
 - At the end of a block, the current subject and meta-mode are reset.
 - Triples cannot span blocks.
+
 ```
 TEXT  := BLOCK (Newline Newline Newline BLOCK)*
 BLOCK := LINE (Newline Newline? LINE)*
 ```
- 
+
 - A line is either a triple, an additional property, or a command.
+
 ```
 LINE       := TRIPLE | ADDITIONAL | COMMAND
 ```
 
 - A triple may state the link/property type (`..` type `..`).
 - A triple can also omit the link type (`....`, `.. ..`), resulting in the default link type `links to`.
-```
-TRIPLE     :=   SUBJECT_NAME Newline? `..` NAME   `..` NAME META?
-              | SUBJECT_NAME Newline? `..` SPACE? `..` NAME META?  
 
 ```
+TRIPLE     :=   SUBJECT_NAME Newline? `..` NAME   `..` NAME META?
+              | SUBJECT_NAME Newline? `..` SPACE? `..` NAME META?
+```
+
 - Additional properties on the same subject can be made by omitting the first part of the triple.
+
 ```
 ADDITIONAL :=                `..` NAME   `..` NAME META?
-              |              `..` SPACE? `..` NAME META?  
-              
+              |              `..` SPACE? `..` NAME META?
+
 ```
 
 - A [command](user-guide.md#commands) is any string starting with `ddot.it` and ending with whitespace.
+
 ```
-COMMAND    := 'ddot.it[^ \n\t]*' (Space | Tab | Newline)                  
+COMMAND    := 'ddot.it[^ \n\t]*' (Space | Tab | Newline)
 ```
 
 - Meta is usually a single line from double comma to the end of line (... `,,` META)
 - Meta can also span multiple lines, if terminated by another double comma. (... `,,` Newline META-LINES `,,`).
 - Meta can contain additional properties to annotate a triple
+
 ```
 META       := META_LINE | META_BLOCK
-META_TEXT  := NAME | ( '..' NAME '..' NAME )+  
+META_TEXT  := NAME | ( '..' NAME '..' NAME )+
 META_LINE  := SPACE? ',,' SPACE? META_TEXT SPACE?
-META_BLOCK := SPACE? ',,' Newline META_TEXT (Newline META_TEXT)* Newline ',,' 
+META_BLOCK := SPACE? ',,' Newline META_TEXT (Newline META_TEXT)* Newline ',,'
 ```
 
 
 ### Syntax Example
-```ddot.it
+
+```
 Project Eagle..started in.. 2024
 ..doc site .. example.com/docbase/8dcjsid
 John Doe..leads.. Project Eagle ,, ..since.. 2025
@@ -131,8 +138,8 @@ ddot readers exist or are planned for these document types:
 - HTML files (1)
 - PowerPoint files
 
-These require authentication: 
- 
+These require authentication:
+
 - Google Contacts notes field
 - Google Keep (1)
 - Google Calendar entries (1)
@@ -144,7 +151,7 @@ These require authentication:
 ddot readers must
 
 - respect [ddot.it commands](user-guide.md#commands)
-  - Process only included lines as defined by `ddot.it/on` and `ddot.it/off`. 
+  - Process only included lines as defined by `ddot.it/on` and `ddot.it/off`.
 - fire events for each recognized triple, as defined in the next section.
 
 
@@ -193,6 +200,6 @@ At [GraphInOut.com](https://graphinout.com) CJ can be converted in a number of o
 <img src="data-model.svg" style="width: 85%;"  alt="Example"/>
 </p>
 
-Triples logically form a tree: **entity** → **type** → **value** → Set of entries. 
+Triples logically form a tree: **entity** → **type** → **value** → Set of entries.
 An entry contains source information (source kind, source url, source line) and optional triple metadata (string).
 Duplicate triples thus result in multiple entries (each with a different source location) for the same triple.
