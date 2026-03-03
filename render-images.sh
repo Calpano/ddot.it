@@ -1,3 +1,4 @@
-plantuml -tsvg architecture.puml
-plantuml -tsvg triple-structure.puml
-plantuml -tsvg data-model.puml
+plantuml -tsvg site/images/architecture.puml
+plantuml -tsvg site/images/triple-structure.puml
+plantuml -tsvg site/images/data-model.puml
+plantuml -tsvg site/images/triple.puml

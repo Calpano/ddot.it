@@ -1,0 +1,63 @@
+@startuml
+hide circles
+hide empty members
+hide stereotype
+!option handwritten true
+
+skinparam backgroundColor #FEFEFE
+skinparam shadow false
+skinparam class {
+    BackgroundColor White
+    ArrowColor #555555
+    BorderColor #555555
+    FontName Helvetica
+}
+skinparam class<<Label>> {
+    BackgroundColor #FFFFFF
+    BorderColor #FFFFFF
+    FontColor #E65100
+}
+skinparam class<<Key>> {
+    BackgroundColor #FFF3E0
+    BorderColor #FB8C00
+    FontColor #E65100
+}
+class legend as "ddot.it"<<Label>> {
+    Datatype:
+    .................
+    Semantic web:
+    Property graphs:
+    OOP:
+    CDS:
+}
+class from <<Key>> {
+    String
+
+    subject
+    entity
+    object
+    source
+}
+
+class type <<Key>> {
+    String
+
+    predicate
+    property
+    field
+    relation type
+}
+class to <<Key>> {
+    String
+
+    object
+    value
+    value
+    target
+}
+
+legend -[hidden] from
+from - type
+type -> to
+
+@enduml

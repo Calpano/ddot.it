@@ -1,7 +1,7 @@
 ---
 title: Plain Text Reader
 parent: Developer Guide
-nav_order: 5
+nav_order: 6
 ---
 # ⚇ ddot.it Plain Text Reader
 

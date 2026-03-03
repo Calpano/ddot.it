@@ -1,7 +1,7 @@
 ---
 title: Java Reader
 parent: Developer Guide
-nav_order: 4
+nav_order: 5
 ---
 # ⚇ ddot.it Java Reader
 
