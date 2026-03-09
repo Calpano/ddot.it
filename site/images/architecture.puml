@@ -39,7 +39,7 @@ skinparam class<<Data>> {
     FontColor #4A148C
 }
 
-class kg as "knowledge.cj.json" <<Data>>
+class kg as "JSON" <<Data>>
 class Collector <<Core>>
 
 class mdReader as "Markdown\nReader" <<Reader>>

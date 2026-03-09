@@ -4,7 +4,9 @@
 
 ddot.it lets you embed typed links (triples) directly in any text — source code comments, Markdown, YAML, AsciiDoc, plain text, and more. A **ddot collector** reads those sources, extracts all triples, and combines them into a single knowledge graph in Connected JSON (CJ) format.
 
-## Syntax
+For writing ddot.it, just read write.md and skip the rest.
+
+## Syntax - for Parsing
 
 ### Codepoints
 

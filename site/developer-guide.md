@@ -7,7 +7,7 @@ has_children: true
 
 Contents:
 [Architecture](#architecture)
-| [Syntax Specification](#syntax)
+| [Syntax Specification](#syntax-specification)
 | [Reader](#reader)
 | [Events](#events)
 | [Collector](#collector)
@@ -20,7 +20,7 @@ Contents:
 3. The [collector](#collector) sends the resulting knowledge graph to a file or a pre-configured destination.
 
 <p style="text-align: center">
-<img src="images/architecture.svg" style="width: 75%;"  alt="Example"/>
+<img src="images/architecture.svg" style="width: 95%;"  alt="Example"/>
 </p>
 
 
@@ -54,7 +54,8 @@ These require authentication:
 - Google Calendar entries (1)
 - Todoist tasks (1)
 
-(1) These can be realised as a browser extension. Aggregating triples locally for (a) download, (b) sending to an API endpoint (locally or graphinout.com account).
+(1) These can be realised as a browser extension or Android app.
+Aggregating triples locally for (a) download, (b) sending to an API endpoint (locally or graphinout.com account).
 
 
 ddot readers must
@@ -82,31 +83,34 @@ Triple events are JSON-formatted and have the following structure:
 Replacement happens in the [collector](#collector).
 - `ddot.it/on` and `ddot.it/off`: These commands have been processed by the reader and are not emitted as events.
 
-### Triple Event Example
+### Triple Events
+Stored as JSON Lines ([JSONL](https://jsonlines.org/)) format (one event per line):
+
 ```json
-[
-  { "from": "Project Eagle", "type": "started in", "to": "2024",
-    "kind": "markdown", "source": "/README.md", "location": 1 },
-
-  { "from": "Project Eagle", "type": "doc site", "to": "example.com/docbase/8dcjsid",
-    "kind": "markdown", "source": "/README.md", "location": 2 },
-
-  { "from": "John Doe", "type": "leads", "to": "Project Eagle",
+{ "from": "Project Eagle", "type": "started in", "to": "2024",
+  "kind": "markdown", "source": "/README.md", "location": 1 }
+```
+```json
+{ "from": "Project Eagle", "type": "doc site", "to": "example.com/docbase/8dcjsid",
+  "kind": "markdown", "source": "/README.md", "location": 2 }
+```
+```json
+{ "from": "John Doe", "type": "leads", "to": "Project Eagle",
     "meta": { "type": "since", "to": "2025" },
-    "kind": "markdown", "source": "/README.md", "location": 3 },
-
-  { "from": "Project Eagle", "type": "links to", "to": "Moonshot",
-    "kind": "markdown", "source": "/README.md", "location": 4 }
-]
+    "kind": "markdown", "source": "/README.md", "location": 3 }
+```
+```json
+{ "from": "Project Eagle", "type": "links to", "to": "Moonshot",
+  "kind": "markdown", "source": "/README.md", "location": 4 }
 ```
 
 
 ## Collector
-The collector combines all triple events and represents them as a single knowledge graph, expressed in [**Connected JSON** (CJ)](https://j-s-o-n.org) format.
-At [GraphInOut.com](https://graphinout.com) CJ can be converted in a number of other graph formats.
+The collector combines all triple events and represents them as a single knowledge base, simply a JSON file with all events concatenated.
+At [graphinout.com](https://graphinout.com) this format can be converted (SOON) to a number of other graph formats, including [**Connected JSON** (CJ)](https://j-s-o-n.org) format.
 
 <p style="text-align: center">
-<img src="images/data-model.svg" style="width: 85%;"  alt="Example"/>
+<img src="images/data-model.svg" style="width: 95%;"  alt="Example"/>
 </p>
 
 Triples logically form a tree: **entity** → **type** → **value** → Set of entries.
