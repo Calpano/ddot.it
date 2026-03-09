@@ -5,8 +5,9 @@ nav_order: 10
 ---
 # ⚇ ddot.it and RDF
 
-RDF is also using triples, but RDF has more features -- and is more complex.
-RDF is not even a syntax, but a datamodel with several syntax. ddot.it compares probably best to [Turtle](https://en.wikipedia.org/wiki/Turtle_(syntax).
+RDF is also using triples, but RDF has more features – and is more complex.
+RDF is not even a syntax, but a datamodel with several syntaxes. 
+ddot.it compares probably best to [Turtle](https://en.wikipedia.org/wiki/Turtle_(syntax)).
 
 ```turtle
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
@@ -53,3 +54,12 @@ dc ..prefix.. http://purl.org/dc/elements/1.1/
 ex ..prefix.. http://example.org/stuff/1.0/
 ```
 which, if you look at it, doesn't look to bad.
+
+## Interpreting ddot.it as RDF
+When mapped back into the GGG (giant global graph) of triples, each ddot.it subject is probably best interpreted as a blank node with a bunch of properties. Hopefull some of them are inverse functional properties (such as `..url..`) so that different nomenclature for the same concept can be merged.
+Ideally, the ddot.it is mapped to RDF by the ddot.it collector.
+
+## Summary
+ddot.it does not replace RDF. It is a simpler syntax, with fewer features, that is easier to type.
+ddot.it works well in contexts where string labels are precise enough, e.g. in a company or in personal use. 
+Use RDF and JSON for data exchange and ddot.it for handwritten triples.
