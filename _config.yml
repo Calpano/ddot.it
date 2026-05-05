@@ -15,9 +15,11 @@ url: https://ddot.it
 favicon_ico: "/assets/images/favicon.svg"
 logo: "/images/icon-128.png"
 
-aux_links:
-  GitHub: https://github.com/Calpano/ddot.it
-aux_links_new_tab: true
+
+nav_external_links:
+  - title: GitHub
+    url: https://github.com/Calpano/ddot.it
+    opens_in_new_tab: true
 
 heading_anchors: true
 back_to_top: true
