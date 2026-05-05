@@ -16,4 +16,5 @@ echo "Installing gems..."
 bundle install
 
 echo "Starting Jekyll at http://localhost:4000 ..."
+bundle exec jekyll clean
 bundle exec jekyll serve --livereload --incremental
