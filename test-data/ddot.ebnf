@@ -1,0 +1,45 @@
+(* ddot.it grammar — line-oriented graph notation                         *)
+(* This describes lexical structure as seen by a syntax highlighter, for   *)
+(* the purpose of producing the canonical token stream in spec/expected/.  *)
+(* Semantic notions like "subject inheritance across continuation lines"   *)
+(* are runtime concerns, not token concerns, and are out of scope here.    *)
+
+file              = { line, newline } ;
+
+line              = disabled-span
+                  | triple-line
+                  | continuation-line
+                  | block-meta-marker
+                  | text-line ;     (* any line not matching the above *)
+
+triple-line       = slot, op-typed,   slot, op-typed, slot, [ inline-meta ]
+                  | slot, op-untyped,                 slot, [ inline-meta ] ;
+
+continuation-line =        op-typed,  slot, op-typed, slot, [ inline-meta ]
+                  |        op-untyped,                slot, [ inline-meta ] ;
+
+inline-meta       = ws, ",,", [ ws, continuation-tail ] ;
+
+continuation-tail = op-typed, slot, op-typed, slot
+                  | op-untyped, slot ;
+
+block-meta-marker = ",,", ws ;        (* alone on its own line — opens or closes a block *)
+
+disabled-span     = off-marker, ?any-chars-incl-newlines?, on-marker ;
+off-marker        = "ddot.it/off" | "!!off" ;
+on-marker         = "ddot.it/on"  | "!!on"  ;
+
+op-typed          = ".." ;
+op-untyped        = "...." | "..", ws, ".." ;
+
+slot              = command
+                  | slot-text ;
+slot-text         = ? one or more chars that do not introduce "..", ",,", or newline ? ;
+
+command           = "ddot.it", [ "/", word ]
+                  | "!!", [ word ] ;
+
+word              = letter, { letter | digit | "_" | "-" } ;
+
+ws                = { " " | "\t" } ;
+newline           = "\n" | "\r\n" ;

@@ -17,14 +17,14 @@
 # the IntelliJ project; assert byte-identical match to `expected.body.html`.
 #
 # Usage:
-#   ruby test-data/preview-html/regenerate.rb            # writes/overwrites expected.body.html
-#   ruby test-data/preview-html/regenerate.rb --check    # exits non-zero if any case is stale (CI)
+#   ruby test-data/regenerate-html.rb            # writes/overwrites expected.body.html
+#   ruby test-data/regenerate-html.rb --check    # exits non-zero if any case is stale (CI)
 
 require 'pathname'
 
 ROOT          = Pathname.new(__dir__).realpath
 CASES_DIR     = ROOT / 'cases'
-RENDERER_PATH = ROOT.join('..', '..', '..', 'ddot.it-intellij', 'src', 'main', 'resources',
+RENDERER_PATH = ROOT.join('..', '..', 'ddot.it-intellij', 'src', 'main', 'resources',
                           'com', 'calpano', 'ddot', 'asciidoc', 'ddot-render.rb')
 
 unless RENDERER_PATH.file?
@@ -69,6 +69,6 @@ end
 
 if mode == :check && !stale.empty?
   warn "\n#{stale.size} case(s) stale: #{stale.join(', ')}"
-  warn 'Run `ruby test-data/preview-html/regenerate.rb` to refresh.'
+  warn 'Run `ruby test-data/regenerate-html.rb` to refresh.'
   exit 1
 end
