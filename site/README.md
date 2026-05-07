@@ -5,19 +5,17 @@ ddot.it ..author.. Max Völkel ,, ..year.. 2026
 ..logo.. ⚇
 ..license..Apache 2.0
 -->
-[ 🤖 Your are a helpful coding agent? See [https://ddot.it/llms.txt](https://ddot.it/llms.txt) ]
 
-- ddot.it (double dot) is a **simple syntax** (only `..` and `,,`) you can use wherever you can enter text. \
-    ⌨️ Ergonomic, easy to type, even on mobile keyboards. \
-    🤖 AI ready: Token-efficient and Markdown-compatible.
-- Simple, uniform 'triple' structure for **typed links**, **simple links**, and **properties**. \
-  <p style="text-align: center;">
-    <img src="images/triple.svg" alt="Example" style="width: 75%" />
-  </p>
+- ddot.it is a **simple syntax** using only double-dot (`..`) and double-comma (`,,`).
+  - **Ergonomic**: ⌨️ Easy to type, even on mobile keyboards.  
+  - **AI ready**:  🤖Token-efficient and Markdown-compatible.
 
-- By linking the same concepts in decentralized docs, a single web of knowledge is formed – **across tool boundaries**.
+- ddot.it can be used **wherever you can enter text**.
+   - Add links, annotations and structured data directly into your existing **decentralized documents**: \
+   [Markdown](reader-markdown.md) files, [Java](reader-java.md)Doc comments, Google Context notes field, [PowerPoint](reader-powerpoint.md) slide notes, Confluence pages, Maven pom.[xml](reader-xml.md) files, Word documents, email text, Docker compose [yaml](reader-yaml.md) files, [web pages](reader-html.md),  ...  
+  - By using the same concepts, a single web of knowledge is formed – **across tool boundaries**.  
 
-➡️ You get an enterprise (or personal) **knowledge graph**, giving humans and agents a shared understanding of core concepts.
+- You get an enterprise (or personal) **knowledge graph**, giving humans and agents a shared understanding of core concepts.
 
 
 <div style="border: 1px solid #ccc;
@@ -51,6 +49,12 @@ they are read by a ddot collector as this single knowledge graph:
 
 **How does it work?**
 
+A uniform 'triple' structure for **typed links**, **simple links**, and **properties**. 
+  <p style="text-align: center;">
+    <img src="images/triple.svg" alt="Example" style="width: 75%" />
+  </p>
+
+
 1. Each **ddot reader** knows how to read one kind of source and extracts the triples from the ddot.it text.
 2. A **ddot collector** uses a number of readers to read all sources, periodically.
     - Your sources remain the single source of truth. Triples are just cached.
@@ -69,9 +73,12 @@ See the [User Guide](user-guide.md) for the full syntax reference and more [comm
 
 See the [Developer Guide](developer-guide.md) on how to implement your own readers and collectors.
 
+## Editor Support
+- Free VSCode extension on [VSCode Marketplace](https://marketplace.visualstudio.com/items?itemName=calpano.ddot) and on [Open VSX Registry](https://open-vsx.org/extension/calpano/ddot)
+
 
 <h2 style="text-align: center;">
 <span style="font-size: 180px; color:#AB68FF">⚇</span><br />
 ddot.it &ndash; just d..dot it!</h2>
 
-Version 1, 2026-02-24
+**Coding agent? See [https://ddot.it/llms.txt](https://ddot.it/llms.txt)**

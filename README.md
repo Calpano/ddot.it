@@ -57,12 +57,24 @@ they are interpreted by a ddot collector as this single knowledge graph:
 
 See the [User Guide](https://ddot.it/user-guide.html) and [Developer Guide](https://ddot.it/developer-guide.html) on [ddot.it](https://ddot.it).
 
+
+## Editor Support
+- Free VSCode extension on [VSCode Marketplace](https://marketplace.visualstudio.com/items?itemName=calpano.ddot) and on [Open VSX Registry](https://open-vsx.org/extension/calpano/ddot)
+
+
 ---
 
 *Version 1, 2026-02-24 · License: Apache 2.0*
 
 <!-- ddot.it/on
 ddot.it/this
-..version.. 1
-..date.. 2026-03-03
+..has type..webpage
+..author .. Max Völkel
+..lastModified.. 2026-05-07 ,, and manually updated here :-)
+
+ddot.it ..has type.. language
+..purpose.. knowledge graph notation
+..has site.. https://ddot.it
+..has site.. https://marketplace.visualstudio.com/items?itemName=calpano.ddot
+..has site..https://open-vsx.org/extension/calpano/ddot
 -->
