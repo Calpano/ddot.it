@@ -58,9 +58,9 @@ they are interpreted by a ddot collector as this single knowledge graph:
 See the [User Guide](https://ddot.it/user-guide.html) and [Developer Guide](https://ddot.it/developer-guide.html) on [ddot.it](https://ddot.it).
 
 
-## Editor Support
+## Editor/IDE Support
 - Free VSCode extension on [VSCode Marketplace](https://marketplace.visualstudio.com/items?itemName=calpano.ddot) and on [Open VSX Registry](https://open-vsx.org/extension/calpano/ddot)
-
+- Free plugin for IntelliJ IDEA, IntelliJ IDEA Community, MPS, PhpStorm, JetBrains Gateway, GoLand, PyCharm, WebStorm, Code With Me Guest, Rider, PyCharm Community, CLion, DataSpell, RustRover, Android Studio, JetBrains Client, DataGrip, and RubyMine from [Jetbrains Marketplace](https://plugins.jetbrains.com/plugin/31651-ddot-it).
 
 ---
 
