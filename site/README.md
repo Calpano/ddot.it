@@ -75,6 +75,7 @@ See the [Developer Guide](developer-guide.md) on how to implement your own reade
 
 ## Editor Support
 - Free VSCode extension on [VSCode Marketplace](https://marketplace.visualstudio.com/items?itemName=calpano.ddot) and on [Open VSX Registry](https://open-vsx.org/extension/calpano/ddot)
+- Free plugin for IntelliJ IDEA, IntelliJ IDEA Community, MPS, PhpStorm, JetBrains Gateway, GoLand, PyCharm, WebStorm, Code With Me Guest, Rider, PyCharm Community, CLion, DataSpell, RustRover, Android Studio, JetBrains Client, DataGrip, and RubyMine from [Jetbrains Marketplace](https://plugins.jetbrains.com/plugin/31651-ddot-it).
 
 
 <h2 style="text-align: center;">
