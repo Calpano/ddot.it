@@ -74,16 +74,16 @@ See the [User Guide](user-guide.md) for the full syntax reference and more [comm
 See the [Developer Guide](developer-guide.md) on how to implement your own readers and collectors.
 
 ## Editor Support
-- Free VSCode extension on [VSCode Marketplace](https://marketplace.visualstudio.com/items?itemName=calpano.ddot) and on [Open VSX Registry](https://open-vsx.org/extension/calpano/ddot)
-- Free plugin for IntelliJ IDEA, IntelliJ IDEA Community, MPS, PhpStorm, JetBrains Gateway, GoLand, PyCharm, WebStorm, Code With Me Guest, Rider, PyCharm Community, CLion, DataSpell, RustRover, Android Studio, JetBrains Client, DataGrip, and RubyMine from [Jetbrains Marketplace](https://plugins.jetbrains.com/plugin/31651-ddot-it).
+- Free VSCode extension on [VSCode Marketplace](https://marketplace.visualstudio.com/items?itemName=calpano.ddot){:data-umami-event="outbound-vscode-marketplace"} and on [Open VSX Registry](https://open-vsx.org/extension/calpano/ddot){:data-umami-event="outbound-open-vsx"}
+- Free plugin for IntelliJ IDEA, IntelliJ IDEA Community, MPS, PhpStorm, JetBrains Gateway, GoLand, PyCharm, WebStorm, Code With Me Guest, Rider, PyCharm Community, CLion, DataSpell, RustRover, Android Studio, JetBrains Client, DataGrip, and RubyMine from [Jetbrains Marketplace](https://plugins.jetbrains.com/plugin/31651-ddot-it){:data-umami-event="outbound-jetbrains-marketplace"}.
 - ddot **textmate grammar** on
-  [npmjs](https://www.npmjs.com/package/@calpano/ddot-textmate-grammar)
+  [npmjs](https://www.npmjs.com/package/@calpano/ddot-textmate-grammar){:data-umami-event="outbound-npm-textmate-grammar"}
 - ddot **shiki language registration** on
-  [npmjs](https://www.npmjs.com/package/@calpano/ddot-shiki)
-- highlight.js language definition on [npmjs](https://www.npmjs.com/package/@calpano/ddot-highlightjs)
-- Prism.js language definition for ddot.it on [npmjs](https://www.npmjs.com/package/@calpano/ddot-prismjs)
-- Rouge syntax highlighter on [rubygems](https://rubygems.org/gems/rouge-ddot) for Asciidoctor, Jekyll, GitLab
-- Pygments lexer for ddot.it on [PyPI](https://pypi.org/project/pygments-ddot/)
+  [npmjs](https://www.npmjs.com/package/@calpano/ddot-shiki){:data-umami-event="outbound-npm-shiki"}
+- highlight.js language definition on [npmjs](https://www.npmjs.com/package/@calpano/ddot-highlightjs){:data-umami-event="outbound-npm-highlightjs"}
+- Prism.js language definition for ddot.it on [npmjs](https://www.npmjs.com/package/@calpano/ddot-prismjs){:data-umami-event="outbound-npm-prismjs"}
+- Rouge syntax highlighter on [rubygems](https://rubygems.org/gems/rouge-ddot){:data-umami-event="outbound-rubygems-rouge"} for Asciidoctor, Jekyll, GitLab
+- Pygments lexer for ddot.it on [PyPI](https://pypi.org/project/pygments-ddot/){:data-umami-event="outbound-pypi-pygments"}
 
 <h2 style="text-align: center;">
 <span style="font-size: 180px; color:#AB68FF">⚇</span><br />
