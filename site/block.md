@@ -21,6 +21,9 @@ john ..age.. 11
 ```
 You can abbreviate `ddot.it/block` as `!!block`.
 
+Within a block, ddot.it triples MAY NOT be recognized.
+
+
 ### Newlines
 The general pattern for newlines is
 ```
@@ -45,6 +48,9 @@ is exactly the same as
 aaa ..bbb.. Hello World
 ```
 
+- Newlines in a block are copied as newline characters (Unicode `\n`) into the triple object.
+- The block content starts on the first line **after** the block start.
+- The block content ends with the last line before the block end.
 
 
 
@@ -63,10 +69,15 @@ THE-END
 john ..age.. 11
 ```
 
-- Newlines in a block are copied as newline characters (Unicode `\n`) into the triple object.
-- The block content starts on the first line **after** the block start.
-- The block content ends with the last line before the block end.   
+### Meta
+Metadata on a triple is used as usually:
 
-Within a block, ddot.it triples MAY NOT be recognized.
+```
+john ..address.. ddot.it/block ,, ..year.. 2123
+Broadway 1
+Berlin
+Germany
 
+```
+### Further Reading
 See the [User Guide](user-guide.md#this-command) for the full reference.
