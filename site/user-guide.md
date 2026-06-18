@@ -8,6 +8,7 @@ nav_order: 1
 <!-- TOC -->
 * [⚇ ddot.it &ndash; User Guide](#-ddotit--user-guide)
   * [Contents](#contents)
+  * [About this Document](#about-this-document)
   * [Syntax Elements](#syntax-elements)
   * [Typed Link](#typed-link)
   * [Untyped Link](#untyped-link)
@@ -22,6 +23,11 @@ nav_order: 1
     * [This Command](#this-command)
   * [Relation Types](#relation-types)
 <!-- TOC -->
+
+## About this Document
+- Version: 1.1
+- Release Date: 2026-06-18
+- see [Changelog](/changelog)
 
 ## Syntax Elements
 - Double dot (`..`) → [typed links](#typed-link)
