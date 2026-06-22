@@ -1,0 +1,107 @@
+[
+  {
+    "line": 0,
+    "start": 0,
+    "end": 12,
+    "token": "command",
+    "text": "ddot.it/this"
+  },
+  {
+    "line": 0,
+    "start": 13,
+    "end": 15,
+    "token": "operator",
+    "text": ".."
+  },
+  {
+    "line": 0,
+    "start": 16,
+    "end": 23,
+    "token": "relation",
+    "text": "project"
+  },
+  {
+    "line": 0,
+    "start": 24,
+    "end": 26,
+    "token": "operator",
+    "text": ".."
+  },
+  {
+    "line": 0,
+    "start": 27,
+    "end": 35,
+    "token": "object",
+    "text": "Code Red"
+  },
+  {
+    "line": 1,
+    "start": 0,
+    "end": 12,
+    "token": "command",
+    "text": "ddot.it/this"
+  },
+  {
+    "line": 1,
+    "start": 13,
+    "end": 15,
+    "token": "operator",
+    "text": ".."
+  },
+  {
+    "line": 1,
+    "start": 16,
+    "end": 22,
+    "token": "relation",
+    "text": "author"
+  },
+  {
+    "line": 1,
+    "start": 23,
+    "end": 25,
+    "token": "operator",
+    "text": ".."
+  },
+  {
+    "line": 1,
+    "start": 26,
+    "end": 31,
+    "token": "object",
+    "text": "Alice"
+  },
+  {
+    "line": 2,
+    "start": 0,
+    "end": 12,
+    "token": "command",
+    "text": "ddot.it/this"
+  },
+  {
+    "line": 2,
+    "start": 13,
+    "end": 15,
+    "token": "operator",
+    "text": ".."
+  },
+  {
+    "line": 2,
+    "start": 16,
+    "end": 22,
+    "token": "relation",
+    "text": "status"
+  },
+  {
+    "line": 2,
+    "start": 23,
+    "end": 25,
+    "token": "operator",
+    "text": ".."
+  },
+  {
+    "line": 2,
+    "start": 26,
+    "end": 32,
+    "token": "object",
+    "text": "active"
+  }
+]

@@ -1,0 +1,5 @@
+{"from":"a","type":"knows","to":"b","kind":"ddot","source":"input.ddot","location":1}
+{"from":"b","type":"knows","to":"c","kind":"ddot","source":"input.ddot","location":2}
+{"from":"a","type":"!!label","to":"Alice","kind":"ddot","source":"input.ddot","location":3}
+{"from":"b","type":"!!label","to":"Bob","kind":"ddot","source":"input.ddot","location":4}
+{"from":"c","type":"!!label","to":"Carol","kind":"ddot","source":"input.ddot","location":5}

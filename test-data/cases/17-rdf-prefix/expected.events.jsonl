@@ -1,0 +1,2 @@
+{"from":"foaf","type":"prefix","to":"http://xmlns.com/foaf/0.1/","kind":"ddot","source":"input.ddot","location":1}
+{"from":"Alice","type":"knows","to":"Bob","kind":"ddot","source":"input.ddot","location":2}

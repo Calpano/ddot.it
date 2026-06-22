@@ -1,0 +1,5 @@
+a ..knows.. b
+b ..knows.. c
+a ..!!label.. Alice
+b ..!!label.. Bob
+c ..!!label.. Carol

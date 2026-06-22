@@ -1,0 +1,72 @@
+[
+  {
+    "line": 0,
+    "start": 0,
+    "end": 4,
+    "token": "subject",
+    "text": "foaf"
+  },
+  {
+    "line": 0,
+    "start": 5,
+    "end": 7,
+    "token": "operator",
+    "text": ".."
+  },
+  {
+    "line": 0,
+    "start": 7,
+    "end": 13,
+    "token": "relation",
+    "text": "prefix"
+  },
+  {
+    "line": 0,
+    "start": 13,
+    "end": 15,
+    "token": "operator",
+    "text": ".."
+  },
+  {
+    "line": 0,
+    "start": 16,
+    "end": 42,
+    "token": "object",
+    "text": "http://xmlns.com/foaf/0.1/"
+  },
+  {
+    "line": 1,
+    "start": 0,
+    "end": 5,
+    "token": "subject",
+    "text": "Alice"
+  },
+  {
+    "line": 1,
+    "start": 6,
+    "end": 8,
+    "token": "operator",
+    "text": ".."
+  },
+  {
+    "line": 1,
+    "start": 8,
+    "end": 13,
+    "token": "relation",
+    "text": "knows"
+  },
+  {
+    "line": 1,
+    "start": 13,
+    "end": 15,
+    "token": "operator",
+    "text": ".."
+  },
+  {
+    "line": 1,
+    "start": 16,
+    "end": 19,
+    "token": "object",
+    "text": "Bob"
+  }
+]

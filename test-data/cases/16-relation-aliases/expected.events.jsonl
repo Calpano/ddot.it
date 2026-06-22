@@ -1,0 +1,4 @@
+{"from":"Alice","type":"is a","to":"Person","kind":"ddot","source":"input.ddot","location":1}
+{"from":"Bob","type":"type","to":"Person","kind":"ddot","source":"input.ddot","location":2}
+{"from":"Alice","type":"rel","to":"Bob","kind":"ddot","source":"input.ddot","location":3}
+{"from":"Alice","type":"see also","to":"Carol","kind":"ddot","source":"input.ddot","location":4}

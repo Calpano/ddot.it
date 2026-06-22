@@ -1,0 +1,102 @@
+[
+  {
+    "line": 0,
+    "start": 0,
+    "end": 4,
+    "token": "subject",
+    "text": "john"
+  },
+  {
+    "line": 0,
+    "start": 5,
+    "end": 7,
+    "token": "operator",
+    "text": ".."
+  },
+  {
+    "line": 0,
+    "start": 7,
+    "end": 14,
+    "token": "relation",
+    "text": "address"
+  },
+  {
+    "line": 0,
+    "start": 14,
+    "end": 16,
+    "token": "operator",
+    "text": ".."
+  },
+  {
+    "line": 0,
+    "start": 17,
+    "end": 30,
+    "token": "command",
+    "text": "ddot.it/block"
+  },
+  {
+    "line": 1,
+    "start": 0,
+    "end": 10,
+    "token": "(unclassified)",
+    "text": "Broadway 1",
+    "scopes": [
+      "source.ddot"
+    ]
+  },
+  {
+    "line": 2,
+    "start": 0,
+    "end": 6,
+    "token": "(unclassified)",
+    "text": "Berlin",
+    "scopes": [
+      "source.ddot"
+    ]
+  },
+  {
+    "line": 3,
+    "start": 0,
+    "end": 7,
+    "token": "(unclassified)",
+    "text": "Germany",
+    "scopes": [
+      "source.ddot"
+    ]
+  },
+  {
+    "line": 4,
+    "start": 0,
+    "end": 4,
+    "token": "subject",
+    "text": "john"
+  },
+  {
+    "line": 4,
+    "start": 5,
+    "end": 7,
+    "token": "operator",
+    "text": ".."
+  },
+  {
+    "line": 4,
+    "start": 7,
+    "end": 10,
+    "token": "relation",
+    "text": "age"
+  },
+  {
+    "line": 4,
+    "start": 10,
+    "end": 12,
+    "token": "operator",
+    "text": ".."
+  },
+  {
+    "line": 4,
+    "start": 13,
+    "end": 15,
+    "token": "object",
+    "text": "11"
+  }
+]
