@@ -1,6 +1,6 @@
 ---
 title: "ddot.it/label"
-permalink: /on
+permalink: /label
 nav_exclude: true
 ---
 # ddot.it/label
