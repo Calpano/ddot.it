@@ -1,8 +1,14 @@
-= CHANGELOG
+# CHANGELOG
 
+
+## Version 1.2
+Released on 2026-06-22
+
+- Added `ddot.it/label` command, which is used as a relation.
+- Define how ddot.it handles binaries
 
 ## Version 1.1
-Released on 2026-02-21
+Released on 2026-06-18
 
 - Added [`ddot.it/block`](https://ddot.it/block) command
 - New `has content` relation
