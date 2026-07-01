@@ -65,35 +65,35 @@
     ]
   },
   {
-    "line": 4,
+    "line": 5,
     "start": 0,
     "end": 4,
     "token": "subject",
     "text": "john"
   },
   {
-    "line": 4,
+    "line": 5,
     "start": 5,
     "end": 7,
     "token": "operator",
     "text": ".."
   },
   {
-    "line": 4,
+    "line": 5,
     "start": 7,
     "end": 10,
     "token": "relation",
     "text": "age"
   },
   {
-    "line": 4,
+    "line": 5,
     "start": 10,
     "end": 12,
     "token": "operator",
     "text": ".."
   },
   {
-    "line": 4,
+    "line": 5,
     "start": 13,
     "end": 15,
     "token": "object",
