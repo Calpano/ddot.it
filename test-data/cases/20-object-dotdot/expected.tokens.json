@@ -1,0 +1,72 @@
+[
+  {
+    "line": 0,
+    "start": 0,
+    "end": 1,
+    "token": "subject",
+    "text": "a"
+  },
+  {
+    "line": 0,
+    "start": 2,
+    "end": 4,
+    "token": "operator",
+    "text": ".."
+  },
+  {
+    "line": 0,
+    "start": 4,
+    "end": 8,
+    "token": "relation",
+    "text": "spec"
+  },
+  {
+    "line": 0,
+    "start": 8,
+    "end": 10,
+    "token": "operator",
+    "text": ".."
+  },
+  {
+    "line": 0,
+    "start": 11,
+    "end": 24,
+    "token": "object",
+    "text": "http://h/x..y"
+  },
+  {
+    "line": 1,
+    "start": 0,
+    "end": 1,
+    "token": "subject",
+    "text": "a"
+  },
+  {
+    "line": 1,
+    "start": 2,
+    "end": 4,
+    "token": "operator",
+    "text": ".."
+  },
+  {
+    "line": 1,
+    "start": 4,
+    "end": 12,
+    "token": "relation",
+    "text": "links to"
+  },
+  {
+    "line": 1,
+    "start": 12,
+    "end": 14,
+    "token": "operator",
+    "text": ".."
+  },
+  {
+    "line": 1,
+    "start": 15,
+    "end": 27,
+    "token": "object",
+    "text": "../../b.adoc"
+  }
+]

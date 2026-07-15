@@ -1,0 +1,2 @@
+{"from":"a","type":"spec","to":"http://h/x..y","kind":"ddot","source":"input.ddot","location":1}
+{"from":"a","type":"links to","to":"../../b.adoc","kind":"ddot","source":"input.ddot","location":2}
