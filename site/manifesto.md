@@ -12,8 +12,8 @@ Knowledge and code should be read more often than written.
 The basic syntax of ddot.it can be taught in 20 seconds:
 
 - all knowledge is triples
-- Example: ddot.it  ..has type.. language
-- Structure: subject .. relation .. object ,, here is optionally metadata about the triple
+- Example: `ddot.it  ..has type.. language`
+- Structure: `subject .. relation .. object ,, here is optionally metadata about the triple`
 
 Programs can emit ddot.it trivially. Just ensure no double-dot appears in subjects or relations.
 
