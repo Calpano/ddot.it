@@ -1,0 +1,1036 @@
+= The ddot.it Specification 1.0.0
+:toc: macro
+:ddd: Ddot.it
+:dd: ddot.it
+:toclevels: 4
+
+Ddot.it is a small language for knowledge graphs.
+It is meant to be used within existing files, which have their own structure and syntax.
+We call it the host language, where ddot.it is the guest language.
+Ddot.it has a generic triple model and a simple syntax.
+A gentle introduction can be found at https://ddot.it.
+
+.About this document
+- Last Modified: 2026-07-17
+- Version: 1.1.0
+
+.Contents
+toc::[]
+
+== Introduction
+. What is the <<purpose>> of {dd}?
+. Where can I use it? <<host-languages>>
+. What can I express structurally with {dd}? <<information_model>>
+. How do I type {dd} syntax? <<syntax_concepts>>
+
+[[purpose]]
+=== Purpose
+{ddd} is meant to be spread over many files.
+Together, all these files should be parsed by a {dd} parser, creating one large knowledge base.
+This knowledge base can interlink and describe concepts, and it can <<this-command,annotate the documents>> in which the {dd} syntax has been typed.
+Crucially, {dd} is meant to be typed alongside other content in another syntax.
+In fact, it has been designed specifically so that it <<host-languages,coexists with other syntaxes>>: Markdown and AsciiDoc syntax have no meaning in {dd} and also the other way round.
+
+[[host-languages]]
+=== Guest and Host Language
+- {ddd} can be used as a custom text format for representing knowledge graphs.
+
+.Spec
+****
+If ddot.it is used stand-alone, the following is defined:
+
+- File extension: `.ddot`
+- MIME type: `text/x-ddot`  #VERIFY#
+****
+
+- {ddd} can be used as a **guest language** inside another **host language** or even a more complex **host system**.
+For example, {dd} can be used within Markdown and AsciiDoc.
+In general, a host language SHOULD be parsed by a host-language aware parser.
+That parser SHOULD strip away host syntax for encoding host structures.
+For example, `## Foo` defines a headline in Markdown, so only `Foo` should be given to the ddot.it parser.
+
+
+
+
+[#information_model]
+=== Information Model
+{ddd} has a simple, triple-based information model.
+
+- *Subject* (*S*, about what are we stating facts),
+- *Relation* (*P*, named after RDF property/predicate), and
+- *Object* (*O*, another objects name or a data value).
+
+Additionally, a triple can have any number of attached
+**Meta Relation** (*MR*) and
+**Meta Object** (*MO*)
+pairs.
+This resembles RDF 1.2 / RDF-Star and provides a way to state facts about the triple.
+
+.Data Model
+****
+- A snippet has a **source URI** and any number of **triples**.
+- A triple consists of **subject**, **relation**, and **object**.
+- Additionally, a **triple** can have any number of (**meta relation**, **meta object**) pairs.
+- Each of *subject*, *relation*, *object*, *meta relation*, and *meta object* is a string value.
+****
+
+.The ddot.it Information Model
+[plantuml]
+....
+hide empty members
+hide circle
+
+class Snippet {
+}
+class SourceURI {
+    String
+}
+Snippet *-- SourceURI
+class Triple
+class Subject {
+  String
+}
+class Relation {
+  String
+}
+class Object {
+  String
+}
+class MetaRelation {
+  String
+}
+class MetaObject {
+  String
+}
+
+Snippet *-* "n" Triple
+Triple *-- Subject
+Triple *-- Relation
+Triple *-- Object
+Triple*..* "n" Meta
+class Meta
+Meta *-- MetaRelation
+Meta *-- MetaObject
+....
+
+.Example Snippet as {dd} Syntax
+[ddot.it]
+----
+Dirk ..works at.. SAP ,, ..since.. 2016
+----
+
+.Example Snippet as Information Model JSON
+[json]
+----
+{
+  "sourceUri": "file:///Users/maxvolkel/Desktop/example.adoc",
+  "triples": [
+     {"s":"Dirk", "p":"works at", "o":"SAP", "meta": [
+        {"p": "since", "o":"2016" }
+     ]}
+  ]
+}
+----
+
+.{ddd} Data Model JSON Schema
+****
+.Schema
+[json]
+----
+{
+   "$schema":"http://json-schema.org/draft-07/schema#",
+   "type":"object",
+   "properties":{
+      "sourceUri":{ "type":"string" },
+      "triples":{
+         "type":"array",
+         "items":{
+            "type":"object",
+            "properties":{
+               "s":{ "type":"string", "description":"Subject" },
+               "p":{ "type":"string", "description":"Predicate" },
+               "o":{ "type":"string", "description":"Object" },
+               "meta":{
+                  "type":"array",
+                  "description":"Optional metadata for the triple.",
+                  "items":{
+                     "type":"object",
+                     "properties":{
+                        "p":{ "type":"string" },
+                        "o":{ "type":"string" }
+                     },
+                     "required":[ "p", "o" ]
+                  }
+               }
+            },
+            "required":[ "s", "p", "o" ]
+         }
+      }
+   },
+   "required":[ "sourceUri", "triples" ]
+}
+----
+****
+
+
+[#syntax_concepts]
+=== Syntax Concepts
+Ddot.it tries to use few syntax elements, to make learning, reading and writing easy.
+The following syntax elements are used:
+
+Double dot (`..`)::
+It's used for writing *triples*. This most fundamental syntax element, the *double dot* (*ddot*) is what gave {dd} its name.
+
++
+.Example
+----
+Claudia ..owns.. cat
+----
+
+Whitespace::
+Space and tab _are_ significant but never their exact amount.
+So {dd} has a middle ground between 'whitespace is optional' (its not) and 'indentation level matters' (it doesn't).
+
+Double comma (`,,`)::
+For appending *meta* data to a triple.
+
++
+.Example
+----
+Claudia ..owns.. cat ,, ..since.. X-mas 2026
+----
+
+Double exclamation mark (`!!`)::
+For <<command, commands>>.
+
+Newlines::
+These are significant as they terminate a triple.
+
++
+However, when they are not allowed by the <<host-languages,host syntax>>, a **double semicolon** can be used.
+
+Double semicolon (`;;`)::
+For newlines, where the host language doesn't allow typing real newline characters.
+
+
+[#syntax_shorthands]
+=== Syntax Shorthands
+.Subject Optional
+To avoid repeating the same *subject* over and over, {dd} allows to omit it after the first line.
+So instead of
+----
+sss ..ppp1.. ooo1
+sss ..ppp2.. ooo2
+sss ..ppp3.. ooo3
+----
+one can write
+----
+sss ..ppp1.. ooo1
+..ppp2.. ooo2
+..ppp3.. ooo3
+----
+
+NOTE: There is no shorthand for expressing multiple objects for the same _subject_-_relation_ combination.
+
+
+
+
+
+
+[#command]
+== Commands
+Commands extend {dd} capabilities in various ways while keeping the extra syntax small.
+
+All commands can be typed in several ways, which are interpreted identically:
+
+- `https://ddot.it/COMMAND_NAME`
+- `http://ddot.it/COMMAND_NAME`
+- `ddot.it/COMMAND_NAME`
+- `!!COMMAND_NAME`
+
+
+NOTE: The `!!COMMAND_NAME` is easy to type, whereas the `https://ddot.it/COMMAND_NAME` is the most self-documenting version.
+In practice, `ddot.it/COMMAND_NAME` provides the best balance between readability and self-documenting.
+The expansion from `!!` could be done by editor plugins at typing time or ddot.it CLI tools.
+
+NOTE: All commands are designed to be resolvable HTTPS URI (in their `ddot.it/COMMAND_NAME` form).
+Each URI resolves to a documentation page for the exact command.
+In the future, that page could even explain the interpretation of parameters.
+
+.https://datatracker.ietf.org/doc/html/rfc3986[RFC 3986] defines the URI syntax:
+----
+The following are two example URIs and their component parts:
+
+         foo://example.com:8042/over/there?name=ferret#nose
+         \_/   \______________/\_________/ \_________/ \__/
+          |           |            |            |        |
+       scheme     authority       path        query   fragment
+          |   _____________________|__
+         / \ /                        \
+         urn:example:animal:ferret:nose
+----
+
+A {dd} command thus consists of
+
+- command-begin := ( `https://ddot.it` | `http://ddot.it` | `ddot.it` | `!!` )
+- command : = *uri-path* *uri-query*? *uri-fragment*?
+
+
+
+
+[[off-command]]
+=== Command `!!off`
+{ddd} has no comments in its syntax.
+But only conforming lines are interpreted as triples.
+To explicitly **exclude** certain lines from interpretation -- effectively like a **block comment** -- ddot.it provides `ddot.it/off` and `ddot.it/on` commands.
+
+.Spec
+****
+The `!!off` command excludes the following text from {dd} parsing.
+Until parsing resumes with an <<on-command,!!on>> command.
+****
+
+CAUTION: This command, like all commands, is not active when inside a <<block-command>>.
+
+
+[[on-command]]
+=== Command `!!on`
+.Spec
+****
+This command resumes {dd} parsing.
+If it was already on, nothing changes.
+****
+
+CAUTION: This command, like all commands, is not active when inside a <<block-command>>.
+
+See also: The <<off-command,!!off>> command.
+
+
+
+[#block-command]
+=== Command `!!block`
+JSON, for example, allows to type `foo\"bar` to effectively have a single double quote in the string between `foo` and `bar` and get `foo"bar` as a value.
+In {dd}, quotes don't need to be escaped, as they carry no semantics in the syntax.
+Other character sequences, such as `..`, `,,`, `;;`, `!!` or _newlines_ cannot be used everywhere.
+
+{ddd} has no escape syntax.
+Instead, {dd} provides a <<block-command,!!block command>>.
+The block command allows almost any character to be put verbatim into ddot.it, without interpreting it.By default, a `!!block` ends with the first blank line, but a custom end marker line can be defined.
+
+.Example 1
+[ddot.it]
+----
+John ..address.. !!block
+1 Broad Way
+Lower Manhatten
+..No !!command has an effect here..
+U.S.A.
+
+Dirk ..works at.. SAP
+----
+
+.Example 2
+[ddot.it]
+----
+John ..address.. !!block?end=END
+1 Broad Way
+Lower Manhatten
+..No !!command has an effect here..
+U.S.A.
+END
+Dirk ..works at.. SAP
+----
+
+.Interpretation (for both Examples)
+- S=`John`, P=`address`, O=`1 Broad Way +
+Lower Manhatten +
+..No !!command has an effect here.. +
+U.S.A.`
+- S=`Dirk`, P=`works at`, O=`SAP`
+
+
+See also https://ddot.it/block[].
+
+
+[[this-command]]
+=== Command `!!this`
+To annotate the document _in which the ddot.it is typed_, a built-in <<command, command>>, `!!this`, can be used.
+
+- It is replaced with the `sourceUri` of the chunk in which it is written, when the {dd} syntax is to be interpreted.
+- Usually used as Subject.
+- A strict source-source processor (e.g. a linter) should leave the `!!this` as it is.
+
+See also https://ddot.it/this[].
+
+
+[[label-command]]
+=== Command `!!label`
+Sets the visible 'label' of an entity.
+This command is merely a built-in relation.
+It has no defined semantics when not used as a triple relation.
+Using labels happens in higher layers and tools.
+
+.Effect
+- Direct effect: None.
+- In tools that show the knowledge graph visually, the re-defined _label_ should be shown and the relabeled id should not be shown.
+
+.Example
+----
+a ..b.. c
+c ..!!label.. FOO BAR BAZ
+----
+.Interpretation
+* S=`a`, P=`b`, O=`c`
+* S=`c`, P=`!!label`, O=`FOO BAR BAZ`
+
+NOTE: Maybe a syntax like `ddot:label` would be better.
+
+
+
+== Parsing Process
+Now we know the <<information_model>> and <<syntax_concepts>>, we look into the process from file on disk to triples in memory.
+
+We have several goals in parsing:
+
+- Extract triples (and their meta and sourceUri) from a chunk.
+- Syntax-highlight text in a chunk. For this, we need to tag each character into a set of nested but non-overlapping regions. We must classify characters into a tree. Then, we define styling via CSS for each region and thus define the syntax highlighting.
+- Auto-completion support. Building on tagged regions, we need to define for each substate (in which region is the cursor, what's before and after the cursor, how we got at this state: by typing or moving the cursor?) whether to launch auto-completion or not. And what to show.
+
+NOTE: As all goals are interwoven, we explain them together. The purpose of this spec is to clearly define the parse semantics. Actual implementations for fast parsing don't need to construct tagged regions for every character.
+
+.Process
+. First, we must get <<chunk, chunks>> (text blocks) to be parsed from the system in which {dd} has been entered.
+. Then we pre-parse the chunk into <<snippet,**snippets**>> -- and the  **excluded** parts.
+This needs to carefully process both <<block-command,!!block>> (verbatim) and <<off-command,,!!off/!!on>> (exclude) commands.
+
+
+[[chunk]]
+=== Chunks: Getting Text for Parsing
+- {ddd} can appear in any text box, in any system or file.
+Getting the text out of a system in general requires help from the host system (e.g. _Atlassian Confluence_) to deliver a documents’ text (and its **sourceUri**) to the {dd} parser.
+- Plain `.ddot` text files can be parsed directly.
+Markdown and AsciiDoc documents can also be parsed with a plain {dd} parser, but specialised parsers offer more features.
+- More complex formats such as HTML, Java source code or PowerPoint slides SHOULD be parsed with format-specific {dd} parsers.
+
+TIP: To avoid parsing a text file which contains valid {dd} syntax by accident, one can look for the signature string `ddot.it` in the file. Its presence is meant as a marker, similar to a https://en.wikipedia.org/wiki/File_format#Magic_number[magic byte signature] in other file formats.
+Whenever the character sequence `ddot.it` **appears anywhere** in a text file, we can assume the contents should be ddot.it-parsed.
+
+.Chunk
+- Usually, one file is one **chunk**.
+Some files, like YAML files, can encode multiple documents in a single file.
+In a wiki, each page could be one chunk.
+- The host parser must deliver one **chunk** for each such part.
+- Each chunk must be given its own *sourceURI*, which is often derived from file URI plus an appended hash fragment.
+This fragment can be a chunk index or start line number.
+Line numbers help tracing back the origin of unintended triples.
+The `sourceUri` is also what allows {dd} to annotate parts of a document via the <<this-command,!!this>> command.
+
+.Spec
+****
+A host format parser delivers **chunks** with a **sourceUri** to the {dd} parser.
+For plain `.ddot` files, the {dd} parser does this itself.
+****
+
+Each pair of **text chunk** plus **URI** is the given to the ddot.it parser.
+
+
+[[snippet]]
+=== Splitting Chunks to Snippets
+A chunk MAY be split into smaller snippets if it contains <<off-command,!!off>> and <<on-command,!!on>> commands.
+Otherwise, all the chunks’ content is the snippet.
+In any case, the pre-parser must be careful in respecting the interleaving of both <<block-command>> and <<off-command>>/<<on-command>>.
+
+A stateful parser must remember if it is in _plain_ {dd} or in _verbatim_ {dd}. When in plain, the off/on commands have an effect and bring the parser into the _excluded_ state.
+
+.Pre-Parsing Chunks to Snippets
+[plantuml]
+....
+hide empty description
+
+state Plain
+state Block
+state Excluded
+state "Block\nwith\n custom end" as blockMarker
+
+[*] -> Plain
+Plain --u> Block : !!block
+Plain --u> blockMarker : !!block?end=MY-MARKER
+Block --> Plain : Blank Line
+blockMarker --> Plain : MY-MARKER
+Plain --> Excluded : !!off
+Excluded --> Plain : !!on
+....
+
+.Spec
+****
+Each **chunk** is pre-processed by a ddot.it parser into **snippets**.
+<<syntax_shorthands, Leaving out the subject>> only works within a snippet, not across snippet boundaries.,
+****
+
+
+
+
+
+
+
+[[parsing]]
+== Parsing Snippets
+This is where the meat of the parsing happens.
+
+- Parsing is defined via the <<_lexical_layer>> (via Regexes), a <<grammar>> (via an EBNF) and a <<state-automaton>>.
+- Then we group and rename parser states into _tagged regions_, to define syntax highlighting.
+
+In vase of doubt, the golden corpus at `ddot.it/test-data/cases/` shall have the last word.
+
+=== Lexical Layer
+Only the following basic tokens have a special role when parsing {dd}.
+
+.Token Alphabet, Single Codepoints,
+[cols="^1l,2d,3d,2l"]
+|===
+| Token | Name | Comment | Regex
+
+|WS| Whitespace | SPACE or TAB |[ \t]
+|NL| Newline | CR, LF, or CR+LF|(\r\|\n\|\r\n)
+|DT| Dot | A single dot `.` |\.
+|CM| Comma | A single comma `,` |,
+|SC| Semicolon | A single semicolon `;` |;
+|EM| Exclamation Mark | A single exclamation mark `!` |!
+|===
+
+The syntax of {dd} is fundamentally based on **counting consecutive characters**. The main element is the double-dot (`..`) which is only valid if it is not preceded or followed by another dot.
+One or three dots are fine and can be used in text as usual, without any special interpretation.
+Four dots, well, we made that a special case of _the empty relation_, so that has a defined interpretation.
+Five dots are fine and mean nothing.
+
+And here we define the counted token sequences.
+
+.Token Sequences
+[cols="^1l,5d,2l"]
+|===
+| Token | Description | Regex
+
+|DT2| A sequence of 2 consecutive `DT`. +
+The whole sequence is neither preceded by another `DT` nor followed by another `DT`.
+|\.{2}
+
+|DT4| A sequence of 4 consecutive `DT`. +
+The whole sequence is neither preceded by another `DT` nor followed by another `DT`.
+|\.{4}
+
+|CM2| A sequence of 2 consecutive `CM`. +
+The whole sequence is neither preceded by another `CM` nor followed by another `CM`.
+|,{2}
+
+|SC2| A sequence of 2 consecutive `SC`. +
+The whole sequence is neither preceded by another `SC` nor followed by another `SC`.
+|;{2}
+
+|EM2| A sequence of 2 consecutive `EM`. +
+The whole sequence is neither preceded by another `EM` nor followed by another `EM`.
+|!{2}
+
+|TX| Any sequence of characters, that does not contain `WS`, `NL`, `DT2`, `CM2`, `SC2`, `EM2`.
+|[^ \t\r\n,.;!]+
+|===
+
+
+[[grammar]]
+=== Grammar in EBNF
+.Syntax (of the grammar)
+- Terminals are UPPERCASE
+- Variables are TitleCase
+- `?` optional, `*` zero or more, `+` one or more, `|` alternative, `()` grouping
+- `//` comments about the syntax itself. {Dd} has no comments syntax.
+- `TextExcept{...}` is a shorthand for:
+** We have text, that does not start or end with whitespace (`WS`).
+** We allow all of `(NL | WS | DT2 | DT4 | CM2 | SC2 | EM2 | TX)` except those listed in the _Except_ clause.
+** E.g.: `TextExcept{CM2,NL} = (DT2 | DT4 | SC2 | EM2 | TX) (WS* (DT2 | DT4 | SC2 | EM2 | TX))*`.
+
+
+.Full
+----
+Document    := Line*
+
+Line        := WS* Triple WS* NL
+              | (or any other text or syntax here) NL
+
+DoubleDot   := WS* DT2 WS*
+// the untyped (empty) relation, written '....' or '.. ..'.
+// WS+, not WS*: with no WS between, the two DT2 would be four adjacent dots,
+// which lexes as DT4 — that is the first alternative, not the second.
+QuadDot     := WS* ( DT4 | DT2 WS+ DT2 ) WS*
+
+Triple      :=  Subject?
+                ( DoubleDot Relation DoubleDot | QuadDot )
+                 Object
+                 WS* Meta?
+
+Subject     :=  TextExcept{NL,DT2,DT4}
+Relation    :=  TextExcept{NL,DT2,DT4}
+Object      :=  TextExcept{NL,CM2}
+
+Meta              :=  CM2 WS* MetaInline WS*
+// the block may be empty: ',,' NL WS* ',,'
+                    | CM2 NL (MetaBlock NL)? WS* CM2 WS*
+MetaRelation      := TextExcept{NL,DT2,DT4}
+
+MetaInline        := ( MetaTripleInline (SC2 MetaTripleInline)* )
+                    | MetaTextInline
+
+MetaTripleInline  :=  DoubleDot MetaRelation DoubleDot MetaObjectInline
+                    | QuadDot MetaObjectInline
+
+MetaObjectInline   :=  TextExcept{NL,SC2}
+
+MetaTextInline     :=  (CM2 | SC2 | EM2 | TX)
+                       (WS* (DT2 | DT4 | CM2 | SC2 | EM2 | TX))*
+
+MetaBlock          :=  MetaTripleInBlock (NL MetaTripleInBlock)*
+                    | MetaTextBlock
+
+MetaTripleInBlock   := DoubleDot MetaRelation DoubleDot MetaObjectInBlock
+                    | QuadDot MetaObjectInBlock
+
+MetaObjectInBlock    := TextExcept{NL}
+
+MetaTextBlock      := MetaTextBlockLine (NL MetaTextBlockLine)*
+
+MetaTextBlockLine  := WS*
+// a real line must contain anything besides just CM2 and WS
+// and may not be DT2 to avoid parsing as MetaTripleInBlock/MetaRelation
+                      (TX | EM2 | SC2 )+
+                      (WS | TX | DT2 | DT4 | EM2 | CM2 | SC2 )*
+----
+
+
+
+.Notes on the productions
+- `Subject?` is optional: an omitted subject means _continue with the subject of the previous line_.
+- `Text` is a whitespace-trimmed sequence; the `WS` around and between words is not part of the Subject, Relation, or Object contents.
+- `QuadDot` is the shorthand for an implicit relation: `a....b` and `a .. .. b` both mean
+`a ..links to.. b`. The two spellings are the same operator, not two operators — see
+`10-spaced-untyped` and `02-untyped-link` in the golden corpus.
+
+
+
+
+
+=== Abstract Syntax Tree
+What a parsed {dd} `Document` looks like as a tree. Every arrow is a _contains_ relation;
+there are no other relations in this diagram. Orange nodes are exclusive choices: exactly
+one of their children is present.
+
+.The ddot.it AST
+[plantuml]
+....
+hide empty members
+hide circle
+hide methods
+
+skinparam class {
+  BackgroundColor<<choice>> #ffe0b2
+  BorderColor<<choice>> #e65100
+}
+
+class Document
+class Line <<choice>>
+class NotATriple
+class Triple
+class Subject
+class Relation
+class Object
+class Meta <<choice>>
+class MetaInline <<choice>>
+class MetaTripleInline
+class MetaTextInline
+class MetaBlock <<choice>>
+class MetaTripleInBlock
+class MetaTextBlock
+class MetaTextBlockLine
+class MetaRelation
+class MetaObject
+class Command {
+  !!block?end=MARKER
+  !!this
+  !!label
+}
+
+Document *- "0..n" Line
+Line *-- "0..1" Triple
+Line *- "0..1" NotATriple
+
+Triple *---- "0..1" Subject
+Triple *---- "0..1" Relation
+Triple *---- "1" Object
+Triple *- "0..1" Meta
+
+Subject *-- "0..n" Command
+Relation *-- "0..n" Command
+Object *-- "0..n" Command
+MetaRelation *-- "0..n" Command
+MetaObject *-- "0..n" Command
+
+Meta *-- "0..1" MetaInline
+Meta *-- "0..1" MetaBlock
+
+MetaInline *-- "0..n" MetaTripleInline
+MetaInline *--- "0..1" MetaTextInline
+
+MetaBlock *-- "0..n" MetaTripleInBlock
+MetaBlock *-- "0..1" MetaTextBlock
+
+MetaTripleInline *-- "0..1" MetaRelation
+MetaTripleInline *-- "1" MetaObject
+
+MetaTripleInBlock *-- "0..1" MetaRelation
+MetaTripleInBlock *-- "1" MetaObject
+
+MetaTextBlock *-- "1..n" MetaTextBlockLine
+....
+
+.Notes on the tree
+- `Line` is either a `Triple` or a `NotATriple`. `NotATriple` is the second alternative of the
+`Line` production: text that is passed through unparsed. It has no children.
+- `Subject` is absent when it is continued from the previous Line.
+- `Relation` is absent for the `QuadDot` shortcut; it then means `links to`.
+- `Meta` is either inline or block, never both. Likewise `MetaInline` and `MetaBlock` each hold
+either triples or text, never both.
+- `MetaObject` unifies `MetaObjectInline` and `MetaObjectInBlock`: the two differ only in which
+characters may occur, not in what they mean once parsed.
+- `MetaTextInline` and `MetaTextBlock` carry the built-in relation `text`, so in the Information
+Model they are a Meta like any other.
+- A `Command` is a part of the text of the field holding it, not a replacement for it:
+`John ..address.. !!block?end=END` has an Object holding one Command, whereas
+`Max ..text.. 42` has an Object holding none. The attributes list the built-in commands; each
+may equally be written `ddot.it/label`, `http://ddot.it/label` or `https://ddot.it/label`.
+- Commands may occur in every field of a Triple and of a Meta alike: `Subject`, `Relation`,
+`Object`, `MetaRelation` and `MetaObject`.
+
+
+
+[[state-automaton]]
+=== Parse State Automaton
+
+.Diagram Legend
+Red arrows indicate the 'happy path': a simple Triple without any Meta.
+
+// The parsing model is split into three diagrams:
+//   1. Triple      -- Subject, Relation, Object. Entered at StartOfLine.
+//   2. Meta inline -- the one-line Meta form. Entered from TripleObject on CM2.
+//   3. Meta block  -- the ',,' fenced Meta form. Entered from MetaStart on NL.
+// States drawn in orange are defined in another part; they are the seams:
+//   StartOfLine, TripleObject, NotATriple and MetaStart.
+//
+// Each state defines what happens for every token of:
+// NL | WS | DT2 | DT4 | CM2 | SC2 | EM2 | TX
+
+.The ddot.it Parsing Model, part 1: Triple
+[plantuml]
+....
+hide empty description
+
+state "Meta\n(see part 2)" as MetaStart #ffe0b2
+
+[*] --> StartOfLine
+
+' --- Subject ------------------------------------------------------
+StartOfLine --> StartOfLine : WS
+StartOfLine --> StartOfLine : NL // empty line
+StartOfLine -[#red]-> Subject : CM2 | SC2 | EM2 | TX
+StartOfLine --> RelationStart : DT2 // Subject omitted:\ncontinue previous Subject
+StartOfLine --> TripleObject : DT4 // Subject omitted +\nimplicit Relation
+
+Subject --> Subject : WS | CM2 | SC2 | EM2 | TX
+Subject --> NotATriple : NL
+Subject -[#red]-> RelationStart : DT2
+Subject --> TripleObject : DT4 // implicit Relation 'links to'
+
+' --- Relation: empty so far (the second half of a QuadDot may still come) --
+RelationStart --> RelationStart : WS
+RelationStart -[#red]-> Relation : CM2 | SC2 | EM2 | TX
+RelationStart --> TripleObject : DT2 // '.. ..' — the other\nspelling of QuadDot
+RelationStart --> NotATriple : NL | DT4
+
+' --- Relation: has text, so the triple is typed --------------------
+Relation --> Relation : WS | CM2 | SC2 | EM2 | TX
+Relation --> NotATriple : NL | DT4
+Relation -[#red]-> TripleObject : DT2
+
+' --- Object -------------------------------------------------------
+TripleObject --> TripleObject : WS | DT2 | DT4 | SC2 | EM2 | TX
+TripleObject -[#red]-> StartOfLine : NL // emit Triple
+TripleObject --> MetaStart : CM2
+
+' --- Not a Triple -------------------------------------------------
+NotATriple --> NotATriple : WS | DT2 | DT4 | CM2 | SC2 | EM2 | TX
+NotATriple --> StartOfLine : NL // Line is passed through unparsed
+....
+
+.The ddot.it Parsing Model, part 2: Meta, inline form
+[plantuml]
+....
+hide empty description
+
+state "TripleObject\n(see part 1)" as TripleObject #ffe0b2
+state "StartOfLine\n(see part 1)" as StartOfLine #ffe0b2
+state "NotATriple\n(see part 1)" as NotATriple #ffe0b2
+state "Meta block\n(see part 3)" as BlockFirstLine #ffe0b2
+
+TripleObject --> MetaStart : CM2
+
+MetaStart --> MetaStart : WS
+MetaStart --> MetaRelationInline : DT2
+MetaStart --> MetaObjectInline : DT4 // implicit MetaRelation
+MetaStart --> MetaTextInline : CM2 | SC2 | EM2 | TX
+MetaStart --> BlockFirstLine : NL // switch to block form
+
+MetaRelationInline --> MetaRelationInline : WS | CM2 | SC2 | EM2 | TX
+MetaRelationInline --> NotATriple : NL | DT4
+MetaRelationInline --> MetaObjectInline : DT2
+
+MetaObjectInline --> MetaObjectInline : WS | DT2 | DT4 | CM2 | EM2 | TX
+MetaObjectInline --> MetaNextInline : SC2
+MetaObjectInline --> StartOfLine : NL // emit Triple + Metas
+
+MetaNextInline --> MetaNextInline : WS
+MetaNextInline --> MetaRelationInline : DT2
+MetaNextInline --> MetaObjectInline : DT4
+MetaNextInline --> NotATriple : NL | CM2 | SC2 | EM2 | TX
+
+MetaTextInline --> MetaTextInline : WS | DT2 | DT4 | CM2 | SC2 | EM2 | TX
+MetaTextInline --> StartOfLine : NL // emit Triple +\nMeta 'text'
+....
+
+.The ddot.it Parsing Model, part 3: Meta, block form
+[plantuml]
+....
+hide empty description
+
+state "MetaStart\n(see part 2)" as MetaStart #ffe0b2
+state "StartOfLine\n(see part 1)" as StartOfLine #ffe0b2
+state "NotATriple\n(see part 1)" as NotATriple #ffe0b2
+
+MetaStart --> BlockFirstLine : NL
+
+' --- the first line decides triples XOR text -----------------------
+BlockFirstLine --> BlockFirstLine : WS
+BlockFirstLine --> MetaRelationInBlock : DT2 // commit to triples
+BlockFirstLine --> MetaObjectInBlock : DT4 // commit to triples,\nimplicit MetaRelation
+BlockFirstLine --> MetaTextBlockLine : TX | EM2 | SC2 // commit to text
+BlockFirstLine --> BlockEnd : CM2 // empty block
+BlockFirstLine --> NotATriple : NL
+
+' --- triples only ------------------------------------------------
+BlockTripleLine --> BlockTripleLine : WS
+BlockTripleLine --> MetaRelationInBlock : DT2
+BlockTripleLine --> MetaObjectInBlock : DT4 // implicit MetaRelation
+BlockTripleLine --> BlockEnd : CM2
+BlockTripleLine --> NotATriple : NL | TX | EM2 | SC2 // no text in a triple block
+
+MetaRelationInBlock --> MetaRelationInBlock : WS | CM2 | SC2 | EM2 | TX
+MetaRelationInBlock --> NotATriple : NL | DT4
+MetaRelationInBlock --> MetaObjectInBlock : DT2
+
+MetaObjectInBlock --> MetaObjectInBlock : WS | DT2 | DT4 | CM2 | SC2 | EM2 | TX
+MetaObjectInBlock --> BlockTripleLine : NL
+
+' --- text only ---------------------------------------------------
+BlockTextLine --> BlockTextLine : WS
+BlockTextLine --> MetaTextBlockLine : TX | EM2 | SC2
+BlockTextLine --> BlockEnd : CM2
+BlockTextLine --> NotATriple : NL | DT2 | DT4 // no triples in a text block
+
+MetaTextBlockLine --> MetaTextBlockLine : WS | DT2 | DT4 | CM2 | SC2 | EM2 | TX
+MetaTextBlockLine --> BlockTextLine : NL
+
+' --- closing CM2 -------------------------------------------------
+BlockEnd --> BlockEnd : WS
+BlockEnd --> StartOfLine : NL // emit Triple + Metas
+BlockEnd --> NotATriple : DT2 | DT4 | CM2 | SC2 | EM2 | TX
+....
+
+.Notes on the states
+- `StartOfLine` is both the start and the accepting state: a `Document` is a sequence of `Line`,
+and each `Line` ends by returning here. A Triple is emitted on the transition back.
+- `NotATriple` implements the second alternative of `Line`: text that is not a Triple is
+consumed up to the next `NL` and passed through unparsed.
+- The `DT4` shortcut skips the `Relation` state entirely, since `QuadDot` carries the
+implicit relation `links to`.
+- `MetaStart` is the only place where the inline and the block form are told apart: an `NL`
+right after the `CM2` selects the block form, anything else the inline form.
+- `MetaTextInline` and `MetaTextBlockLine` are entered only on a token other than `DT2` / `DT4`.
+This mirrors the grammar: once meta text has started, a later `DT2` is text, not a separator
+(see Example 2).
+- Inside a `,,`-block, triples and text cannot be mixed. `BlockFirstLine` commits the whole
+block: a leading `DT2` / `DT4` selects `BlockTripleLine` (where `TX` / `EM2` / `SC2` at line
+start is an error), plain text selects `BlockTextLine` (where `DT2` / `DT4` at line start is
+an error). This matches `MetaBlock`, which is either all `MetaTripleInBlock` or all
+`MetaTextBlockLine`.
+- The closing `CM2` is recognised only at the start of a line, after optional `WS`, from
+`BlockFirstLine`, `BlockTripleLine` or `BlockTextLine`. A `CM2` anywhere else in a block
+line is content.
+- A block may be empty: reaching the closing `CM2` straight from `BlockFirstLine` gives
+`,,` NL `WS*` `,,` with no Meta at all.
+
+
+
+
+
+== Syntax Highlighting
+
+=== Tagged Regions Catalog
+After lexing and parsing, every character of a chunk belongs to exactly one
+region. Regions nest but never overlap, so each character maps to a single,
+most-specific scope. We name these regions with
+https://www.sublimetext.com/docs/scope_naming.html[TextMate scopes] -- the same
+scope vocabulary used by Sublime Text, VS Code, TextMate, and the
+`tmLanguage`/`tmTheme` ecosystem -- so that an existing colour theme highlights
+{dd} without any theme-specific work.
+
+This region layer sits on top of the *lexical* layer -- the token alphabet
+(`DT2`, `DT4`, `CM2`, `SC2`, `EM2`, `TX`, `WS`, `NL`), the grammar over it, and
+the parsing state machine. Each implementation maps its native lexer/parser
+states onto the canonical scopes below.
+
+.Naming convention
+****
+Every {dd} scope is a dot-separated path from a **parent scope** -- one of the
+standard TextMate roots, which decides the default colour -- down to a
+{dd}-specific leaf, and it always ends in `.ddot`:
+
+  <parent-scope> [ '.' <detail> ] '.ddot'
+
+The trailing `.ddot` lets a theme select all guest-language scopes at once and
+keeps them from clashing with <<host-languages,host-language>> scopes present in
+the same file.
+****
+
+.Parent scopes
+Only seven standard TextMate parents are needed. Choosing the correct parent is
+what makes a *generic* theme colour {dd} sensibly, so this is the important
+design decision -- the leaf names are secondary.
+
+[cols="1l,4d,3d"]
+|===
+| Parent | Why this parent fits | {dd} regions under it
+
+| meta          | Structural grouping only; themes deliberately leave it unstyled. | snippet, triple, triple SPO, annotation
+| entity        | The salient *named* parts of a triple. | subject, relation
+| string        | Value slots -- objects and meta values behave like (unquoted) literals. | object, meta-object, meta-text
+| keyword       | Interpreted words and link operators -- the parts that *do* something. | `..`, `....`, `.. ..`, commands
+| punctuation   | Syntactic markers that separate or terminate but carry no value. | `,,`, `;;`, `!!`
+| comment       | Text excluded from parsing reads exactly like a comment. | body of an `!!off`…`!!on` span
+| markup        | Verbatim, uninterpreted payload. | body of an `!!block`
+|===
+
+.Scope catalog
+[cols="1l,3l,3d"]
+|===
+| Region | Full TextMate scope | Notes
+
+| snippet        | meta.snippet.ddot                          | Whole snippet; grouping only.
+| triple         | meta.triple.ddot                           | One triple, including its meta.
+| triple-spo     | meta.triple.spo.ddot                       | The `S ..P.. O` part.
+| triple-meta    | meta.triple.meta.ddot                      | The `,,`-introduced meta part.
+
+| subject        | entity.name.subject.ddot                   | The thing being described.
+| relation       | entity.other.attribute-name.relation.ddot  | Predicate of a typed triple.
+| object         | string.unquoted.object.ddot                | Object slot (literal or reference).
+
+| operator       | keyword.operator.ddot                      | `..`; also `....` and `.. ..` for the untyped link.
+| command        | keyword.control.ddot                       | `off`, `on`, `block`, `this`, `ddot.it/<word>`.
+| command-marker | punctuation.definition.keyword.ddot        | The `!!` that introduces a command.
+| meta-delim     | punctuation.separator.meta.ddot            | `,,` opening or separating metadata.
+| terminator     | punctuation.terminator.ddot                | `;;` in-line newline substitute.
+
+| meta-operator  | keyword.operator.meta.ddot                 | `..` / `....` inside metadata.
+| meta-relation  | entity.other.attribute-name.meta.ddot      | Predicate inside metadata.
+| meta-object    | string.unquoted.meta.ddot                  | Object inside metadata.
+| meta-text      | string.unquoted.meta.ddot                  | Free text in a `,,` block with no triple.
+
+| block          | markup.raw.block.ddot                      | Content inside `!!block` (verbatim).
+| excluded       | comment.block.ddot                         | Body of an `!!off`…`!!on` span; the markers themselves stay `keyword.control`.
+|===
+
+.Rules
+- **Quoted strings (`"..."`)** are NOT a separate scope. Double quotes are
+legal, uninterpreted characters and belong to whichever slot encloses them
+(subject / relation / object / meta-*).
+- **Whitespace** between tokens is not scoped.
+- **The `.. ..` operator form** is one `operator` region spanning the full
+literal `.. ..` (inner whitespace included). It is semantically equivalent to
+`....` -- both denote an untyped link.
+- **Commands inside slots**: when a slot's *entire* text matches a command form
+(e.g. `ddot.it/this` standing in for a subject), the whole slot is emitted as
+`command` (`keyword.control.ddot`) instead of its usual slot scope such as
+`subject` or `object`. A slot that merely *contains* a command-like substring is
+not affected -- only an exact, full-slot match is a command.
+- **Excluded span markers**: the off-marker (`ddot.it/off` or `!!off`) and the
+on-marker (`ddot.it/on` or `!!on`) are emitted as `command`. Everything between
+them is one or more `excluded` regions (one `comment.block.ddot` per non-empty
+line).
+
+
+
+== Autocompletion
+
+=== Autocompletion Queries Catalog
+#TODO#
+
+
+
+
+
+
+
+
+
+== Q & A
+
+=== Datatypes
+.Q: What about data types in {dd}?
+A: There are no  data types in ddot.it.
+Users can use, e.g., JSON primitive syntax to express data types. RDF Turtle syntax works also. Both syntaxes need to be interpreted by higher layers.
+It looks ugly, but it works.
+
+
+=== Serializing to {dd}
+.Q: Is it easy to dump data to {dd} syntax?
+A: Almost. In most scenarios, you have total control over your small relation vocabulary. The space of possible subject identifiers is often easy to guarantee to be `..`-free. In objects, it gets more complicated. You must check each object string for
+
+- newlines (would be re-parsed as a shorted object value),
+- `,,`-markers (would be re-parsed as star of meta block),
+- `!!` markers (would be re-parsed as a command).
+
+If any of these occur, write the object wrapped in a <<block-command,`!!block` command>>.
+Similar considerations apply to the meta-object and meta-text.
+
+=== Namespaces
+.Q: Can I used namespaces like in RDF or XML?
+A: See also https://ddot.it/rdf.html[]. In short, you can, but you shouldn't have to.
+
+Using Namespaces::
+In all strings, the namespace syntax with prefix + colon can be used.
+E.g. `foaf:knows` is a valid {dd} relation.
+
+Declaring Namespaces::
+– so that they can be resolved
+A ‘natural’ option in ddot.it would be
+
++
+.Example
+[ddot.it]
+----
+rdf ..prefix.. http://www.w3.org/1999/02/22-rdf-syntax-ns#
+dc ..prefix.. http://purl.org/dc/elements/1.1/
+ex ..prefix.. http://example.org/stuff/1.0/
+----
+
++
+So the relation `prefix` would get a special semantics.
+Maybe `ddot:prefix` would be better?
+
+
+== References
+- The https://pomsky-lang.org/[Pomsky] portable regex syntax seems smart
