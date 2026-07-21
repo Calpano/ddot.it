@@ -1,0 +1,936 @@
+= The ddot.it Vocabulary 1.1.0
+:toc: macro
+:ddd: Ddot.it
+:dd: ddot.it
+:toclevels: 4
+:toc:
+
+
+== Introduction
+This document defines some basic relations and types, to be used in {dd}.
+{ddd} itself is relation agnostic and can be used with any relations, including those defined in RDF.
+
+There are only two built-in relations, representing syntax shortcuts from the parsing layer: <<text>> (for text annotating a triple, after the `,,` marker) and <<links-to>> (the default relation for the untyped link shortcut `+++....+++`).
+
+The relations in this document are _monotonous_ (you only ever get more triples) and _positive_ (no negation, no contradictions). The same mechanism is used in RDFS and CDS.
+
+=== Syntax
+// ddot.it/off
+
+- In this document, `foo`, `bar` and `baz` are variables.
+- We use this syntax to present some triples above the line as _Given_ from which we deduce the _Inferred_ triple below the line.
+
++
+.Given / Inferred
+[ddot.it]
+----
+... given triples here ...
+___________________________________
+... inferred triples here
+----
+// ddot.it/on
+
+- Self-Referential:
+To make {dd} self-sufficient, the relations in this document are defined using the relations in this document. This is common practice.
+
+[[top-level-types]]
+== Top-Level Types
+We can use <<has-type>> to assign subjects a _type_.
+Additionally, we can use <<has-subtype>> to define type hierarchies. So what are the root / top-most elements in the {dd} type hierarchy?
+
+.Top-Level Types, to be used with `has type`
+[plantuml]
+....
+hide empty members
+hide circle
+
+class entity
+class thing
+class type
+class relation
+class symmetric_relation as "symmetric\nrelation"
+class transitive_relation as "transitive\nrelation"
+class identifying_relation as "identifying\nrelation"
+class value
+class identifier
+
+entity <|-- thing
+thing <|-- type
+type <|-- relation
+relation <|-- symmetric_relation
+relation <|-- transitive_relation
+relation <|-- identifying_relation
+entity <|-- value
+value <|-- identifier
+'identifier ... identifying_relation
+....
+
+
+[#type-entity]
+=== Type `entity`
+The absolute root type. Everything in {dd} is an <<has-instance>> or <<has-subtype>> of this type.
+
+.Built-in
+[ddot.it]
+----
+entity ..has type.. entity
+..uri.. https://ddot.it/vocabulary/2026-07-20#entity
+----
+
+=== Types `thing` and `value`
+.Motivation
+{ddd} has only one datatype: string.
+So it cannot distinguish between, lets say `42` being the age of someone or it being the identifier for a chemical compound.  Everything is just an <<type-entity>>.
+
+[[type-thing]]
+.Type `thing`
+We define `thing` to be all entities that are object-like, physical or imaginary concepts that can be named.
+In RDF, these are _URIs_ or _Blank Nodes_.
+
+[[type-value]]
+.Type `value`
+We define `value` to be all entities that have no identity on their own. These are merely used to describe other entities.
+In RDF, these are the _Literals_.
+
+
+
+
+
+
+=== Types `type` and `relation`
+
+[[type-type]]
+.Type `type`
+The "mother of all types" is the type `type`.
+
+.Built-in
+[ddot.it]
+----
+type ..has type.. type
+----
+
+[[type-relation]]
+.Type `relation`
+All relations have the type `relation`.
+
+.Built-in
+[ddot.it]
+----
+relation ..has supertype.. type
+----
+
+=== Linking with Mathematical Relations
+
+[[symmetric-relation]]
+=== Type `symmetric relation`
+The type `symmetric relation` is the type of all mathematically symmetric relations.
+
+// ddot.it/off
+.Given / Inferred
+[ddot.it]
+----
+aaa ..fooRel.. bbb
+fooRel ..has type.. symmetric relation
+___________________________________
+bbb ..fooRel.. aaa
+----
+// ddot.it/on
+
+.Built-in
+[ddot.it]
+----
+symmetric relation ..has supertype.. relation
+..uri.. https://ddot.it/vocabulary/2026-07-20#symmetric-relation
+----
+
+[[transitive-relation]]
+=== Type `transitive relation`
+The type `transitive relation` is the type of all mathematically transitive relations.
+
+// ddot.it/off
+.Given / Inferred
+[ddot.it]
+----
+aaa ..fooRel.. bbb
+bbb ..fooRel.. ccc
+fooRel ..has type.. transitive relation
+___________________________________
+aaa ..fooRel.. ccc
+----
+// ddot.it/on
+
+
+.Built-in
+[ddot.it]
+----
+transitive relation ..has supertype.. relation
+..uri.. https://ddot.it/vocabulary/2026-07-20#transitive-relation
+----
+
+
+
+
+== Usage in Formal Systems and Inference
+For formal systems, such as rule and inference engines, a crucial question is: Are these two entities the same or different logical entities?
+To make using {dd} easier, many relations define **aliases** that are alternative names denoting the same concept.
+
+
+[[has-inverse]]
+=== Relation `has inverse`
+.Motivation
+Often relations form natural pairs, depending on their direction.
+A _Person_ _works for_ a _Company_. In the other direction,
+a _Company_ _employs_ a _Person_. So `works for` and `employs` express the same fact, but stated from a different perspective.
+For many uses cases, the distinction should be ignored.
+Like in OWL, {dd} allows to explicitly state the inverse relation of a relation.
+
+// ddot.it/off
+.Given / Inferred
+[ddot.it]
+----
+a ..ppp.. b
+ppp ..has inverse.. qqq
+_____________________________________
+b ..qqq.. a
+ppp ..has type.. relation
+qqq ..has type.. relation
+----
+// ddot.it/on
+
+
+.Built-in
+[ddot.it]
+----
+has inverse ..has type.. relation
+..has type.. symmetric relation
+..uri.. https://ddot.it/vocabulary/2026-07-20#has-inverse
+----
+
+
+[[inverse-relations-on-the-fly]]
+=== Syntax for Inverse Relations On The Fly
+Given any relation `foo`, you can use `^foo` to state a triple like "the other way round".
+Formally, **the `^` syntax only works as the first character in a relation name**. It's the same character used by the SPARQL query language for the same effect.
+
+// ddot.it/off
+.Given / Inferred
+[ddot.it]
+----
+a ..^foo.. b
+_____________________________________
+b ..foo.. a
+foo ..has type.. relation
+^foo ..has type.. relation
+foo ..has inverse.. ^foo
+^foo ..has inverse.. foo
+----
+// ddot.it/on
+
+And you can always give `^foo` a better <<label>>.
+
+
+
+
+
+
+
+
+[[has-type]]
+=== Relation `has type` / `has instance`
+.Relation `has type`
+[ddot.it]
+----
+has type ..has type.. relation
+..uri.. https://ddot.it/vocabulary/2026-07-20#has-type
+..has shortcut.. a
+----
+
+[[type]]
+=== Type `type`
+The super-type of all types.
+// {ddd} requires no strict separation of class and instance.
+
+[ddot.it]
+----
+type ..has type.. type
+..uri.. https://ddot.it/vocabulary/2026-07-20#type
+
+type ..has subtype.. relation
+----
+
+
+[[has-instance]]
+.Relation `has instance`
+The inverse of <<has-type,`has type`>>: `Car ..has instance.. aaa` whenever
+`aaa ..has type.. Car`.
+
+Typing is a refinement of <<is-tag-of,tagging>>: `has instance` is a <<has-subtype,subtype>> of
+`is tag of`. So `aaa ..has type.. Car` implies `aaa ..has tag.. Car`, which lets type-browsing and
+tag-browsing share one user interface.
+
+[ddot.it]
+----
+has instance ..has type.. relation
+..has supertype.. is tag of
+..has inverse.. has type
+..uri.. https://ddot.it/vocabulary/2026-07-20#has-instance
+..has alias.. hasInstance
+----
+
+
+
+[[has-subtype]]
+=== Relation `has subtype` / `has supertype`
+.Relation `has subtype`
+Types assigned with <<has-type,`has type`>> are inherited along this relation.
+The inverse is `has supertype`.
+
+.Example
+The type `Vehicle` has the more specialised type `Car`: `Vehicle ..has subtype.. Car`.
+
+----
+aaa ..has type.. Car
+Vehicle ..has subtype.. Car
+----
+infers
+----
+aaa ..has type.. Vehicle
+----
+So if we know something is a _Car_, the that also must be a _Vehicle_.
+It does not work the other way round.
+
+
+[ddot.it]
+----
+has subtype ..has type.. relation
+..has type.. transitive relation
+..has inverse.. has supertype
+..uri.. https://ddot.it/vocabulary/2026-07-20#has-subtype
+..has alias.. subtype
+----
+
+.Relation `has supertype`
+[ddot.it]
+----
+has supertype ..has type.. relation
+..has type.. transitive relation
+..has inverse.. has subtype
+..uri.. https://ddot.it/vocabulary/2026-07-20#has-supertype
+..has alias.. subtype
+----
+
+
+
+.Cycles
+If `has subtype` forms a cycle, all participants of the cycle are considered to be the same entity (<<same-as,`same as`>>).
+This is exactly what the RDFS specification also states. This is the logicians' solution to "nothing is forbidden".
+
+A linter should show such cycles, as they are rarely intentional.
+
+
+
+
+
+
+
+
+
+
+
+[#top-level-relations]
+== Top-Level Relations
+The relation hierarchy needs a top relation (<<related>>) from which all other relations can be a <<has-subtype,subtype>> of.
+
+.Overview
+[plantuml]
+....
+hide empty members
+hide circle
+
+' Each node is a "forward / inverse" pair. Convention: the FIRST (upper) name is the
+' relation, the SECOND (lower) name its inverse. A single generalization edge encodes both,
+' because a forward relation's supertype is always forward and an inverse's is always inverse.
+
+class related <<symmetric>>
+
+' === identity / similarity branch (parent is symmetric, so no forward/inverse split)
+class has_similar as "has similar" <<symmetric>>
+class same_as as "same as" <<symmetric transitive>>
+class alias as "is alias of /\nhas alias"
+class replaces as "replaces /\nis replaced by" <<transitive>>
+
+' === linking branch
+class linking as "links to /\nis linked from"
+class order as "has next /\nhas previous" <<transitive>>
+class detail as "has detail /\nhas context"
+class part as "has part /\nis part of" <<transitive>>
+class annotation as "annotates /\nhas annotation"
+class tag as "is tag of /\nhas tag"
+class instance as "has instance /\nhas type"
+
+' === generalization = 'has supertype' (one edge = both directions)
+related <|-- has_similar
+has_similar <|-- same_as
+has_similar <|-- alias
+has_similar <|-- replaces
+
+related <|-- linking
+linking <|-- order
+linking <|-- detail
+detail  <|-- part
+linking <|-- annotation
+annotation <|-- tag
+tag <|-- instance
+....
+
+.Reading the diagram
+- Each box holds a relation and its <<has-inverse,inverse>> as `forward / inverse`. The upper name is a `has subtype` of its parent's upper name; the lower name likewise on the inverse side. So one arrow `A <|-- B` states both _B.forward_ `has supertype` _A.forward_ and _B.inverse_ `has supertype` _A.inverse_.
+- The symmetric relations (`related`, `has similar`, `same as`) are their own inverse, so they carry a single name.
+- An arrow `A <|-- B` means: a statement using _B_ also holds for _A_ (via <<has-subtype,relation inheritance>>).
+- `«symmetric»` and `«transitive»` mark relations of that <<type-relation,type>>; on a pair, the marker applies to both directions.
+- Typing (`has instance` / `has type`) is deliberately a refinement of tagging, which is itself a refinement of annotation. This mirrors Fig. 4.5 of the source thesis (see <<has-instance>>).
+- `has subtype` / `has supertype` are the other structural relations; the type hierarchy they build is shown in <<top-level-types,Top-Level Types>>.
+
+[[related]]
+=== Relation `related`
+An undirected link connecting `foo` and `bar`, with no further claim about _how_ they are related.
+The weakest link {dd} offers.
+The root of the relation tree.
+
+[ddot.it]
+----
+related ..has type.. relation
+..has type.. symmetric relation
+..uri.. https://ddot.it/vocabulary/2026-07-20#related
+..has alias.. is related to
+..has alias.. hasRelated
+----
+
+
+== Identity: Same or Different?
+Some core relations.
+
+[[has-similar]]
+=== Relation `has similar`
+`foo` and `bar` are similar, without any claim that they are the same.
+Weaker than <<same-as,`same as`>>, stronger than <<related,`related`>>.
+
+[ddot.it]
+----
+has similar ..has type.. relation
+..has type.. symmetric relation
+..has supertype.. related
+..has inverse.. has similar
+..uri.. https://ddot.it/vocabulary/2026-07-20#has-similar
+..has alias.. is similar to
+..has alias.. hasSimilar
+----
+
+`has similar` is symmetric but *not* transitive.
+From `a ..has similar.. b` and `b ..has similar.. c` nothing follows about `a` and `c`.
+That is what makes it the safe target for importing fuzzy links such as `skos:closeMatch` or
+WordNet's _similar to_ — see link:ddot-it-relations.adoc#standards[the alignment tables].
+
+
+[[same-as]]
+=== Relation `same as`
+`foo` and `bar` refer to the same concept.
+Neither one is the main name — compare <<is-alias-of,`is alias of`>>, which does distinguish.
+
+[ddot.it]
+----
+same as ..has type.. relation
+..has type.. symmetric relation
+..has type.. transitive relation
+..has supertype.. has similar
+..uri.. https://ddot.it/vocabulary/2026-07-20#same-as
+..has alias.. is same as
+----
+
+
+
+[[has-alias]]
+=== Relation `has alias` / `is alias of`
+.Relation `has alias`
+[ddot.it]
+----
+has alias ..has type.. relation
+..has supertype.. has similar
+..uri.. https://ddot.it/vocabulary/2026-07-20#has-alias
+..has alias.. alias
+----
+
+
+
+[[is-alias-of]]
+.Relation `is alias of`
+Like <<same-as,`same as`>>, but with a clear main concept: `foo` is the alternative name, `bar` is
+the one to keep. This is like a sym-link.
+
+The inverse is <<has-alias,`has alias`>>.
+
+[ddot.it]
+----
+is alias of ..has type.. relation
+..has supertype.. has similar
+..has inverse.. has alias
+..uri.. https://ddot.it/vocabulary/2026-07-20#is-alias-of
+----
+
+
+
+
+[[replaces]]
+=== Relations `is replaced by` / `replaces`
+`foo ..replaces.. bar` — `foo` supersedes `bar`.
+Both remain distinct entities; use <<same-as,`same as`>> if they are in fact the same thing.
+
+.Usage in Interactive Tools (Editors)
+In an editor, when a user types in a string `aaa` marked as `aaa ..is replaced by.. bbb`, then the editor should replace the `aaa` directly with `bbb`.
+In N3 (and RDF syntax), the built-in `a` is used to express typing, e.g.,
+_(`ex:Berlin`, `a`, `ex:City`). To make {dd} more self-documenting, we prefer `has type` and write `Berlin ..has type.. City`.
+However, **typing** just `a` is quite nice. So we define `a` to be  **replaced by** for `has type`.
+
+
+[ddot.it]
+----
+is replaced by ..has type.. relation
+..has supertype.. has similar
+..has inverse.. replaces
+..uri.. https://ddot.it/vocabulary/2026-07-20#is-replaced-by
+..has alias.. replacedBy
+..has type.. transitive relation
+
+replaces ..has type.. relation
+..has supertype.. has similar
+..has inverse.. is replaced by
+..uri.. https://ddot.it/vocabulary/2026-07-20#replaces
+..has type.. transitive relation
+----
+
+
+=== Type `identifier` and Relation `identifying relation`
+
+[[type-identifier]]
+.Type `identifier`
+We define `identifier` to be a subtype of <<type-value>>, used in a relation of type <<identifying-relation>>.
+
+[[identifying-relation]]
+.Type `identifying relation`
+An `identifying relation` carries a value, which uniquely identifies subjects.
+
+// ddot.it/off
+.Given / Inferred
+[ddot.it]
+----
+a ..rel.. q
+b ..rel.. q
+rel ..has type.. identifying relation
+_____________________________________
+a ..is same as.. b
+q ..has type.. identifier
+a ..has type.. thing
+b ..has type.. thing
+----
+// ddot.it/on
+
+See <<same-as>>.
+
+.Built-in
+[ddot.it]
+----
+identifying relation ..has type.. type
+----
+
+
+
+
+
+
+== Order
+
+[[has-next]]
+=== Relations `has next` / `has previous`
+.Relations `has next`
+A sequence. `foo ..has next.. bar` places `foo` earlier than `bar`.
+Both directions are transitive, so a chain of steps yields the full ordering.
+
+[ddot.it]
+----
+has next ..has type.. relation
+..has type.. transitive relation
+..has supertype.. links to
+..has inverse.. has previous
+..uri.. https://ddot.it/vocabulary/2026-07-20#has-next
+..has alias.. has after
+..has alias.. hasAfter
+----
+
+[[has-previous]]
+.Relation `has previous`
+[ddot.it]
+----
+has previous ..has type.. relation
+..has type.. transitive relation
+..has supertype.. has source
+..has inverse.. has next
+..uri.. https://ddot.it/vocabulary/2026-07-20#has-previous
+..has alias.. has prev
+..has alias.. has before
+..has alias.. hasBefore
+----
+
+
+[[linking]]
+== Linking
+Linking, like in hyper-text, is the most basic way of a directed relation in {dd}.
+
+
+[[links-to]]
+=== Relation `links to` / `is linked from`
+This relation is also one of the relations built into {dd} parsing.
+It is used as the implicit relation of an untyped link, written `....` or `.. ..`.
+
+If the empty relation shortcut is used as in +
+
+- `+++s....o+++` (no space) or its variant +
+- `s.. ..o` (with spaces),
+
++
+then there is no relation name given. {ddd} defaults to emit `links to` as relation name in these cases.
+
+
+[ddot.it]
+----
+links to ..has type.. relation
+..has supertype.. related
+..uri.. https://ddot.it/vocabulary/2026-07-20#links-to
+..alias.. has target
+..alias.. hasTarget
+..alias.. ^has source
+..has inverse.. has source
+
+has source ..has type.. relation
+..has supertype.. related
+..has inverse.. links to
+..label.. is linked from
+..alias.. is linked from
+..alias.. has source
+..alias.. ^links to
+----
+
+See also link:ddot-it-parse.adoc#grammar[parsing].
+
+
+
+
+
+[[hierarchy]]
+== Hierarchies
+
+[[has-detail]]
+=== Relations `has detail` and `has context`
+`foo ..has detail.. bar` — `bar` elaborates or refines `foo`.
+Read the other way, `foo` is the context in which `bar` makes sense.
+
+.Built-in
+[ddot.it]
+----
+has detail ..has type.. relation
+..has supertype.. links to
+..has inverse.. has context
+..uri.. https://ddot.it/vocabulary/2026-07-20#has-detail
+..has alias.. hasDetail
+
+has context ..has type.. relation
+..has supertype.. has source
+..has inverse.. has detail
+..uri.. https://ddot.it/vocabulary/2026-07-20#has-context
+..has alias.. hasContext
+----
+
+The relations `has detail`/`has context` are *not* transitive, unlike <<has-part,`has part`>> below, which is a more
+specific relation. A detail of a detail is not automatically a detail of the whole.
+
+
+[[has-part]]
+=== Relations `has part` and `is part of`
+`foo ..has part.. bar` — `bar` is a component of `foo`.
+Both directions are transitive: a part of a part is a part of the whole.
+
+[ddot.it]
+----
+has part ..has type.. relation
+..has type.. transitive relation
+..has supertype.. has detail
+..has inverse.. is part of
+..uri.. https://ddot.it/vocabulary/2026-07-20#has-part
+..has alias.. hasPart
+
+is part of ..has type.. relation
+..has type.. transitive relation
+..has supertype.. has context
+..has inverse.. has part
+..uri.. https://ddot.it/vocabulary/2026-07-20#is-part-of
+..has alias.. isPartOf
+----
+
+.Tags propagate to parts
+A tag on a whole applies to each of its parts:
+
+// ddot.it/off
+.Given / Inferred
+[ddot.it]
+----
+aaaPart ..is part of.. bbbWhole
+bbbWhole ..has tag.. cccTag
+___________________________________
+aaaPart ..has tag.. cccTag
+----
+// ddot.it/on
+
+
+.Example
+----
+Engine ..is part of.. Car
+Car ..has tag.. mechanical
+__________________________
+Engine ..has tag.. mechanical
+----
+
+
+
+
+
+
+
+
+== Going Meta
+
+[[annotates]]
+=== Relations `has annotation` / `annotates`
+`bar ..annotates.. foo` — `bar` is a remark, comment or note *about* `foo`.
+The annotation is a first-class entity, so it can itself be annotated, tagged or typed.
+
+[ddot.it]
+----
+annotates ..has type.. relation
+..has supertype.. links to
+..has inverse.. has annotation
+..uri.. https://ddot.it/vocabulary/2026-07-20#annotates
+..has alias.. has annotation member
+..has alias.. hasAnnotationMember
+
+has annotation ..has type.. relation
+..has supertype.. has source
+..has inverse.. annotates
+..uri.. https://ddot.it/vocabulary/2026-07-20#has-annotation
+..has alias.. hasAnnotation
+----
+
+TIP: Annotating a *triple* rather than an entity is what the `,,` meta part is for.
+See link:ddot-it-parse.adoc#parsing[parsing].
+
+
+
+
+
+[[has-tag]]
+=== Relation `has tag` / `is tag of`
+.Relation `has tag`
+`foo` has the tag `bar`.
+A tga is usually a single term. Sometimes multiple words are also used.
+
+[ddot.it]
+----
+has tag ..has type.. relation
+..has inverse.. is tag of
+..uri.. https://ddot.it/vocabulary/2026-07-20#has-tag
+..has alias.. tag
+----
+
+Tags are *not* transitive. A tag on a tag says nothing about the tagged entity.
+
+[[is-tag-of]]
+.Relation `is tag of`
+The inverse of <<has-tag,`has tag`>>: `bar ..is tag of.. foo` whenever `foo ..has tag.. bar`.
+Declared separately so that the tag side of the pair has a name and a URI of its own.
+
+[ddot.it]
+----
+is tag of ..has type.. relation
+..has supertype.. annotates
+..has inverse.. has tag
+..uri.. https://ddot.it/vocabulary/2026-07-20#is-tag-of
+..has alias.. has tag member
+..has alias.. hasTagMember
+----
+
+
+
+== Content Management Relations
+
+
+[[label]]
+=== Relation `label`
+Some tools allow changing the label of a node.
+So in the semantic layer these tools must use a data model where each node gets an _id_ and a _label_ (which by default equals the _id_ string).
+
+Sets the visible 'label' of an entity.
+It has no defined semantics when not used as a triple relation.
+Using labels happens in higher layers and tools.
+
+In tools that show the knowledge graph visually, the re-defined _label_ should be shown and the relabeled id should not be shown.
+
+[ddot.it]
+----
+label ..has type.. relation
+..uri.. https://ddot.it/vocabulary/2026-07-20#label
+----
+
+
+NOTE: In previous versions of {dd}, this was modelled as a command (`!!label`).
+
+
+
+[[text]]
+=== Relation `text`
+This relation is one of the relations built into {dd} parsing.
+It carries the free text of a `,,` <<parsing,meta>> that holds no triple (`MetaTextInline` / `MetaTextBlock`).
+Or assigns arbitrary content to a subject.
+
+When parsing link:ddot-it-parse.adoc#parsing[meta-text], as in `s..p..o,, meta-text`, this is reported on the triple event layer as (`meta: [{"r":"text","o":"meta-text"}]`).
+
+[ddot.it]
+----
+text ..uri.. https://ddot.it/vocabulary/2026-07-20#text
+..alias.. has text
+..alias.. has content
+----
+
+
+
+== Linking with the Semantic Web
+{ddd} should be compatible with semantic web / linked open data standards.
+The triple structure fits exactly, and even the triple-meta parts map to upcoming RDF 1.2 specs (see https://www.w3.org/TR/rdf12-primer/[Primer] or https://www.w3.org/TR/rdf12-concepts/[Spec]).
+The "base layer" of these standards, The _Resource Description Framework (RDF)_, mandates that resource identifiers are URIs.
+For that reason, we **give every {dd} relation a URI** via {dd} `uri`.
+
+[[uri]]
+=== Relation `uri`
+.Built-in
+[ddot.it]
+----
+uri ..has type.. relation
+..uri.. https://ddot.it/vocabulary/2026-07-20#uri
+----
+
+If an entity has several URIs, all of them denote the same entity.
+
+[[prefix]]
+=== Relation `prefix`
+.Built-in
+[ddot.it]
+----
+prefix ..has type.. relation
+..uri.. https://ddot.it/vocabulary/2026-07-20#prefix
+----
+
+Additionally, because URIs are visually quite ugly and have a repetitive part, its common practice in most syntaxes to abbreviate the reoccurring URI prefix. {ddd} does the same.
+
+.Effect
+- For any string starting with a sequence `foo:bar` in
+** subject (`foo:bar ..y.. z`)
+** relation (`x ..foo:bar.. z`), or
+** object (`x ..y.. foo:bar`),
+- where we also have the triple `foo .. prefix .. baz`,
+- we infer a similar string with the prefix **resolved** into its **namespace**
+** subject (`bazbar ..y.. z`)
+** relation (`x ..bazbar.. z`), or
+** object (`x ..y.. bazbar`).
+
+In practice, `baz` is usually something like `https://example.com/ns/v3/`.
+
+.The {dd} Namespace
+We also state as a built-in:
+
+.Built-in
+[ddot.it]
+----
+ddot ..prefix.. https://ddot.it/vocabulary/2026-07-20#
+----
+
+
+
+== Provenance
+In this section we define some common relations to be used in the link:ddot-it-parse.adoc#information_model[meta] part of a triple (after the `,,` marker).
+
+.Relation `source uri`
+Maybe only for debugging, maybe always, a triple can state the file or web resource it was collected from
+
+
+- `source uri` (should include source lines in the `#` fragment)
+** include source file name
+- `collected` ISO-DATE-TIME
+- `valid since` -- a kind of first collected
+- `valid until` -- if missing, still valid
+- `grade`: enum {unreviewed, reviewed, manual}
+
+An unreviewed triple is a tool's guess and should be treated as disposable.
+A tool that re-runs its matcher is expected to drop the `..grade.. unreviewed` triples it previously emitted.
+Never store an author's intent as an auto-link.
+
+
+.source doc last modified
+`?x ..has type.. source`
+`?x ..last modified.. 2026-10-09T09-13-59`
+
+
+NOTE: In CDS some triple provenance was modelled by using relations. This is now superseded by using `grade`. The migration is as follows:
+
+.Migration from CDS
+[cols="^2l,2l"]
+|===
+| CDS | {dd}
+
+|a ..hasManualLinkTarget.. b |a....b ,, ..grade.. manual
+|b ..hasManualLinkSource.. b |a....b ,, ..grade.. manual
+|a ..hasAutoLinkTarget.. b |a....b ,, ..grade.. unreviewed
+|b ..hasAutoLinkSource.. a |a....b ,, ..grade.. unreviewed
+|===
+
+
+== Summary
+
+=== Type Hierarchy
+The `has subtype` tree, rooted at <<type-entity,`entity`>>. Each entry links to its definition.
+
+* <<type-entity,entity>>
+** <<type,type>>
+*** <<type-relation,relation>>
+**** <<symmetric-relation,symmetric relation>>
+**** <<transitive-relation,transitive relation>>
+**** <<identifying-relation,identifying relation>>
+** <<type-thing,thing>>
+** <<type-value,value>>
+*** <<type-identifier,identifier>>
+
+=== Relation Hierarchy
+The `has supertype` tree, rooted at <<related,`related`>>, mirroring the overview diagram in
+<<top-level-relations>> and Fig. 4.5 of the source thesis.
+Each entry links to its definition; the inverse relation is shown in parentheses.
+`_s_` marks <<symmetric-relation,symmetric>> and `_t_` <<transitive-relation,transitive>> relations.
+
+* <<related,related>> `_s_`
+** <<has-similar,has similar>> `_s_`
+*** <<same-as,same as>> `_s_` `_t_`
+*** <<is-alias-of,is alias of>> (<<has-alias,has alias>>)
+*** <<replaces,replaces>> (is replaced by) `_t_`
+** <<links-to,links to>> (is linked from)
+*** <<annotates,annotates>> (has annotation)
+**** <<is-tag-of,is tag of>> (<<has-tag,has tag>>)
+***** <<has-instance,has instance>> (<<has-type,has type>>)
+*** <<has-next,has next>> (<<has-previous,has previous>>) `_t_`
+*** <<has-detail,has detail>> (has context)
+**** <<has-subtype,has subtype>> (has supertype) `_t_`
+**** <<has-part,has part>> (is part of) `_t_`
