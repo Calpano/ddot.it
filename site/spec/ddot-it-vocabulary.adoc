@@ -33,6 +33,20 @@ ___________________________________
 - Self-Referential:
 To make {dd} self-sufficient, the relations in this document are defined using the relations in this document. This is common practice.
 
+  [[declaration-conventions]]
+=== Declaration Conventions
+Every built-in in this document is declared with the same shape, so that a tool can load the
+vocabulary without special-casing:
+
+. **Canonical names are spelled out.** A built-in block always uses the canonical relation name
+  (`has alias`, not `alias`; `same as`, not `is same as`). Alternative spellings appear only as
+  `..has alias..` values.
+. **Both sides of a pair are declared.** A relation and its <<has-inverse,inverse>> each get their
+  own block with their own `has type`, `has supertype`, `has inverse` and `uri`.
+. **Symmetric relations are their own inverse.** For a relation of type <<symmetric-relation,`symmetric relation`>>
+  the `has inverse` triple is implied and therefore not stated.
+. **Every built-in has a `uri`** in the {dd} namespace (see <<prefix>>).
+
 [[top-level-types]]
 == Top-Level Types
 We can use <<has-type>> to assign subjects a _type_.
@@ -80,7 +94,7 @@ entity ..has type.. entity
 === Types `thing` and `value`
 .Motivation
 {ddd} has only one datatype: string.
-So it cannot distinguish between, lets say `42` being the age of someone or it being the identifier for a chemical compound.  Everything is just an <<type-entity>>.
+So it cannot distinguish between, let's say `42` being the age of someone or it being the identifier for a chemical compound.  Everything is just an <<type-entity>>.
 
 [[type-thing]]
 .Type `thing`
