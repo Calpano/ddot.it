@@ -1,0 +1,240 @@
+= ddot.it Syntax Summary — What You Need to Learn
+:toc: left
+:toclevels: 2
+:icons: font
+
+A user-facing summary of all ddot.it syntax concepts, distilled from the
+prose specification (link:site/user-guide.md[User Guide],
+link:site/syntax.md[Syntax Spec],
+command docs, reader docs). Concepts are grouped into what you *must* know
+(<<basic,Basic>>), what you can learn later (<<advanced,Advanced>>), and what
+you should know *so you don't misread text without realizing it*
+(<<pitfalls,Pitfalls>>).
+
+== The Big Idea (30 seconds)
+
+ddot.it is a *guest language*: you don't write ddot.it files (although you
+can), you sprinkle ddot.it lines into the documents you already have — a
+Markdown README, a `pom.xml` comment, a docker-compose YAML comment, a
+PowerPoint speaker note, an email. The document format you embed into is the
+*host language*.
+
+Each ddot.it line states one *triple*: `subject .. relation .. object`
+("Project Eagle started-in 2024"). A *ddot collector* periodically indexes
+all your files with a set of per-format *readers* and combines every triple
+found anywhere into *one knowledge graph*. Your files stay the single source
+of truth; the graph is just a cache built from them. Because you use the same
+names ("Project Eagle") across tool boundaries, the triples from different
+files connect into a shared web of knowledge for humans and AI agents.
+
+[[basic]]
+== Basic Concepts — learn these first
+
+These five things cover ~95 % of everyday reading and writing.
+
+[cols="1,2,3",options="header"]
+|===
+| Concept | Syntax | Meaning
+
+| Typed link / property
+| `aaa .. bbb .. ccc`
+| "aaa" links to "ccc" with relation "bbb". Subject–predicate–object,
+  entity–property–value, key–value — all the same shape.
+
+| Untyped link
+| `aaa .... ccc` (also `aaa .. .. ccc`)
+| "aaa" links to "ccc" with the default relation `links to`. Exactly four
+  dots (or two spaced `..`).
+
+| Additional properties (omitted subject)
+| a line starting with `..bbb.. ccc`
+| Adds another property to the *previous* subject. The only syntax sugar in
+  the language.
+
+| Metadata
+| `aaa ..bbb.. ccc ,, ddd`
+| Everything after `,,` annotates *the whole triple* (not the object) —
+  e.g. `,, ..since.. 2025` or a free-text note.
+
+| Whitespace freedom
+| `Dirk Hagemann   .. works at ..  Big Corp`
+| Spaces and tabs around slots don't matter; they are stripped from slot
+  edges. Internal spaces are kept (`Project Eagle` stays two words).
+|===
+
+Example putting all of them together:
+
+----
+Project Eagle ..started in.. 2024
+..doc site.. example.com/docbase/8dcjsid
+John Doe ..leads.. Project Eagle ,, ..since.. 2025
+Project Eagle .... Moonshot
+----
+
+Two more basics that are behavior, not markup:
+
+* *Incomplete triples are silently ignored.* A line that doesn't form a valid
+  triple simply produces nothing — no error. Ordinary prose is safe.
+* *Blank lines reset.* Two blank lines (three newlines) end a "block": the
+  current subject is forgotten, so a later `..bbb.. ccc` line no longer
+  attaches to it. Triples cannot span blocks.
+
+[[commands]]
+== Commands (`ddot.it/…` or `!!…`)
+
+Commands fine-tune processing. `!!` is exactly shorthand for `ddot.it/` —
+`!!off` ≡ `ddot.it/off`. The long form is self-documenting (the URL leads to
+the docs page).
+
+*Basic commands* (worth knowing early):
+
+[cols="1,3",options="header"]
+|===
+| Command | Effect
+
+| `ddot.it`
+| Bare marker: "this document contains ddot.it". Helps humans and agents.
+
+| `ddot.it/this` / `!!this`
+| Used as *subject*: refers to the current document itself. The collector
+  replaces it with the real source URL. This is how you annotate a file:
+  `ddot.it/this ..author.. Alice`.
+
+| `ddot.it/on`, `ddot.it/off` / `!!on`, `!!off`
+| Include/exclude regions. Everything between `off` and the next `on` is
+  ignored by readers. Default (no commands): the whole document is processed.
+  The marker must stand alone on its line.
+|===
+
+*Advanced commands* — see <<advanced>>.
+
+[[advanced]]
+== Advanced Concepts — learn when you need them
+
+[cols="1,2,3",options="header"]
+|===
+| Concept | Syntax | When you need it
+
+| Multi-line metadata block
+| triple ends with a bare `,,`, then one meta line per line, closed by a
+  lone `,,` line
+| Attaching many `..type.. value` pairs to one triple readably.
+
+| Multiple inline meta pairs (v1.3)
+| `aaa ..bbb.. ccc ,, ..since.. 2010 ..until.. 2020`
+| Several annotations on one line.
+
+| `ddot.it/block` / `!!block`
+| `john ..address.. !!block` then content lines, ended by a blank line or a
+  custom marker (`!!block?end=THE-END`)
+| Multi-line string values. Interior newlines become real `\n` in the value.
+  Inside a block, ddot.it syntax is *not* recognized.
+
+| `ddot.it/verbatim` / `!!verbatim`
+| Inline: rest of line taken literally. Block: like `!!block`, but
+  additionally *escapes* `,,`, `..` and commands
+| When a value must contain characters ddot.it would otherwise interpret —
+  e.g. a literal `,,`.
+
+| `ddot.it/label` / `!!label`
+| `a ..!!label.. Alice` (used as *relation*)
+| Separating short node IDs from display labels, useful while a graph's
+  naming is still in flux.
+
+| Standard relation names
+| `has type`, `has tag`, `same as`, `has subtype`, `links to`,
+  `has content`, `prefix`, …
+| Conventions, not syntax — but reusing them makes graphs from different
+  files merge better. See link:site/relations.md[Relations].
+
+| RDF mapping / `prefix`
+| `dc ..prefix.. http://purl.org/dc/elements/1.1/`
+| Only for RDF-flavored downstream processing. Ignore otherwise.
+
+| Host-specific extraction
+| e.g. Markdown `## Title {#a .b}` → `Title ..has tag.. a` +
+  `..has type.. b`; HTML `data-ddot` attributes and `<ddot-it>` elements
+| Each reader also mines host-language structures. You only need the rules
+  of the hosts you write in.
+|===
+
+There are deliberately *no* other features: no lists, no nesting, no quoting,
+no escaping (beyond `verbatim`). "To say a, b, and c have type service, write
+three lines." (link:site/manifesto.md[Manifesto]: less is more.)
+
+[[pitfalls]]
+== Pitfalls — know these so you don't misread anything
+
+These are intended behaviors that surprise people. If you skip this section
+you may read (or write) something and silently get a different graph than you
+think.
+
+=== 1. Exactly two or four dots — dot runs are dead
+`..` and `....` are operators *only* when followed by a non-dot character (a
+space counts). Three, five, or six dots in a row are *not* operators, so the
+line is silently ignored:
+
+----
+S .. rel .. O      ✓ typed triple
+S .... O           ✓ untyped
+S ... O            ✗ ignored
+S ...... O         ✗ ignored (dots run into the separator)
+----
+
+=== 2. The object MAY contain `..` — subject and relation may not
+Since v1.3, everything after the second separator is the object, verbatim.
+So relative paths and URLs are fine as objects:
+
+----
+x ..links to.. ../../y            ✓ object is "../../y"
+page ..links to.. http://h/a..b   ✓ interior ".." kept
+a..b ..reads.. o                  ✗ ignored — subject may not contain ".."
+----
+
+The *space* before an object starting with dots is what keeps this
+unambiguous. Single dots inside names are always fine (`j-s-o-n.org`,
+`3.0`).
+
+=== 3. `,,` starts metadata — always, at its first occurrence
+Any `,,` on a triple line splits off metadata for the *whole triple*. If your
+object value must contain a literal `,,`, you need `!!verbatim`. Also:
+metadata annotates the triple, not the object — `John ..leads.. Eagle ,,
+..since.. 2025` says the *leading* is since 2025, not that Eagle is.
+
+=== 4. Metadata is more permissive than triples
+Inside the `,,` part, `..` may appear freely in values (the operator rules
+don't apply there), and a bare string is valid metadata (an untyped note).
+
+=== 5. Two blank lines reset the subject
+`..bbb.. ccc` continuation lines attach to the last subject — but a block
+boundary (two blank lines) clears it, and the orphaned continuation line is
+then ignored. Conversely, a *single* blank line does *not* reset: your
+continuation still attaches to the subject above it, even if that isn't what
+you meant.
+
+=== 6. "More is better": prose can accidentally become triples
+Any line in scope with a valid `.. .. ` shape becomes a triple — readers
+process plain text, not just marked regions. This is by design (a little
+noise beats untyped knowledge). Use `ddot.it/off` … `ddot.it/on` to fence
+off regions if it matters.
+
+=== 7. Untyped links have no stored type
+`aaa .... ccc` emits a triple with *no* type field; `links to` is a display
+default applied downstream. `..` with an empty relation (`.. ..`) is the
+same thing.
+
+=== 8. There are no shorthands
+No way to give one subject two objects on one line, no lists, no "a, b, c".
+One triple per line, period.
+
+== Suggested Learning Path
+
+1. *Day one:* typed link `..x..`, untyped link `....`, continuation lines,
+   `,,` metadata, `ddot.it/this`. Write your first annotations in a Markdown
+   comment.
+2. *Week one:* `on`/`off` regions, the `!!` shorthand, multi-line `,,`
+   blocks, standard relation names.
+3. *When needed:* `block`, `verbatim`, `label`, host-specific extras
+   (section attributes, `data-ddot`, `<ddot-it>`), RDF `prefix`.
+4. *Read <<pitfalls>> once* — especially dots rule (1–2), `,,`-splitting
+   (3), and blank-line reset (5).
