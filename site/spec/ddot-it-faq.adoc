@@ -50,7 +50,7 @@ A ‘natural’ option in ddot.it would be
 
 +
 .Example
-[ddot.it]
+[source,ddot.it]
 ----
 rdf ..prefix.. http://www.w3.org/1999/02/22-rdf-syntax-ns#
 dc ..prefix.. http://purl.org/dc/elements/1.1/

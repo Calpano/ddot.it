@@ -48,7 +48,7 @@ assumption are not: there, a later statement can withdraw an earlier conclusion.
 
 +
 .Given / Inferred
-[ddot.it]
+[source,ddot.it]
 ----
 ... given triples here ...
 ___________________________________
@@ -157,7 +157,7 @@ The absolute root type. Everything in {dd} is an <<has-instance>> or <<has-subty
 
 // https://ddot.it/on
 .Built-in
-[ddot.it]
+[source,ddot.it]
 ----
 entity ..has type.. entity
 ..has type.. type
@@ -187,7 +187,7 @@ In RDF, these are _URIs_ or _Blank Nodes_.
 
 // https://ddot.it/on
 .Built-in
-[ddot.it]
+[source,ddot.it]
 ----
 thing ..has type.. type
 ..has supertype.. entity
@@ -202,7 +202,7 @@ In RDF, these are the _Literals_.
 
 // https://ddot.it/on
 .Built-in
-[ddot.it]
+[source,ddot.it]
 ----
 value ..has type.. type
 ..has supertype.. entity
@@ -222,7 +222,7 @@ It is its own type.
 
 // https://ddot.it/on
 .Built-in
-[ddot.it]
+[source,ddot.it]
 ----
 type ..has type.. type
 ..has supertype.. thing
@@ -236,7 +236,7 @@ All relations have the type `relation`.
 
 // https://ddot.it/on
 .Built-in
-[ddot.it]
+[source,ddot.it]
 ----
 relation ..has type.. type
 ..has supertype.. type
@@ -254,7 +254,7 @@ Some relations have mathematical properties that let a reasoner infer further tr
 The type `symmetric relation` is the type of all mathematically symmetric relations.
 
 .Given / Inferred
-[ddot.it]
+[source,ddot.it]
 ----
 aaa ..fooRel.. bbb
 fooRel ..has type.. symmetric relation
@@ -264,7 +264,7 @@ bbb ..fooRel.. aaa
 
 // https://ddot.it/on
 .Built-in
-[ddot.it]
+[source,ddot.it]
 ----
 symmetric relation ..has type.. type
 ..has supertype.. relation
@@ -277,7 +277,7 @@ symmetric relation ..has type.. type
 The type `transitive relation` is the type of all mathematically transitive relations.
 
 .Given / Inferred
-[ddot.it]
+[source,ddot.it]
 ----
 aaa ..fooRel.. bbb
 bbb ..fooRel.. ccc
@@ -289,7 +289,7 @@ aaa ..fooRel.. ccc
 
 // https://ddot.it/on
 .Built-in
-[ddot.it]
+[source,ddot.it]
 ----
 transitive relation ..has type.. type
 ..has supertype.. relation
@@ -315,7 +315,7 @@ For many use cases, the distinction should be ignored.
 Like in OWL, {dd} allows to explicitly state the inverse relation of a relation.
 
 .Given / Inferred
-[ddot.it]
+[source,ddot.it]
 ----
 a ..ppp.. b
 ppp ..has inverse.. qqq
@@ -328,7 +328,7 @@ qqq ..has type.. relation
 
 // https://ddot.it/on
 .Built-in
-[ddot.it]
+[source,ddot.it]
 ----
 has inverse ..has type.. relation
 ..has type.. symmetric relation
@@ -344,7 +344,7 @@ Given any relation `foo`, you can use `^foo` to state a triple like "the other w
 Formally, **the `^` syntax only works as the first character in a relation name**. It's the same character used by the SPARQL query language for the same effect.
 
 .Given / Inferred
-[ddot.it]
+[source,ddot.it]
 ----
 a ..^foo.. b
 _____________________________________
@@ -384,7 +384,7 @@ The inverse is <<has-instance,`has instance`>>; the supertype is <<has-tag,`has 
 typing is a refinement of tagging.
 
 // https://ddot.it/on
-[ddot.it]
+[source,ddot.it]
 ----
 has type ..has type.. relation
 ..has supertype.. has tag
@@ -402,7 +402,7 @@ an editor may substitute the one for the other, and a reasoner treats both as th
 
 // https://ddot.it/on
 .Built-in
-[ddot.it]
+[source,ddot.it]
 ----
 a ..is replaced by.. has type
 ----
@@ -418,7 +418,7 @@ Typing is a refinement of <<is-tag-of,tagging>>: `has instance` is a <<has-subty
 tag-browsing share one user interface.
 
 // https://ddot.it/on
-[ddot.it]
+[source,ddot.it]
 ----
 has instance ..has type.. relation
 ..has supertype.. is tag of
@@ -452,7 +452,7 @@ It does not work the other way round.
 
 
 // https://ddot.it/on
-[ddot.it]
+[source,ddot.it]
 ----
 has subtype ..has type.. relation
 ..has type.. transitive relation
@@ -465,7 +465,7 @@ has subtype ..has type.. relation
 
 // https://ddot.it/on
 .Relation `has supertype`
-[ddot.it]
+[source,ddot.it]
 ----
 has supertype ..has type.. relation
 ..has type.. transitive relation
@@ -608,7 +608,7 @@ The weakest link {dd} offers.
 The root of all relations between <<type-thing,things>>.
 
 // https://ddot.it/on
-[ddot.it]
+[source,ddot.it]
 ----
 related ..has type.. relation
 ..has type.. symmetric relation
@@ -629,7 +629,7 @@ end — this is how {dd} recovers the <<type-thing,thing>> / <<type-value,value>
 its single string datatype cannot express:
 
 .Given / Inferred
-[ddot.it]
+[source,ddot.it]
 ----
 aaa ..ppp.. vvv
 ppp ..has type.. property
@@ -669,7 +669,7 @@ just as <<has-subtype,`has subtype`>> declares both `..has type.. transitive rel
 
 // https://ddot.it/on
 .Type `property`
-[ddot.it]
+[source,ddot.it]
 ----
 property ..has type.. type
 ..has supertype.. relation
@@ -680,7 +680,7 @@ property ..has type.. type
 [[has-property]]
 // https://ddot.it/on
 .Relation `has property`
-[ddot.it]
+[source,ddot.it]
 ----
 has property ..has type.. relation
 ..has type.. property
@@ -741,7 +741,7 @@ Some core relations.
 Weaker than <<same-as,`same as`>>, stronger than <<related,`related`>>.
 
 // https://ddot.it/on
-[ddot.it]
+[source,ddot.it]
 ----
 has similar ..has type.. relation
 ..has type.. symmetric relation
@@ -764,7 +764,7 @@ WordNet's _similar to_ — see xref:ddot-it-cds.adoc#standards[the alignment tab
 Neither one is the main name — compare <<is-alias-of,`is alias of`>>, which does distinguish.
 
 // https://ddot.it/on
-[ddot.it]
+[source,ddot.it]
 ----
 same as ..has type.. relation
 ..has type.. symmetric relation
@@ -783,7 +783,7 @@ same as ..has type.. relation
 `bar ..has alias.. foo` — `foo` is an alternative name for `bar`, which stays the main one.
 
 // https://ddot.it/on
-[ddot.it]
+[source,ddot.it]
 ----
 has alias ..has type.. relation
 ..has supertype.. has similar
@@ -803,7 +803,7 @@ the one to keep. This is like a sym-link.
 The inverse is <<has-alias,`has alias`>>.
 
 // https://ddot.it/on
-[ddot.it]
+[source,ddot.it]
 ----
 is alias of ..has type.. relation
 ..has supertype.. has similar
@@ -827,7 +827,7 @@ This is how the `a` shortcut for <<has-type,`has type`>> is defined.
 
 
 // https://ddot.it/on
-[ddot.it]
+[source,ddot.it]
 ----
 is replaced by ..has type.. relation
 ..has supertype.. has similar
@@ -853,7 +853,7 @@ We define `identifier` to be a subtype of <<type-value>>, used in a relation of 
 
 // https://ddot.it/on
 .Built-in
-[ddot.it]
+[source,ddot.it]
 ----
 identifier ..has type.. type
 ..has supertype.. value
@@ -866,7 +866,7 @@ identifier ..has type.. type
 An `identifying relation` carries a value, which uniquely identifies subjects.
 
 .Given / Inferred
-[ddot.it]
+[source,ddot.it]
 ----
 a ..rel.. q
 b ..rel.. q
@@ -882,7 +882,7 @@ See <<same-as>>.
 
 // https://ddot.it/on
 .Built-in
-[ddot.it]
+[source,ddot.it]
 ----
 identifying relation ..has type.. type
 ..has supertype.. relation
@@ -905,7 +905,7 @@ A sequence. `foo ..has next.. bar` places `foo` earlier than `bar`.
 Both directions are transitive, so a chain of steps yields the full ordering.
 
 // https://ddot.it/on
-[ddot.it]
+[source,ddot.it]
 ----
 has next ..has type.. relation
 ..has type.. transitive relation
@@ -920,7 +920,7 @@ has next ..has type.. relation
 [[has-previous]]
 // https://ddot.it/on
 .Relation `has previous`
-[ddot.it]
+[source,ddot.it]
 ----
 has previous ..has type.. relation
 ..has type.. transitive relation
@@ -954,7 +954,7 @@ then there is no relation name given. {ddd} defaults to emit `links to` as relat
 
 
 // https://ddot.it/on
-[ddot.it]
+[source,ddot.it]
 ----
 links to ..has type.. relation
 ..has supertype.. related
@@ -971,7 +971,7 @@ links to ..has type.. relation
 The inverse of `links to`. Its <<has-alias,alias>> `has source` is the name used in CDS.
 
 // https://ddot.it/on
-[ddot.it]
+[source,ddot.it]
 ----
 is linked from ..has type.. relation
 ..has supertype.. related
@@ -999,7 +999,7 @@ Read the other way, `foo` is the context in which `bar` makes sense.
 
 // https://ddot.it/on
 .Built-in
-[ddot.it]
+[source,ddot.it]
 ----
 has detail ..has type.. relation
 ..has supertype.. links to
@@ -1025,7 +1025,7 @@ specific relation. A detail of a detail is not automatically a detail of the who
 Both directions are transitive: a part of a part is a part of the whole.
 
 // https://ddot.it/on
-[ddot.it]
+[source,ddot.it]
 ----
 has part ..has type.. relation
 ..has type.. transitive relation
@@ -1047,7 +1047,7 @@ is part of ..has type.. relation
 A tag on a whole applies to each of its parts:
 
 .Given / Inferred
-[ddot.it]
+[source,ddot.it]
 ----
 aaaPart ..is part of.. bbbWhole
 bbbWhole ..has tag.. cccTag
@@ -1079,7 +1079,7 @@ Engine ..has tag.. mechanical
 The annotation is a first-class entity, so it can itself be annotated, tagged or typed.
 
 // https://ddot.it/on
-[ddot.it]
+[source,ddot.it]
 ----
 annotates ..has type.. relation
 ..has supertype.. links to
@@ -1110,7 +1110,7 @@ See xref:ddot-it-parse.adoc#parsing[parsing].
 A tag is usually a single term. Sometimes multiple words are also used.
 
 // https://ddot.it/on
-[ddot.it]
+[source,ddot.it]
 ----
 has tag ..has type.. relation
 ..has supertype.. has annotation
@@ -1128,7 +1128,7 @@ The inverse of <<has-tag,`has tag`>>: `bar ..is tag of.. foo` whenever `foo ..ha
 Declared separately so that the tag side of the pair has a name and a URI of its own.
 
 // https://ddot.it/on
-[ddot.it]
+[source,ddot.it]
 ----
 is tag of ..has type.. relation
 ..has supertype.. annotates
@@ -1155,7 +1155,7 @@ showing it in place of the id, using it for search, exporting it — belongs to 
 this document says nothing about it.
 
 // https://ddot.it/on
-[ddot.it]
+[source,ddot.it]
 ----
 label ..has type.. relation
 ..has type.. property
@@ -1181,7 +1181,7 @@ When parsing xref:ddot-it-parse.adoc#parsing[meta-text], as in `s..p..o,, meta-t
 The key is `p`, matching the meta object in the xref:ddot-it-parse.adoc#information_model[Data Model JSON Schema] -- a meta pair uses the same `p`/`o` keys as a triple.
 
 // https://ddot.it/on
-[ddot.it]
+[source,ddot.it]
 ----
 text ..has type.. relation
 ..has type.. property
@@ -1205,7 +1205,7 @@ For that reason, we **give every {dd} relation a URI** via {dd} `uri`.
 === Relation `uri`
 // https://ddot.it/on
 .Built-in
-[ddot.it]
+[source,ddot.it]
 ----
 uri ..has type.. relation
 ..has type.. property
@@ -1220,7 +1220,7 @@ If an entity has several URIs, all of them denote the same entity.
 === Relation `prefix`
 // https://ddot.it/on
 .Built-in
-[ddot.it]
+[source,ddot.it]
 ----
 prefix ..has type.. relation
 ..has type.. property
@@ -1249,7 +1249,7 @@ We also state as a built-in:
 
 // https://ddot.it/on
 .Built-in
-[ddot.it]
+[source,ddot.it]
 ----
 ddot ..prefix.. https://ddot.it/vocabulary/2026-07-20#
 ----
@@ -1269,7 +1269,7 @@ The URI should name the source file and should locate the source lines in the `#
 e.g. `+file:///home/me/notes.adoc#L12-L14+`.
 
 // https://ddot.it/on
-[ddot.it]
+[source,ddot.it]
 ----
 source uri ..has type.. relation
 ..has type.. property
@@ -1284,7 +1284,7 @@ source uri ..has type.. relation
 When the triple was collected, as an ISO 8601 date-time.
 
 // https://ddot.it/on
-[ddot.it]
+[source,ddot.it]
 ----
 collected ..has type.. relation
 ..has type.. property
@@ -1300,7 +1300,7 @@ collected ..has type.. relation
 `valid until` is the date after which it no longer holds; if it is missing, the triple is still valid.
 
 // https://ddot.it/on
-[ddot.it]
+[source,ddot.it]
 ----
 valid since ..has type.. relation
 ..has type.. property
@@ -1321,7 +1321,7 @@ valid until ..has type.. relation
 When the *source document* was last changed. Used on the source, not on the triple:
 
 .Example
-[ddot.it]
+[source,ddot.it]
 ----
 notes.adoc ..has type.. source
 ..last modified.. 2026-10-09T09:13:59
@@ -1329,7 +1329,7 @@ notes.adoc ..has type.. source
 
 // https://ddot.it/on
 .Built-in
-[ddot.it]
+[source,ddot.it]
 ----
 last modified ..has type.. relation
 ..has type.. property
@@ -1359,7 +1359,7 @@ over. The same distinction applies to editing any source file: deleting a line c
 not the logic.
 
 // https://ddot.it/on
-[ddot.it]
+[source,ddot.it]
 ----
 grade ..has type.. relation
 ..has type.. property
@@ -1406,7 +1406,7 @@ misparses: `+1..3 ..has type.. cardinality+` reads as subject `1`, relation `3`.
 avoid the trap entirely.]
 , each taking a plain integer:
 
-[ddot.it]
+[source,ddot.it]
 ----
 Person ..has address.. Address ,, ..min cardinality.. 1 ;; ..max cardinality.. 3
 ----
@@ -1421,7 +1421,7 @@ For the common case where a relation carries exactly _n_ values, `cardinality` s
 at once.
 
 .Given / Inferred
-[ddot.it]
+[source,ddot.it]
 ----
 rel ..cardinality.. nnn
 ___________________________________
@@ -1431,7 +1431,7 @@ rel ..max cardinality.. nnn
 
 // https://ddot.it/on
 .Built-in
-[ddot.it]
+[source,ddot.it]
 ----
 min cardinality ..has type.. relation
 ..has type.. property
@@ -1442,7 +1442,7 @@ min cardinality ..has type.. relation
 // https://ddot.it/off
 
 // https://ddot.it/on
-[ddot.it]
+[source,ddot.it]
 ----
 max cardinality ..has type.. relation
 ..has type.. property
@@ -1453,7 +1453,7 @@ max cardinality ..has type.. relation
 // https://ddot.it/off
 
 // https://ddot.it/on
-[ddot.it]
+[source,ddot.it]
 ----
 cardinality ..has type.. relation
 ..has type.. property
@@ -1470,7 +1470,7 @@ types>>, declared the same way as <<symmetric-relation,`symmetric relation`>> an
 one triple that uses it.
 
 .Given / Inferred
-[ddot.it]
+[source,ddot.it]
 ----
 rel ..has type.. required
 ___________________________________
@@ -1478,7 +1478,7 @@ rel ..min cardinality.. 1
 ----
 
 .Given / Inferred
-[ddot.it]
+[source,ddot.it]
 ----
 rel ..has type.. single valued
 ___________________________________
@@ -1487,7 +1487,7 @@ rel ..max cardinality.. 1
 
 // https://ddot.it/on
 .Built-in
-[ddot.it]
+[source,ddot.it]
 ----
 required ..has type.. type
 ..has supertype.. relation
@@ -1496,7 +1496,7 @@ required ..has type.. type
 // https://ddot.it/off
 
 // https://ddot.it/on
-[ddot.it]
+[source,ddot.it]
 ----
 single valued ..has type.. type
 ..has supertype.. relation
@@ -1505,7 +1505,7 @@ single valued ..has type.. type
 // https://ddot.it/off
 
 // https://ddot.it/on
-[ddot.it]
+[source,ddot.it]
 ----
 multi valued ..has type.. type
 ..has supertype.. relation

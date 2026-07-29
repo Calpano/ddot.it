@@ -127,7 +127,7 @@ xref:ddot-it-vocabulary.adoc#links-to[`links to`]. Both are filled in by the tim
 reaches this model.
 
 .Example Snippet as {dd} Syntax
-[ddot.it]
+[source,ddot.it]
 ----
 Dirk ..works at.. SAP ,, ..since.. 2016
 ----
@@ -521,7 +521,7 @@ and the whole construct comes out as `NotATriple`.
 ****
 
 .Example 1
-[ddot.it]
+[source,ddot.it]
 ----
 John ..address.. !!block
 1 Broad Way
@@ -533,7 +533,7 @@ Dirk ..works at.. SAP
 ----
 
 .Example 2
-[ddot.it]
+[source,ddot.it]
 ----
 John ..address.. !!block?end=END
 1 Broad Way
@@ -552,7 +552,7 @@ U.S.A.`
 - S=`Dirk`, P=`works at`, O=`SAP`
 
 .Example 3 -- `!!block` in other fields
-[ddot.it]
+[source,ddot.it]
 ----
 !!block?end=EOS
 ../../notes.adoc

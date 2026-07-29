@@ -430,7 +430,7 @@ if (diffs.length === 0) {
     console.log(`FAIL ${name} — now PASSES; remove it from KNOWN_UNSUPPORTED`);
     continue;
   }
-  …
+  // …
 }
 ----
 
