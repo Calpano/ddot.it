@@ -1,6 +1,13 @@
 # CHANGELOG
 
 
+## Version 1.3
+Unreleased (as of 2026-07-01)
+- **Dropped the planned `ddot.it/verbatim` command.**
+  [`ddot.it/block`](https://ddot.it/block) already takes its body verbatim —
+  no triples, metadata or commands are recognized inside it — so a second
+  escaping command would have been a redundant way to say the same thing.
+
 ## Version 1.2
 Released on 2026-06-22
 
