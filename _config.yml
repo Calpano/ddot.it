@@ -30,6 +30,7 @@ plugins:
   - jekyll-optional-front-matter
   - jekyll-titles-from-headings
   - jekyll-relative-links
+  - jekyll-asciidoc
 
 defaults:
   - scope:
@@ -40,3 +41,16 @@ defaults:
       path: "README.md"
     values:
       nav_exclude: true
+
+# AsciiDoc rendering (site/spec/*.adoc).
+# `idprefix`/`idseparator` are deliberately left at their defaults: the specs
+# cross-reference sections by title, and changing the generated id scheme would
+# silently break those links.
+asciidoctor:
+  base_dir: :docdir
+  safe: unsafe
+  attributes:
+    - source-highlighter=rouge
+    - icons=font
+    - toc=macro
+    - sectanchors
