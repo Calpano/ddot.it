@@ -1,0 +1,1307 @@
+= ddot.it for Parser Writers
+:toc: left
+:toclevels: 3
+:sectnums:
+:sectnumlevels: 3
+:source-highlighter: rouge
+:icons: font
+
+A single, consolidated specification for anyone _implementing a ddot.it parser_
+(a "reader" in ddot.it terminology). It reconciles the prose specification, the
+formal grammar, the golden test corpus, and the two canonical reference
+implementations into one document, and calls out every place where they
+diverge.
+
+[NOTE]
+====
+This document is *derived* from the sources listed in
+<<sources,Sources & Provenance>>. Wherever a claim is made, the source is
+linked inline. Where the human-facing prose and the canonical code disagree,
+*the prose specification is authoritative*: several current mismatches are
+*bugs in the reference parser* (catalogued in <<bugs,Known bugs>>), and the
+golden corpus will be regenerated once they are fixed. Implement the spec. Only
+where the spec is genuinely silent does this document fall back to describing
+what the reference code does.
+====
+
+[[smallest-model]]
+== TL;DR: the smallest model required to parse ddot.it
+
+*A regular language / finite-state machine is sufficient. You do not need a
+context-free grammar, a stack, recursion, backtracking, or unbounded
+lookahead.*
+
+More precisely, ddot.it is parsed by a *line-oriented deterministic
+finite-state transducer*:
+
+* *Structural class (Chomsky hierarchy): Type-3 (regular).* There is no nested
+  or recursive construct anywhere in the language. Metadata blocks do not nest;
+  `off`/`on` regions toggle rather than nest; there are no balanced brackets.
+  This is confirmed by both reference implementations:
+  the Java event parser
+  link:../ddot.it-intellij/src/main/java/com/calpano/ddot/export/DdotEventExporter.java[`DdotEventExporter.java`]
+  is a single `for`-loop over lines with three state variables and *no stack*,
+  and the canonical TextMate grammar
+  link:../ddot.it-syntax-tools/textmate/ddot.tmLanguage.json[`ddot.tmLanguage.json`]
+  uses only non-nesting `begin`/`end` regions.
+
+* *Per-line lexing is a plain regular expression.* Every line is classified and
+  split by the single separator regex `\.{4}|\.{2}` plus a `,,` scan — see
+  link:test-data/ddot.ebnf[`ddot.ebnf`] and
+  link:test-data/tokens.md[`tokens.md`].
+
+* *The only cross-line memory is a fixed set of modes plus a couple of string
+  registers.* The modes are `normal`, `in-meta-block`, `off`, and `in-block`
+  (the last for `ddot.it/block` / `ddot.it/verbatim`) — a small fixed set. The
+  registers hold *data copied verbatim* — the current subject (for
+  <<additional-properties,subject inheritance>>) and the active block's
+  end-marker string. Because these registers are copied, not matched
+  structurally, they do not raise the language above regular. In automata terms
+  this is a *finite-state transducer with registers* (a streaming string
+  transducer), strictly weaker than a pushdown automaton.
+
+* *Objects may themselves contain `..`.* Only the `..`/`....` that delimit a
+  triple's slots are operators; the object runs to end of line and is taken
+  verbatim, so `a ..path.. ../../foo.txt` is legal (object `../../foo.txt`).
+  This is still regular — the object is just `.*$`. See
+  <<object-literal,Objects may contain `..`>>.
+
+* *Lookahead:* effectively none beyond the current line. The block-boundary rule
+  (see <<blocks,Blocks>>) needs to recognise a run of blank lines, which is
+  still bounded and regular. The canonical event parser does not even implement
+  that reset (see <<bug-reset,Known bugs>>).
+
+.Practical consequence
+[TIP]
+====
+You can implement a fully conforming ddot.it parser as:
+
+[source,text]
+----
+for each line (after newline normalisation):
+    trim → dispatch on mode (off / in-meta-block / normal)
+    split body on  \.{4}|\.{2}  and on the first  ,,
+    emit / accumulate
+----
+
+No parser generator, no grammar runtime, no recursion. A hand-written loop with
+three state variables is the reference design — see
+link:../ddot.it-intellij/src/main/java/com/calpano/ddot/export/DdotEventExporter.java#L48[`DdotEventExporter.parse`].
+====
+
+[[single-regex]]
+== Can a single multi-line regex parse ddot.it?
+
+*Almost — but not fully, and the gap is instructive.* A single multi-line
+(DOTALL) regex, applied *globally* (iterated over matches), can *segment* the
+document — matching one triple-with-metadata, or one block, per match. But it
+cannot *emit correct events on its own*, because two things need memory that a
+regex match does not carry between matches.
+
+=== What one regex *can* match in a single pattern
+
+Using alternation, `(?s)` (dotall) and `(?m)` (multiline), a single pattern can
+recognise, per match:
+
+* a full *typed / untyped triple* plus its *inline* meta and its *trailing
+  `,,` … `,,` block* — the object runs to end-of-line, so the
+  <<object-literal,relaxed `..`-in-object>> rule is just `.*$`;
+* a *block / verbatim object with a custom `?end=` marker*, via a *named
+  backreference* — `\k<end>` — so the dynamic closing delimiter is handled
+  *inside one match* (PCRE, Java, and JS/ES2018 all support this);
+* a *block with the default blank-line end* (`\n\n` / `\n\h*\n`);
+* an *`off` region*, consumed and discarded as the *first* alternative so its
+  interior never produces triple matches.
+
+Illustrative combined pattern (sketch — not drop-in):
+
+[source,regexp]
+----
+(?xms)
+  # (1) off-region: match first, ignore the capture → interior yields no triples
+    ^\h* (?:ddot\.it/off|!!off) \h*$  .*?  ^\h* (?:ddot\.it/on|!!on) \h*$
+  # (2) block / verbatim object, optional custom end marker via backreference
+  | ^\h* (?<bsubj>[^\n]*?)\h*\.\.\h*(?<brel>[^\n]*?)\h*\.\.\h*
+        (?:ddot\.it/|!!)(?<cmd>block|verbatim)(?:\?end=(?<end>\S+))?[^\n]*\n
+        (?<body>.*?)
+        (?:\n\k<end>\h*$ | \n\h*\n)
+  # (3) ordinary triple (typed/untyped) + optional inline or block metadata
+  | ^\h* (?<subj>[^\n]*?)\h*
+        (?: \.{4} | \.\.\h*\.\. | \.\.\h*(?<rel>[^\n]*?)\h*\.\. )
+        \h* (?<obj>(?:(?!,,).)*?) \h*
+        (?: ,,\h*(?<imeta>[^\n]*) | ,,\h*\n(?<mblock>.*?)\n\h*,, )? \h*$
+----
+
+=== What one regex *cannot* do — and why
+
+[cols="1,3",options="header"]
+|===
+| Blocker | Why a stateless regex can't
+
+| *Subject inheritance*
+| A continuation line (`..rel.. val`) leaves `subj` empty; the value belongs to
+  a *previous* match. A regex can *capture* the empty group but cannot
+  *substitute* the inherited subject into its output. That requires a
+  `lastSubject` register carried in code — the "+registers" of the
+  <<smallest-model,finite-state transducer with registers>> model.
+
+| *Block-boundary reset*
+| Resetting subject/meta at three newlines (<<bug-reset>>) is coupled to that
+  same register.
+
+| *Assembling block values / verbatim escaping*
+| The regex can *delimit* the block body, but joining interior newlines as `\n`
+  and stripping the end marker is post-processing on the capture, not matching.
+|===
+
+[[regex-capture-subject]]
+=== "Why not just capture `..rel.. object` so nothing is remembered?"
+
+Because a capture group can only capture *text that is present inside the
+match*, and on a *continuation line the subject is not present* — it sits on an
+earlier line:
+
+....
+Dirk Hagemann ..works at.. SAP      <- subject is here
+..knows.. Claudia Stern             <- this line has NO subject to capture
+..phone.. 123                       <- nor this one
+....
+
+A per-line regex matching `..(?<rel>…)..(?<obj>…)` on line 2 has no subject text
+to bind — the group would be empty. So the subject has to come from *somewhere
+outside the current line's match*.
+
+*So push that "somewhere" into the regex — by widening the match. This works,
+and it does remove the cross-line register.* A continuation line is structurally
+recognisable ("a line beginning with `..`"), so one match can cover the *subject
+line plus its whole run of continuation lines*, capturing the subject once and
+repeating the pair group:
+
+[source,regexp]
+----
+(?xm)
+  ^\h*(?<subj>(?:(?!\.\.).)+?)\h*\.\.\h*(?<rel>.*?)\h*\.\.\h*(?<obj>.+?)\h*$   # subject line
+  (?:\n\n?\h*\.\.\h*(?<rel>.*?)\h*\.\.\h*(?<obj>.+?)\h*$ )*                    # continuations
+----
+
+Now the subject *is* inside the match: each match is self-contained, and no
+`lastSubject` variable is carried between matches. `Regex.Matches` over the whole
+document yields one match per subject-block, and the iteration over those matches
+is *stateless*. This is a legitimate design.
+
+Two things still need care — one foldable into the pattern, one not:
+
+. *Inheritance across a gap (foldable).* In the reference, a subject survives an
+  intervening `off`/`on` region or other skipped lines
+  (link:../ddot.it-intellij/src/main/java/com/calpano/ddot/export/DdotEventExporter.java#L61[Java]).
+  A plain `(?:\n\.\..*)*` repeat stops at the first non-`..` line (e.g.
+  `ddot.it/off`), ending the match and orphaning any later continuation. Fold the
+  gap *into* the repeat so the single match spans it:
++
+[source,regexp]
+----
+(?: \n\h*(?:ddot\.it/off|!!off)\b .*? \n\h*(?:ddot\.it/on|!!on)\b   # swallow off-region, no capture
+  | \n\n?\h*\.\.\h*(?<rel>.*?)\h*\.\.\h*(?<obj>.+?)\h*$ )*
+----
++
+The match now carries the subject across the gap. Not a barrier — just a bigger
+pattern (and where the <<bug-reset,block-reset>> boundary applies, that boundary
+is where the repeat must *stop*).
+
+. *Reading back the repeated captures (the one real wall).* In PCRE, JS, Java,
+  Python, and Go a quantified group `(?<rel>…)*` retains *only its last
+  iteration* — so although the match *covers* every pair, you cannot pull them
+  all out of the groups. The exception is *.NET*, whose `Group.Captures` exposes
+  every iteration. Everywhere else you *re-scan the matched block line-by-line*
+  — a *local* loop over one match's own text (not cross-line state).
+
+Bottom line: *widening the match does what you want* — it converts the cross-line
+subject *register* into a single self-contained match, and on *.NET* you get all
+pairs with no remembered state at all. In the other engines the only residual is
+*local iteration* to extract the repeated captures (plus copying `subj` onto each
+emitted event and joining block newlines — output construction, which no pure
+regex does). At that point the choice between "one wide pattern + a per-match
+re-scan" and "a line loop + a one-word `lastSubject`" is an engineering taste
+call, not a capability limit — both are regular, neither needs a stack.
+
+[[regex-dotnet]]
+=== The .NET version (all captures — no remembered state)
+
+.NET is the one common engine whose `Group.Captures` exposes *every* iteration of
+a quantified group, so widening the match reads all pairs back out of a single
+match and the subject register disappears entirely:
+
+[source,csharp]
+----
+using System.Text.RegularExpressions;
+
+// .NET has no \h, so [ \t] is horizontal whitespace. IgnorePatternWhitespace
+// lets us comment; whitespace inside [ ] stays literal. No Singleline ⇒ . ≠ \n.
+var rx = new Regex(@"
+    ^[ \t]*(?<subj>(?:(?!\.\.).)+?)[ \t]*\.\.[ \t]*(?<rel>.*?)[ \t]*\.\.[ \t]*(?<obj>.+?)[ \t]*$   # subject line
+    (?:                                                                                              # then, repeatedly:
+        \n[ \t]*(?:ddot\.it/off|!!off)\b[\s\S]*?\n[ \t]*(?:ddot\.it/on|!!on)\b                      #  swallow an off-region
+      | \n\n?[ \t]*\.\.[ \t]*(?<rel>.*?)[ \t]*\.\.[ \t]*(?<obj>.+?)[ \t]*$                          #  or a continuation pair
+    )*",
+    RegexOptions.Multiline | RegexOptions.IgnorePatternWhitespace);
+
+foreach (Match m in rx.Matches(text))
+{
+    string subject = m.Groups["subj"].Value.Trim();
+    CaptureCollection rels = m.Groups["rel"].Captures;   // ALL iterations, in source order
+    CaptureCollection objs = m.Groups["obj"].Captures;
+    for (int k = 0; k < rels.Count; k++)                 // rel[k] is paired with obj[k]
+        Emit(subject, rels[k].Value.Trim(), objs[k].Value.Trim());
+}
+// (inline `,,` metadata, ....-untyped links, and block/verbatim expansion elided for focus)
+----
+
+The `(?<rel>…)` / `(?<obj>…)` names appear in *both* the subject-line part and
+the continuation part; .NET accumulates every hit into one ordered
+`CaptureCollection`. Because each triple contributes exactly one `rel` and one
+`obj` together — and the off-region branch contributes neither — the two
+collections stay index-aligned. There is no `lastSubject` variable at all.
+
+[[regex-typescript]]
+=== The TypeScript version (re-scan — JS keeps only the last capture)
+
+*JS/TS has no `Group.Captures` equivalent.* A quantified group yields only its
+*last* value; `matchAll` iterates *matches*, not captures within one match; and
+you *cannot even declare* `(?<rel>…)` twice in sequence — duplicate named groups
+are legal only across mutually-exclusive alternatives (since ES2025). So the
+all-captures trick is unavailable. Two idiomatic options:
+
+*Option A — the line loop (recommended; this is what actually ships).* The
+canonical parser _is_ TypeScript: the VS Code extension's `parseDocument`
+(link:../ddot.it-vscode/src/extension.ts#L783[`extension.ts` line 783]) — the
+very function `DdotEventExporter.java` is a port of — carries a one-word
+`currentSubject` register across a per-line loop:
+
+[source,typescript]
+----
+let currentSubject: string | null = null;
+for (let i = 0; i < lines.length; i++) {
+  const trimmed = lines[i].trim();
+  // …handle off/on toggles and open meta blocks (elided)…
+  const { segments, seps, meta } = splitLine(trimmed);
+  const t = extractTriple(segments, seps, currentSubject);  // empty subject ⇒ inherit
+  if (!t) continue;
+  currentSubject = t.from;                                   // the register
+  events.push({ from: t.from, type: t.type, to: t.to, /* … */ location: i + 1 });
+}
+----
+
+*Option B — match the block, then re-scan its lines.* If you want the
+one-regex-per-subject-block shape, match the block (capturing only the subject),
+then split the matched text and pull pairs with a per-line regex:
+
+[source,typescript]
+----
+// One subject-block: subject line + its continuation lines, off-regions swallowed.
+const BLOCK = new RegExp(
+  String.raw`^[ \t]*(?<subj>(?:(?!\.\.).)+?)[ \t]*\.\..*` +                                 // subject line
+  String.raw`(?:\n[ \t]*(?:ddot\.it/off|!!off)\b[\s\S]*?\n[ \t]*(?:ddot\.it/on|!!on)\b` +   // off-region
+  String.raw`|\n\n?[ \t]*\.\..*)*`,                                                          // continuation line
+  'gm',
+);
+// A single triple line → rel + object. Object may itself contain `..` (relative paths).
+const PAIR =
+  /^[ \t]*(?:(?!\.\.).)*?[ \t]*\.\.[ \t]*(?<rel>(?:(?!\.\.).)*?)[ \t]*\.\.[ \t]*(?<obj>.+)$/;
+
+for (const b of text.matchAll(BLOCK)) {
+  const subject = b.groups!.subj.trim();
+  for (const raw of b[0].split('\n')) {
+    const m = PAIR.exec(raw.trim());          // off/on markers have no `..` ⇒ skipped
+    if (m?.groups) Emit(subject, m.groups.rel.trim(), m.groups.obj.trim());
+  }
+}
+----
+
+Both are still regular. Option A is the smaller, more maintainable code and the
+one the project ships; Option B mirrors the .NET structure but trades the
+`currentSubject` variable for an inner `split('\n')` re-scan — the same
+unavoidable iteration, just relocated.
+
+.Could the TS parser use *just one* regex?
+[NOTE]
+====
+Depends on what "one regex" buys you:
+
+* *One regex + a one-word variable:* *yes* — Option A is essentially this. A
+  single pattern with an *optional* subject group, `text.matchAll(…)` over it,
+  and a `currentSubject` variable that fills `from` when the group is empty. One
+  pattern, ~3 lines of glue.
+* *One regex, zero state — its `matchAll` output alone yields every triple with
+  the inherited subject already attached:* *not in practice.* Two engine facts
+  block it: (1) a quantified group keeps only its *last* capture (so the
+  widen-the-block match can't hand back all pairs), and (2) a continuation
+  line does not contain its subject. The only stateless escape is a
+  *variable-length lookbehind* (V8 supports it) that re-derives the subject for
+  each continuation — but that lookbehind must encode "the nearest preceding
+  subject line, reached over only continuation/blank/off lines, *without*
+  crossing a three-newline block reset," which is fragile, O(n²)-ish, still
+  needs a `subj ?? subjFromLookbehind` merge in code, and breaks on the
+  off-region inheritance case. Not worth it.
+
+*Bottom line:* in TypeScript the minimal honest form is *one regex plus a single
+`currentSubject` variable*. A pure, stateless one-`matchAll` solution is a
+party trick, not a parser. (.NET is the exception only because
+`Group.Captures` removes the *variable*, not the iteration.)
+====
+
+=== Practical answer
+
+* *Match a single triple + its metadata (and even a single block with a
+  backreferenced `?end=`) in one regex:* *yes.*
+* *Parse a whole document into correct events with one regex alone:* *no* — you
+  need a *thin code loop* (a handful of lines) around the global regex to carry
+  the `lastSubject` register, apply the block reset, and assemble block values.
+
+That is exactly the model from <<smallest-model>>: regex expresses the *regular*
+structure; the *transduction* (subject substitution, block assembly) needs the
+register layer. The recommended reference design therefore stays the
+line-oriented loop
+(link:../ddot.it-intellij/src/main/java/com/calpano/ddot/export/DdotEventExporter.java#L48[`DdotEventExporter.parse`]),
+which is easier to keep correct than one monster pattern — but a *global regex
+for segmentation + small register loop* is a perfectly valid architecture.
+
+[[algorithm]]
+== Reference algorithm (pseudo-code)
+
+Since a loop is unavoidable, the *most comprehensible* parser is the
+line-oriented state machine below — one pass over the lines, a handful of named
+state variables, and small pure helpers. It is the same shape as the reference
+`parseDocument`
+(link:../ddot.it-vscode/src/extension.ts#L783[`extension.ts`]) /
+`DdotEventExporter`
+(link:../ddot.it-intellij/src/main/java/com/calpano/ddot/export/DdotEventExporter.java[Java]),
+but written to the *spec* — i.e. with the four <<bugs,known bugs>> fixed
+(plain-text meta kept, block reset applied, block/verbatim expanded, all inline
+meta pairs captured) and the v1.3 <<object-literal,`..`-in-object>> rule.
+
+=== Main loop
+
+[source,text]
+----
+function parse(text, kind, source) -> list<Event>:
+    text  = normalizeNewlines(text)        # CR LF → LF, CR → LF   (see “Newline normalisation”)
+    lines = split(text, "\n")              # keep empty lines; i is 0-based
+
+    events   = []
+    subject  = null      # last subject — filled into continuation lines (inheritance)
+    openMeta = null      # the event whose ‘,,’ block is currently open (or null)
+    off      = false     # inside a ddot.it/off … ddot.it/on region?
+    blankRun = 0         # consecutive blank lines (a block boundary = 3 newlines = 2 blanks)
+
+    i = 0
+    while i < length(lines):
+        line = trim(lines[i])
+
+        # (1) blank line: count it (for the block-boundary reset) and move on
+        if line == "":
+            blankRun += 1;  i += 1;  continue
+
+        # (2) block boundary (>=2 blank lines): reset subject AND meta-mode  [fixes BUG 2]
+        if blankRun >= 2:
+            subject = null;  openMeta = null
+        blankRun = 0
+
+        # (3) include / exclude toggles (long or ‘!!’ short form); markers alone on the line
+        if line == "ddot.it/off" or line == "!!off":
+            off = true;  openMeta = null;  i += 1;  continue     # off closes any open meta block
+        if line == "ddot.it/on"  or line == "!!on":
+            off = false;  i += 1;  continue
+        if off:
+            i += 1;  continue                                    # excluded region → emit nothing
+
+        # (4) inside an open multi-line ‘,,’ metadata block
+        if openMeta != null:
+            if line == ",,":                    # closing delimiter
+                openMeta = null
+            else:
+                addMeta(openMeta, line, subject) # one meta line → pair(s) or plain text
+            i += 1;  continue
+
+        # (5) an ordinary line: try to read a triple
+        t = readTriple(line, subject)           # {from, type, to, metaText}  or  null
+        if t == null:
+            i += 1;  continue                    # incomplete / non-triple → silently ignored
+        subject = t.from                         # this subject is inherited by later lines
+        event   = Event(from=t.from, type=t.type, to=t.to, kind, source, location=i+1)
+
+        # (5a) metadata written on the triple’s own line
+        if t.metaText == "":                     # bare trailing ‘,,’ → open a block
+            openMeta = event
+        else if t.metaText != null:              # inline ‘,, …’ → one or more pairs / plain text
+            addMeta(event, t.metaText, subject)  # [fixes BUG 1 and BUG 4]
+
+        # (5b) object is a block / verbatim command → its value is the following lines
+        if isBlockCommand(t.to):                 # [fixes BUG 3]
+            (event.to, i) = readBlock(lines, i + 1, t.to)
+        else:
+            i += 1
+
+        append(events, event)
+
+    return events
+----
+
+=== Helpers
+
+[source,text]
+----
+# Split a line into subject / type / object (+ trailing metadata), applying the
+# v1.3 rule: only the operators that DELIMIT slots are operators; everything
+# after the last one is the object, taken verbatim (so it may contain “..”).
+function readTriple(line, inheritedSubject) -> Triple | null:
+    (body, metaText) = splitOnce(line, ",,")     # metaText = trimmed text after first ‘,,’, or null
+
+    op1 = nextOperator(body, from=0)             # a run of exactly 4 dots, or exactly 2
+    if op1 == null: return null                  # no operator at all → not a triple
+
+    if op1.dots == 4:                            #  SUBJECT .... OBJECT   (untyped)
+        subj = trim(body[0 .. op1.start]);  type = null;  obj = trim(body[op1.end ..])
+    else:                                        #  SUBJECT .. TYPE .. OBJECT   (typed)
+        op2 = nextOperator(body, from=op1.end)
+        if op2 == null: return null              # only one ‘..’ → not a triple
+        subj = trim(body[0 .. op1.start])
+        type = trim(body[op1.end .. op2.start])
+        obj  = trim(body[op2.end ..])            # REST of line, verbatim  → “../../foo.txt” stays intact
+        if type == "": type = null               # ‘.. ..’ (empty type) == untyped
+
+    if obj == "": return null                    # empty object → ignore
+    from = (subj != "") ? subj : inheritedSubject
+    if from == null: return null                 # no subject to inherit → ignore
+    return Triple(from, type, obj, metaText)
+
+# A metadata line/segment → append pair(s) to event.meta.
+function addMeta(event, metaText, subject):
+    pairs = readMetaPairs(metaText)              # scan “..type.. value” repeatedly
+    if pairs is non-empty:
+        for (type, value) in pairs: append(event.meta, {type, to: value})   # [BUG 4: keep ALL pairs]
+    else:
+        append(event.meta, {to: trim(metaText)}) # plain text → untyped pair, no ‘type’  [BUG 1]
+
+# Zero or more “..type.. value” pairs; each value runs up to the next ‘..’ or end.
+function readMetaPairs(s) -> list<(type, value)>:
+    pairs = [];  pos = 0
+    while true:
+        a = nextOperator(s, pos);          if a == null: break
+        b = nextOperator(s, a.end);        if b == null: break
+        type = trim(s[a.end .. b.start])
+        c    = nextOperator(s, b.end)      # start of the following pair, if any
+        end  = (c != null) ? c.start : length(s)
+        append(pairs, (type, trim(s[b.end .. end])))
+        pos = end
+    return pairs
+
+# Object-literal block: capture following lines until the end marker (exclusive).
+# Works for both ddot.it/block and ddot.it/verbatim (content is NOT re-parsed as triples).
+function readBlock(lines, start, command) -> (value, nextIndex):
+    marker = endParam(command)             # “?end=X” → "X";  else null  ⇒ default end = a blank line
+    body = [];  i = start
+    while i < length(lines):
+        if marker == null and trim(lines[i]) == "":     break            # default terminator (kept, not consumed)
+        if marker != null and trim(lines[i]) == marker: i += 1;  break   # custom terminator (consumed)
+        append(body, lines[i]);  i += 1
+    return (join(body, "\n"), i)           # interior newlines become “\n” in the value
+----
+
+[NOTE]
+====
+Two refinements omitted above for readability, both local to the object step:
+
+* *Inline verbatim* — when an object contains `!!verbatim` / `ddot.it/verbatim`
+  mid-line, the *rest of the line* is taken literally (with exactly one following
+  space removed) and `,,` / `..` in it are *not* interpreted
+  (link:site/verbatim.md[verbatim → Inline form]). Handle it inside
+  `readTriple`’s object slot before the normal `,,` split.
+* *Command-as-slot* stays literal: `ddot.it/this` (subject) and `!!label`
+  (relation) pass through unchanged; only `on`/`off` and the block/verbatim
+  objects are acted on. See <<commands>>.
+====
+
+[[pipeline]]
+== Where a parser sits in the pipeline
+
+ddot.it separates *reading* from *collecting*
+(link:site/developer-guide.md[Developer Guide → Architecture]):
+
+. A *reader* (the parser you are writing) knows how to pull ddot.it text out of
+  one *host language* (Markdown, YAML, Java, HTML, plain text, …) and fires
+  *triple events*.
+. A *collector* combines all events into one knowledge graph and does
+  higher-level resolution (e.g. replacing `ddot.it/this` with the real source
+  URL).
+
+[IMPORTANT]
+====
+Your parser's job ends at *emitting triple events*. Several "commands"
+(`ddot.it/this`, `ddot.it/block`, `ddot.it/label`, `ddot.it/verbatim`) are
+*not* resolved by the reference event parser — they pass through as literal slot
+text and are interpreted downstream. See <<commands>> and <<bugs,Known bugs>>.
+====
+
+[[levels]]
+=== Two levels of conformance
+
+There are two distinct, separately-tested contracts. A given implementation only
+needs the one relevant to its concern
+(link:test-data/README.md[test-data/README.md]):
+
+[cols="1,3,2,2",options="header"]
+|===
+| Level | Produces | Golden file | Reference impl.
+
+| *Highlighter / lexer*
+| A flat token stream `{line,start,end,token,text}`
+| `expected.tokens.json`
+| link:../ddot.it-syntax-tools/textmate/ddot.tmLanguage.json[TextMate grammar]
+
+| *Event parser*
+| JSONL triple events
+| `expected.events.jsonl`
+| link:../ddot.it-intellij/src/main/java/com/calpano/ddot/export/DdotEventExporter.java[`DdotEventExporter`]
+(a direct port of the VS Code `parseDocument`)
+|===
+
+There is also a third golden file, `expected.body.html`, produced by the
+preview renderer
+link:../ddot.it-intellij/src/main/resources/com/calpano/ddot/asciidoc/ddot-render.rb[`ddot-render.rb`];
+it is a highlighter that emits HTML spans rather than tokens, and shares the
+lexer's rules.
+
+WARNING: The lexer and the event parser *do not agree on everything* — most
+notably on plain-text metadata (the lexer tokenises it as `meta-text`; the event
+parser wrongly drops it). Several of these disagreements are *bugs in the
+reference event parser*, not intended behaviour — the prose specification is
+authoritative. They are catalogued in <<bugs,Known bugs>>. Where a golden
+`expected.events.jsonl` currently encodes buggy output, it will be regenerated
+once the reference parser is fixed; *implement the spec, not the current golden
+file*, for those specific cases.
+
+[[preprocessing]]
+== Input preprocessing
+
+[[newlines]]
+=== Newline normalisation
+
+Apply *before* parsing (link:site/syntax.md[Syntax Spec → Codepoints],
+link:site/llms.txt[llms.txt]):
+
+. `CR LF` → `NL`
+. `LF` → `NL`
+. `CR` → `NL`
+
+After normalisation the only line terminator is `\n`. Both reference
+implementations then do `text.split("\n", -1)`
+(link:../ddot.it-intellij/src/main/java/com/calpano/ddot/export/DdotEventExporter.java#L52[Java],
+link:../ddot.it-intellij/src/main/resources/com/calpano/ddot/asciidoc/ddot-render.rb[Ruby `render_body`]).
+The `-1` limit is important: *trailing empty lines are preserved*, so line
+numbering stays correct.
+
+=== Relevant codepoints
+
+[cols="2,1,1,3",options="header"]
+|===
+| Name | Char | Code | Role
+| Tab     | `\t` | 9      | Whitespace; stripped at slot edges
+| Newline | NL   | 10, 13 | Line / block separation
+| Space   | ` `  | 32     | Whitespace; stripped at slot edges
+| Comma   | `,`  | 44     | `,,` = metadata delimiter
+| Dot     | `.`  | 46     | `..` / `....` = operators
+|===
+
+Source: link:site/syntax.md[Syntax Spec → Codepoints]. The User Guide notes
+NBSP is also accepted around operators
+(link:site/user-guide.md[User Guide → Syntax Elements]), though the reference
+parsers only strip ASCII whitespace via `trim`.
+
+[[whitespace]]
+=== Whitespace stripping
+
+Spaces and tabs are stripped from the *start and end of every slot name*
+(link:site/syntax.md[`NAME := SPACE? ([^ \t]+) SPACE?`]). Example
+(link:site/syntax.md[Syntax Spec]):
+
+  Dirk Hagemann   .. works at ..  Big Corp   →   (Dirk Hagemann, works at, Big Corp)
+
+Internal whitespace is preserved (`Project Eagle` stays two words). In the
+reference parser every segment is `.trim()`-ed after splitting
+(link:../ddot.it-intellij/src/main/java/com/calpano/ddot/export/DdotEventExporter.java#L154[`splitLine`]).
+
+[[model]]
+== The document model
+
+[[blocks]]
+=== Blocks (prose spec)
+
+Per link:site/syntax.md[Syntax Spec] and link:site/llms.txt[llms.txt]:
+
+[source,ebnf]
+----
+TEXT  := BLOCK (Newline Newline Newline BLOCK)*
+BLOCK := LINE (Newline Newline? LINE)*
+----
+
+* Text is chunked into *blocks* at *three consecutive newlines*.
+* At the *end of a block, the current subject and meta-mode reset*.
+* *Triples cannot span blocks.*
+
+[WARNING]
+====
+*Bug (<<bug-reset>>):* the canonical *event parser does not implement the
+three-newline block reset*. It skips blank lines (`if (trimmed.isEmpty())
+continue;`) *without clearing `currentSubject`*
+(link:../ddot.it-intellij/src/main/java/com/calpano/ddot/export/DdotEventExporter.java#L61[Java]),
+so a subject wrongly survives blank lines indefinitely. The prose spec is
+authoritative: *implement the reset*. The current corpus does not yet exercise
+the difference — in link:test-data/cases/17-block/input.ddot[case 17] the subject
+is `john` on both sides of the blank line — so a pinning case should be added.
+====
+
+[[lines]]
+=== Lines
+
+Within a block, each line is one of
+(link:site/syntax.md[`LINE := TRIPLE | ADDITIONAL | COMMAND`]):
+
+* a *triple* (subject present),
+* an *additional property* (subject omitted — inherits),
+* a *command*,
+* metadata delimiters / content, or
+* *nothing recognisable* → *silently ignored*
+  (link:site/llms.txt[llms.txt]: "Incomplete triples are silently ignored").
+
+[[triples]]
+== Triples
+
+[[typed-link]]
+=== Typed link
+
+....
+aaa .. bbb .. ccc
+....
+
+→ `aaa` links to `ccc` with type `bbb`
+(link:site/user-guide.md[User Guide → Typed Link]). Canonically: three
+segments split by two `..` operators
+(link:../ddot.it-intellij/src/main/java/com/calpano/ddot/export/DdotEventExporter.java#L166[`extractTriple`]).
+See link:test-data/cases/01-simple-triple/[case 01].
+
+[[untyped-link]]
+=== Untyped link
+
+Two equivalent forms (link:site/user-guide.md[User Guide → Untyped Link],
+link:test-data/tokens.md[tokens.md]):
+
+....
+aaa .... ccc          (quad-dot)
+aaa .. .. ccc         (spaced double-dot — one operator token ".. ..")
+....
+
+→ `aaa` links to `ccc` with the *default type* `links to`. In events the `type`
+field is *omitted entirely* (not set to the string `links to`) —
+link:test-data/cases/02-untyped-link/expected.events.jsonl[case 02],
+link:test-data/cases/10-spaced-untyped/[case 10]. The default label `links to`
+is a *collector/consumer* convention (link:site/developer-guide.md[Developer
+Guide → Events]: "`type` … Defaults to `links to`").
+
+[NOTE]
+====
+The `.. ..` (empty-type) form is normalised to untyped in the parser: three
+segments with an *empty middle* produce a `type == null` triple
+(link:../ddot.it-intellij/src/main/java/com/calpano/ddot/export/DdotEventExporter.java#L171[Java]).
+The highlighter, however, emits the whole literal `.. ..` (inner whitespace
+included) as *one* `operator` token
+(link:test-data/tokens.md[tokens.md → Rules],
+link:test-data/cases/10-spaced-untyped/expected.tokens.json[case 10 tokens]).
+====
+
+=== Exactly two or four dots
+
+"There must be *exactly two* dots for typed links and *exactly four* dots for
+untyped links" (link:site/user-guide.md[User Guide → Syntax Elements]). The
+separator regex is `\.{4}|\.{2}` — quad matched greedily before double
+(link:../ddot.it-intellij/src/main/java/com/calpano/ddot/export/DdotEventExporter.java#L30[Java],
+link:../ddot.it-intellij/src/main/resources/com/calpano/ddot/asciidoc/ddot-render.rb[Ruby `SEP_RE`]).
+
+[IMPORTANT]
+====
+Dots *inside a name* are fine — only runs of exactly 2 or 4 dots are operators.
+`j-s-o-n.org ..has type.. project` parses with subject `j-s-o-n.org`
+(link:test-data/cases/12-dotted-subject/[case 12]). Likewise `ddot.it/this` as a
+subject is a single name/command, not an operator.
+====
+
+[[object-literal]]
+=== Objects may contain `..` (relaxed operator rule, v1.3)
+
+Since link:site/CHANGELOG.md[v1.3] the operator rule was *relaxed*: a `..` /
+`....` is an operator *only where it delimits a slot boundary*. Once the slots
+of a triple are established (one operator for untyped, two for typed),
+*everything remaining on the line is the object, taken verbatim* — so the object
+may itself contain `..` sequences:
+
+....
+a ..path.. ../../foo.txt
+....
+
+parses as the triple (`a`, `path`, `../../foo.txt`). The `..` inside
+`../../foo.txt` are *not* operators.
+
+[IMPORTANT]
+====
+The *space is crucial*. In `a ..path.. ../../foo.txt` the whitespace separating
+the relation's closing `..` from an object that itself starts with `..`
+(`..path..` ` ` `../../foo.txt`) is what marks where the operator ends and the
+literal object begins. Without it the dots would run together
+(`..path....../../foo.txt`) and be read as further operators. Compare the untyped
+form `Alpha .. .. Beta` (link:test-data/cases/10-spaced-untyped/[case 10]),
+where `.. ..` appears in *operator* position and is a single untyped operator —
+position, not the characters alone, decides.
+====
+
+[CAUTION]
+====
+*Not yet in the reference implementation.* The current separator handling splits
+on *every* `..` and requires exactly three segments
+(link:../ddot.it-intellij/src/main/java/com/calpano/ddot/export/DdotEventExporter.java#L166[`extractTriple`]),
+so `a ..path.. ../../foo.txt` (four `..` runs → five segments) is *rejected*
+today. A conforming parser must instead consume *at most* the operators needed
+for one triple (1 for untyped, 2 for typed) and take the rest of the line as the
+object. Practically: replace "split on all separators, require 3 segments" with
+"find operator 1; if `..`, find operator 2; object = rest-of-line, trimmed." A
+corpus case (`NN-relative-path`) should be added to pin this.
+====
+
+=== Rejection rule (what is *not* a triple)
+
+`extractTriple` returns a triple *only* for these two exact shapes
+(link:../ddot.it-intellij/src/main/java/com/calpano/ddot/export/DdotEventExporter.java#L166[Java]):
+
+[cols="1,1,3",options="header"]
+|===
+| Segments | Operators | Result
+| 3 | `..` , `..` | typed (or untyped if middle empty)
+| 2 | `....`      | untyped
+|===
+
+Everything else → *ignored*:
+
+* An *empty object* segment → `null` (no event), even with valid operators.
+* A subject-less line whose subject cannot be inherited (`currentSubject ==
+  null`) → `null`.
+* Any other operator count (0, or ≥3 double-dots on one line, or a lone `..`
+  with two segments, etc.) → `null`.
+* A bare `ddot.it` file-type marker → 1 segment → `null` (ignored as a triple).
+
+[[additional-properties]]
+== Additional properties (subject inheritance)
+
+Omit the subject to attach more properties to the *previous* subject
+(link:site/user-guide.md[User Guide → Additional Properties]):
+
+....
+Dirk Hagemann .. works at .. SAP
+.. knows .. Claudia Stern
+.. phone .. 123-456-789
+....
+
+Mechanism: `currentSubject` is set on every emitted triple; a line beginning
+with a leading `..` yields an empty first segment, which falls back to
+`inheritedSubject`
+(link:../ddot.it-intellij/src/main/java/com/calpano/ddot/export/DdotEventExporter.java#L84[Java]).
+See link:test-data/cases/07-leading-separator-continuation/[case 07].
+
+[CAUTION]
+====
+For the *highlighter*, do *not* pre-seed the slot index to 1 on continuation
+lines. The leading `..` operator naturally advances the slot counter, so the
+next segment is classed as the predicate. Pre-setting double-counts and
+mis-classes it as an object — see the explicit warning in
+link:../ddot.it-intellij/src/main/resources/com/calpano/ddot/asciidoc/ddot-render.rb[`render_triple_line`].
+====
+
+[[metadata]]
+== Metadata (`,,`)
+
+Metadata attaches to the *triple on whose line (or whose following block) it
+appears* (link:site/user-guide.md[User Guide → Metadata],
+link:site/syntax.md[Syntax Spec]).
+
+=== Splitting a line into body + meta
+
+`,,` is found by its *first occurrence* on the line; everything before is the
+triple body, everything after is the meta payload
+(link:../ddot.it-intellij/src/main/java/com/calpano/ddot/export/DdotEventExporter.java#L155[`splitLine`]).
+
+=== Inline metadata
+
+....
+John Doe ..leads.. Project Eagle ,, ..since.. 2025
+....
+
+The meta payload is itself parsed as a triple; if it has a *type*, it becomes a
+`{type, to}` meta pair on the event
+(link:test-data/cases/03-inline-meta/expected.events.jsonl[case 03]).
+
+[WARNING]
+====
+*Bug (<<bug-multi-meta>>):* only a *single* `..type.. value` meta pair is
+captured inline. The payload is run through `splitLine`/`extractTriple` *once*
+(link:../ddot.it-intellij/src/main/java/com/calpano/ddot/export/DdotEventExporter.java#L94[Java]),
+so `,, ..a.. 1 ..b.. 2` (which splits into 5 segments) matches no triple shape
+and yields *no* meta at all. A conforming parser should capture *all* inline
+pairs (`{a:1}`, `{b:2}`). Until fixed, use the multi-line block form for several
+pairs.
+====
+
+=== Multi-line metadata block
+
+A *bare trailing* `,,` opens a block; a *bare* `,,` on its own line closes it
+(link:site/user-guide.md[User Guide → Metadata]):
+
+....
+Dirk Hagemann ..works at.. SAP ,,
+..year.. 2010
+..fictive.. yes
+,,
+....
+
+Each interior line is parsed as a triple; those with a type are added as meta
+pairs (link:test-data/cases/04-multiline-meta/expected.events.jsonl[case 04]).
+The opener is detected with `trimmed.endsWith(",,")`
+(link:../ddot.it-intellij/src/main/java/com/calpano/ddot/export/DdotEventExporter.java#L97[Java]);
+the standalone toggle with `trimmed.equals(",,")`
+(link:../ddot.it-intellij/src/main/java/com/calpano/ddot/export/DdotEventExporter.java#L74[Java]).
+
+[[plaintext-meta]]
+=== Plain-text metadata (BUG in reference parser)
+
+Plain-text metadata *is allowed* and *must be emitted*. The prose says metadata
+"can be a single string" (link:site/user-guide.md[User Guide → Metadata]) and
+llms.txt says a bare string `,, note` is treated like `,, .... note`
+(link:site/llms.txt[llms.txt → Metadata]) — i.e. an *untyped* meta pair (object
+`note`, no `type`).
+
+[WARNING]
+====
+*Bug (<<bug-plaintext-meta>>):* the canonical event parser *drops* plain-text
+metadata — it only keeps meta payloads that form a `..type.. value` triple
+(link:../ddot.it-intellij/src/main/java/com/calpano/ddot/export/DdotEventExporter.java#L94[Java]).
+This is wrong per the spec. Affected golden files currently encode the buggy
+(empty-meta) output and will be regenerated:
+
+* Inline: `John Doe ..leads.. Project Eagle ,, a random note` — should attach a
+  meta pair `{to:"a random note"}`; currently emits *no* `meta`
+  (link:test-data/cases/13-inline-meta-text/expected.events.jsonl[case 13]).
+* Block: a `,,` … `free-form note line` … `,,` block — should attach
+  `{to:"free-form note line"}`; currently emits *no* `meta`
+  (link:test-data/cases/09-standalone-comma-block/expected.events.jsonl[case 09],
+  link:test-data/cases/14-multiline-meta-text/expected.events.jsonl[case 14]).
+
+Correct behaviour: a meta line with no `..type..` structure yields an *untyped*
+meta pair — `{to: "<the trimmed string>"}`, `type` omitted — mirroring how an
+untyped triple omits `type`.
+====
+
+The *highlighter already handles this correctly*, tokenising the string as a
+`meta-text` token
+(link:test-data/cases/13-inline-meta-text/expected.tokens.json[case 13 tokens],
+link:test-data/cases/09-standalone-comma-block/expected.tokens.json[case 09 tokens]).
+
+[[commands]]
+== Commands
+
+A command is any token starting with `ddot.it` (optionally `/word`) or the
+shorthand `!!` (optionally `word`)
+(link:site/user-guide.md[User Guide → Commands],
+link:test-data/ddot.ebnf[`ddot.ebnf`]):
+
+[source,ebnf]
+----
+command = "ddot.it", [ "/", word ] | "!!", [ word ] ;
+COMMAND := 'ddot.it[^ \n\t]*' (Space | Tab | Newline)
+----
+
+`!!` is exactly shorthand for `ddot.it/`
+(link:../ddot.it-intellij/src/main/java/com/calpano/ddot/export/DdotEventExporter.java#L34[Java constants]).
+
+=== What the *event parser* actually interprets
+
+The reference event parser special-cases *only two* command pairs:
+
+[cols="1,3",options="header"]
+|===
+| Command | Handling in `DdotEventExporter`
+| `ddot.it/off` / `!!off` | set `off = true`; also *closes any open meta block*
+| `ddot.it/on`  / `!!on`  | set `off = false`
+|===
+
+(link:../ddot.it-intellij/src/main/java/com/calpano/ddot/export/DdotEventExporter.java#L63[Java]).
+*All other commands are literal slot text.* This is critical:
+
+[cols="2,3,2",options="header"]
+|===
+| Appears as | Emitted verbatim as | Evidence
+| Subject `ddot.it/this`
+| `from: "ddot.it/this"` (collector resolves later)
+| link:test-data/cases/05-command/expected.events.jsonl[case 05], link:test-data/cases/16-this/[case 16]
+| Subject `!!this`
+| `from: "!!this"`
+| link:test-data/cases/11-shorthand-command/expected.events.jsonl[case 11]
+| Relation `!!label`
+| `type: "!!label"`
+| link:test-data/cases/15-label/expected.events.jsonl[case 15]
+| Object `ddot.it/block`
+| _currently_ `to: "ddot.it/block"` (body not expanded) — *this is <<bug-block,a bug>>*; must expand to the block value
+| link:test-data/cases/17-block/expected.events.jsonl[case 17]
+|===
+
+`ddot.it/this` and `!!label` passing through as literal slot text is *correct*
+(the collector resolves `this`; `label` is a relation name resolved downstream).
+`ddot.it/block` / `ddot.it/verbatim` passing through is *not* — those must be
+expanded by the parser (<<bug-block>>).
+
+[WARNING]
+====
+*Bug (<<bug-block>>): `ddot.it/block` and `ddot.it/verbatim` must be expanded by
+the parser.* Both (link:site/block.md[block spec],
+link:site/verbatim.md[verbatim spec]) describe *object-literal expansion* with
+optional custom `?end=` markers. The canonical event parser *does not implement
+them* — the following lines are treated as non-matching and ignored (see
+link:test-data/cases/17-block/expected.events.jsonl[case 17], where the object is
+wrongly `ddot.it/block` and `Broadway 1` / `Berlin` / `Germany` produce
+nothing). A conforming parser must instead:
+
+* when a triple's *object* is `ddot.it/block` / `!!block` (or `…/verbatim`),
+  consume the following lines as the object value;
+* the block *starts on the next line* and ends at the *default blank line* or a
+  *custom `?end=MARKER`* line (marker excluded);
+* interior newlines are copied as Unicode `\n` into the object value
+  (link:site/block.md[block → Newlines]);
+* `verbatim` additionally *escapes* ddot.it syntax inside the value (`,,`, `..`,
+  and commands are literal), and its inline form takes the rest of the line
+  verbatim, removing exactly one following space
+  (link:site/verbatim.md[verbatim → Inline form]).
+
+This stays *regular*: add an `in-block` mode with a stored end-marker string
+register (default = blank line). No recursion is introduced.
+====
+
+=== `ddot.it/this` (document self-reference)
+
+Refers to the current document as subject
+(link:site/this.md[this spec], link:site/user-guide.md[User Guide → This
+Command]). *The parser keeps it literal*; the
+link:site/developer-guide.md[collector] substitutes the real source URL
+(link:site/developer-guide.md[Developer Guide → Command Handling]).
+
+=== `ddot.it/on` / `ddot.it/off` (include/exclude regions)
+
+* Default state is *on* (processed). Without any `on`/`off`, the whole document
+  is parsed (link:site/on.md[on spec], link:site/user-guide.md[User Guide →
+  Include/Exclude Regions]).
+* A marker is effective from its line to end-of-document or the opposite marker.
+  Multiple pairs may appear.
+* Markers must be *alone on their (trimmed) line* to toggle — matched by
+  `trimmed.equals("ddot.it/off")` etc.
+  (link:../ddot.it-intellij/src/main/java/com/calpano/ddot/export/DdotEventExporter.java#L63[Java]).
+* Lines inside an `off` region are *skipped* (`if (off) continue;`), producing
+  no events and — in the highlighter — a `disabled` token per non-empty line
+  (link:test-data/tokens.md[tokens.md]). The markers themselves stay `command`.
+* Neither `on` nor `off` is emitted as an event
+  (link:site/developer-guide.md[Developer Guide → Command Handling]).
+* Entering `off` *discards any open meta block*
+  (link:../ddot.it-intellij/src/main/java/com/calpano/ddot/export/DdotEventExporter.java#L65[Java]).
+
+See link:test-data/cases/06-off-on-toggle/[case 06] and
+link:test-data/cases/11-shorthand-command/[case 11].
+
+=== `ddot.it` (file-type indicator)
+
+A bare `ddot.it` line just marks the file as double-dotted for humans/agents
+(link:site/user-guide.md[User Guide → File Type Indicator]); as a triple it is a
+single segment and is ignored.
+
+[[events]]
+== Output: triple events
+
+Emit one JSON object per recognised triple, as JSONL
+(link:site/developer-guide.md[Developer Guide → Events]).
+
+[cols="1,1,4,2",options="header"]
+|===
+| Field | Req. | Meaning | Notes
+| `from`     | yes | Subject                              | inherited if omitted
+| `type`     | no  | Predicate; *omit* for untyped        | default label `links to` is a consumer concern
+| `to`       | yes | Object                               |
+| `meta`     | no  | Array of `{type, to}`                | only typed meta pairs; omitted if empty
+| `kind`     | yes | Source kind (e.g. `markdown`, `ddot`)| fixed per reader
+| `source`   | yes | Source identifier / path             | fixed per reader
+| `location` | yes | *1-based* source line number         | of the triple's first line
+|===
+
+Example (link:test-data/cases/03-inline-meta/expected.events.jsonl[case 03]):
+
+[source,json]
+----
+{"from":"John Doe","type":"leads","to":"Project Eagle",
+ "meta":[{"type":"since","to":"2025"}],
+ "kind":"ddot","source":"input.ddot","location":1}
+----
+
+=== Field-order & serialisation contract
+
+The golden JSONL is *byte-exact*, so serialise fields in this order:
+`from`, `type?`, `to`, `meta?`, `kind`, `source`, `location`
+(link:../ddot.it-intellij/src/main/java/com/calpano/ddot/export/DdotEventExporter.java#L118[`toJson`]).
+JSON string escaping covers `"` `\` `\n` `\r` `\t` `\b` `\f` and `\uXXXX` for
+other control chars
+(link:../ddot.it-intellij/src/main/java/com/calpano/ddot/export/DdotEventExporter.java#L145[`escapeJson`]).
+`location` is 1-based (`i + 1`). The corpus fixes `kind="ddot"`,
+`source="input.ddot"` (link:test-data/README.md[test-data/README.md]).
+
+=== No HTML/quote interpretation
+
+Slot values are taken as-is. Quotes are ordinary characters belonging to the
+slot (link:test-data/tokens.md[tokens.md → Rules]) — `"a sample document"`
+keeps its quotes (link:test-data/cases/05-command/expected.events.jsonl[case
+05]). Angle-bracket/ampersand content is *not* HTML-escaped in events —
+`<https://example.com/x?a=1&b=2>` is emitted verbatim
+(link:test-data/cases/08-html-escaping/expected.events.jsonl[case 08]).
+(HTML-escaping applies only to the *preview renderer's* HTML output, not to
+events or tokens.)
+
+[[highlighter]]
+== The highlighter / token contract
+
+If you are building a syntax highlighter rather than an event parser, target
+`expected.tokens.json`: a flat array of `{line, start, end, token, text}`,
+*zero-indexed*, *end-exclusive*, *whitespace not tokenised*, lines with no
+tokens omitted (link:test-data/README.md[test-data/README.md]).
+
+Token vocabulary (link:test-data/tokens.md[tokens.md]):
+
+[cols="1,3",options="header"]
+|===
+| Token | Covers
+| `subject`       | first slot of a triple
+| `relation`      | predicate of a typed triple
+| `object`        | object slot
+| `operator`      | `..` / `....` / `.. ..` (the last is one token)
+| `command`       | `ddot.it`, `ddot.it/<word>`, `!!`, `!!<word>`
+| `meta-delim`    | `,,` opening/closing metadata
+| `meta-operator` | `..` / `....` inside metadata
+| `meta-relation` | predicate inside metadata
+| `meta-object`   | object inside metadata
+| `meta-text`     | free-form text in a `,,` context (no triple match)
+| `disabled`      | body of an `off`…`on` span (markers stay `command`)
+|===
+
+Key lexer rules (link:test-data/tokens.md[tokens.md → Rules]):
+
+* Quoted strings are *not* a token type — quotes belong to their slot.
+* When a slot's text is *exactly* a command form (e.g. `ddot.it/this` as
+  subject, `!!label` as relation), emit `command`, not the slot role
+  (link:test-data/cases/05-command/expected.tokens.json[case 05],
+  link:test-data/cases/15-label/expected.tokens.json[case 15]).
+* Off/on markers are `command`; interior lines are `disabled` (one token per
+  non-empty line).
+
+The canonical generator is the TextMate grammar
+link:../ddot.it-syntax-tools/textmate/ddot.tmLanguage.json[`ddot.tmLanguage.json`]
+(npm `@calpano/ddot-textmate-grammar`); other highlighters (Pygments, Chroma,
+highlight.js, Prism, Rouge, Shiki) map their native scopes onto this vocabulary
+(link:test-data/README.md[test-data/README.md]).
+
+[[relations]]
+== Standard relation names (consumer-level, not parser-level)
+
+Relations are *just strings* to a parser. The following names are *conventions*
+resolved by consumers/collectors, not by your parser
+(link:site/relations.md[Relations], link:test-data/cases/18-relation-aliases/[case 18]):
+
+[cols="1,1,3",options="header"]
+|===
+| Name | Aliases | Semantics (`A .. rel .. B`)
+| `related`     | `rel`, `is related` | undirected link
+| `same as`     | `is same as`        | A and B are the same concept
+| `is alias of` |                     | like `same as`, with a main concept
+| `links to`    | `link`, `see also`  | directed untyped; *default for* `....`
+| `has tag`     | `tag`               | A has tag B (not transitive)
+| `has type`    | `type`, `is a`      | A has type B (rdf:type-like)
+| `has subtype` | `subtype`           | transitive; cycles ⇒ `same as`
+| `prefix`      | —                   | RDF namespace mapping (see below)
+| `has content` | `content`           | B is a longer string value
+|===
+
+The `prefix` relation supports optional RDF interpretation: a name `A:foo` may
+have its `A:` replaced by the mapped IRI. This is a *recommended downstream
+interpretation only* — not required of a parser
+(link:site/rdf.md[RDF], link:test-data/cases/19-rdf-prefix/[case 19]).
+
+[[host-languages]]
+== Host-language extraction (reader front-ends)
+
+Your parser core (above) consumes plain ddot.it text. A *reader* first extracts
+that text from a host document. Extraction sites per host
+(link:site/developer-guide.md[Developer Guide → Reader]):
+
+[cols="1,3",options="header"]
+|===
+| Host | Where ddot.it text is found
+| link:site/reader-markdown.md[Markdown]
+| plain text, `<!-- -->` comments, fenced code blocks, section attributes `{#id .class}`
+| link:site/reader-asciidoc.md[AsciiDoc]
+| plain text, `//` and `////` comments, `----` listing blocks, block attributes `[#id.class]`
+| link:site/reader-html.md[HTML]
+| `<!-- -->` comments, element text, `data-ddot` attributes, `<ddot-it>` custom element
+| link:site/reader-xml.md[XML / pom.xml]
+| comments, element text (esp. `<description>`)
+| link:site/reader-yaml.md[YAML]
+| `#` comments, scalar string values (each value resets parse context)
+| link:site/reader-java.md[Java]
+| line/block/Javadoc comments, `@DdotIt(String[])` annotation values (newline-joined)
+| link:site/reader-plaintext.md[Plain text]
+| any line
+| link:site/reader-powerpoint.md[PowerPoint]
+| slide text + speaker notes (`.pptx` = zipped XML)
+|===
+
+Two extraction rules worth flagging for parser authors:
+
+* *Section/block attributes* expand to synthetic triples: `## Title {#a .b}`
+  becomes `Title ..has tag.. a` + `..has type.. b`
+  (link:site/reader-markdown.md[Markdown reader],
+  link:site/reader-asciidoc.md[AsciiDoc reader]).
+* `<ddot-it>` elements can carry a multi-line `has content` value with real
+  newlines — the *only* place besides block commands where a value contains
+  `\n` (link:site/reader-html.md[HTML reader → Custom Elements]).
+* YAML resets parse context per scalar string
+  (link:site/reader-yaml.md[YAML reader]) — i.e. subject inheritance does not
+  cross value boundaries.
+
+[[bugs]]
+== Known bugs in the reference parser (read before you ship)
+
+The following are *defects in the canonical event parser*
+(link:../ddot.it-intellij/src/main/java/com/calpano/ddot/export/DdotEventExporter.java[`DdotEventExporter`]),
+not intended behaviour. *The prose specification is authoritative.* A new parser
+should implement the spec; the reference parser and any golden
+`expected.events.jsonl` that currently encodes the buggy output will be brought
+into line.
+
+[[bug-plaintext-meta]]
+=== BUG 1 — plain-text metadata is dropped
+
+Plain-text metadata is allowed and must be emitted as an *untyped* meta pair
+(`{to:"…"}`, no `type`). The parser only keeps `..type.. value` payloads and
+discards bare strings — both inline and in blocks. See <<plaintext-meta>>.
+Affected: link:test-data/cases/13-inline-meta-text/[case 13],
+link:test-data/cases/09-standalone-comma-block/[case 09],
+link:test-data/cases/14-multiline-meta-text/[case 14].
+
+[[bug-reset]]
+=== BUG 2 — no block reset on three newlines
+
+The syntax spec resets the current subject and meta-mode at block boundaries
+(three newlines); the parser skips blank lines without clearing `currentSubject`
+(link:../ddot.it-intellij/src/main/java/com/calpano/ddot/export/DdotEventExporter.java#L61[Java]),
+so a subject wrongly leaks across blocks. Implement the reset. See <<blocks>>.
+
+[[bug-block]]
+=== BUG 3 — `ddot.it/block` / `ddot.it/verbatim` not expanded
+
+Both commands must expand into a multi-line object value (with optional custom
+`?end=` marker, interior newlines as `\n`; `verbatim` additionally escapes
+ddot.it syntax). The parser leaves the command as literal object text and
+ignores the following lines. Implement expansion (still *regular* — an `in-block`
+mode + end-marker register). See <<commands>>. Affected:
+link:test-data/cases/17-block/[case 17].
+
+[[bug-multi-meta]]
+=== BUG 4 — only one inline meta pair captured (semantics change, v1.3)
+
+`,, ..a.. 1 ..b.. 2` should yield *two* meta pairs; the parser runs the payload
+through `extractTriple` once, sees five segments, and yields *none*
+(link:../ddot.it-intellij/src/main/java/com/calpano/ddot/export/DdotEventExporter.java#L94[Java]).
+A conforming parser must capture *all* inline pairs. This is a deliberate
+*change in metadata semantics*, logged in link:site/CHANGELOG.md[CHANGELOG v1.3]:
+one inline `,,` section may now carry several `..type.. value` pairs. See
+<<metadata>>.
+
+=== Not bugs (correct as-is)
+
+* *`ddot.it/this` and `!!label` as slot text* pass through literally — *correct*.
+  The collector resolves `this`
+  (link:site/developer-guide.md[Developer Guide → Command Handling]); `label`
+  is a relation name resolved downstream
+  (link:test-data/cases/15-label/[case 15], link:test-data/cases/16-this/[case 16]).
+
+=== Open question (spec silent)
+
+* *NBSP around operators.* The User Guide allows NBSP
+  (link:site/user-guide.md[User Guide → Syntax Elements]), but the reference
+  `trim`/`\s` only handles ASCII whitespace. Decide explicitly; if you accept
+  NBSP, add a corpus case to pin it.
+
+[[testing]]
+== Conforming: how to test
+
+Run your implementation against the golden corpus under
+link:test-data/cases/[`test-data/cases/`]. Each case
+(link:test-data/README.md[test-data/README.md]) provides:
+
+* `input.ddot` — the source,
+* `expected.events.jsonl` — for event parsers,
+* `expected.tokens.json` — for highlighters,
+* `expected.body.html` — for HTML preview renderers.
+
+Assert *byte-identical* output for your level. Regeneration commands and the CI
+`--check` flags are documented in link:test-data/README.md[test-data/README.md].
+The formal lexical grammar lives in link:test-data/ddot.ebnf[`ddot.ebnf`]; the
+token vocabulary in link:test-data/tokens.md[`tokens.md`].
+
+[[sources]]
+== Sources & provenance
+
+Everything above is derived from these files. Prose spec (human-facing):
+
+* link:site/syntax.md[`site/syntax.md`] — formal syntax specification
+* link:site/user-guide.md[`site/user-guide.md`] — user-facing syntax reference
+* link:site/developer-guide.md[`site/developer-guide.md`] — architecture, events, collector
+* link:site/relations.md[`site/relations.md`] — standard relation names
+* link:site/rdf.md[`site/rdf.md`] — RDF / Turtle comparison, `prefix`
+* link:site/block.md[`site/block.md`] · link:site/verbatim.md[`site/verbatim.md`]
+  · link:site/label.md[`site/label.md`] · link:site/this.md[`site/this.md`]
+  · link:site/on.md[`site/on.md`] · link:site/off.md[`site/off.md`]
+  · link:site/write.md[`site/write.md`] — command specs
+* link:site/reader-markdown.md[Markdown] · link:site/reader-asciidoc.md[AsciiDoc]
+  · link:site/reader-html.md[HTML] · link:site/reader-xml.md[XML]
+  · link:site/reader-yaml.md[YAML] · link:site/reader-java.md[Java]
+  · link:site/reader-plaintext.md[Plain text] · link:site/reader-powerpoint.md[PowerPoint]
+  — host-language readers
+* link:site/llms.txt[`site/llms.txt`] — condensed machine-readable spec
+* link:site/CHANGELOG.md[`site/CHANGELOG.md`] — version history (current: 1.2, 2026-06-22)
+
+Formal grammar & golden corpus (normative for conformance):
+
+* link:test-data/ddot.ebnf[`test-data/ddot.ebnf`] — lexical grammar
+* link:test-data/tokens.md[`test-data/tokens.md`] — canonical token vocabulary
+* link:test-data/README.md[`test-data/README.md`] — corpus layout & workflow
+* link:test-data/cases/[`test-data/cases/`] — 19 golden cases
+
+Canonical reference implementations (normative for behaviour):
+
+* link:../ddot.it-intellij/src/main/java/com/calpano/ddot/export/DdotEventExporter.java[`DdotEventExporter.java`]
+  — the event parser (a direct port of the VS Code `parseDocument`)
+* link:../ddot.it-intellij/src/main/resources/com/calpano/ddot/asciidoc/ddot-render.rb[`ddot-render.rb`]
+  — the preview highlighter/renderer
+* link:../ddot.it-syntax-tools/textmate/ddot.tmLanguage.json[`ddot.tmLanguage.json`]
+  — the canonical highlighter grammar
+
+Published copies of the prose spec live at https://ddot.it/[ddot.it] (e.g.
+https://ddot.it/user-guide.html[user-guide], https://ddot.it/developer-guide.html[developer-guide],
+https://ddot.it/llms.txt[llms.txt]).

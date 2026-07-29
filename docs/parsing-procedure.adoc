@@ -1,0 +1,100 @@
+= ddot.it: Minimum Parsing Procedure
+:toc: macro
+:toclevels: 2
+:icons: font
+:source-highlighter: rouge
+
+The smallest correct procedure for turning ddot.it text into triple events, covering `!!on`/`!!off`,
+`!!verbatim`, metadata (`,,`), and triples (`..`) with continuation lines. The object slot allows `..`
+(see link:site/CHANGELOG.md[CHANGELOG 1.3] and the link:site/spec/ddot-it-parse.adoc[Parse Specification]); the whole rule is a single per-line regex.
+
+toc::[]
+
+== It is one streaming pass, not one regex
+
+A whole-document regex is impossible for either variant, because ddot.it carries *cross-line state* that a
+regex cannot:
+
+* `!!on`/`!!off` — a persistent *mode* across lines;
+* continuation (`.. rel .. o`) — a *subject register* carried forward;
+* `!!verbatim` block, `ddot.it/block`, and standalone `,,` block — *unbounded multi-line accumulation*
+  with an end-marker register.
+
+That is a *finite-state transducer with a few string registers* (see
+link:parser-devs.adoc#_tldr[parser-devs: TL;DR]). *One left-to-right pass over lines is enough for both
+variants — no second pass, no cross-line backtracking.*
+
+== The per-line procedure (identical for both variants)
+
+[source,text]
+----
+state: mode ∈ {ON,OFF} = ON ; subject = null
+       block ∈ {NONE,VERBATIM,BLOCK,METABLOCK} = NONE
+       endMarker ; head{from,rel,meta} ; buf[]
+
+for each line (after newline normalisation):
+
+  1. if block != NONE:                      # inside a verbatim / block / meta block
+        if line == endMarker (blank by default, or custom):
+             emit(head.from, head.rel, join(buf,"\n"), head.meta); block = NONE
+        else buf.append(line)               # literal: ".." / ",," / on-off are NOT special here
+        continue
+
+  2. if line contains !!off / ddot.it/off : mode = OFF; subject = null; continue
+     if line contains !!on  / ddot.it/on  : mode = ON;                continue
+  3. if mode == OFF: continue
+  4. t = line.strip(); if t == "": continue
+  5. if t == ",,": open METABLOCK (attaches to the last triple); continue
+
+  # ---- candidate triple line ----
+  6. if t ends with !!verbatim[?end=M]:                       # verbatim BLOCK opener
+        (from,rel) = head-of(t without the trailing command)
+        block = VERBATIM; endMarker = M or blank; head = {from,rel}; buf = []; continue
+  7. if the object slot opens an inline !!verbatim:           # inline verbatim
+        object = literal(rest of line, drop one space)        # ",," and ".." stay literal
+     else:
+        (triplePart, meta) = split t at the FIRST ",,"        # inline metadata
+        slots = SPLIT(triplePart)          # <<< the ONLY variant-specific step
+        if slots == null: continue         # not a well-formed triple → ignore the line
+        (from,rel,object) = slots
+  8. if from == "": from = subject; if from == null: continue # continuation → inherit subject
+     else: subject = from
+     if object == "": continue                                # empty object → not a triple
+     emit(from, rel, object, meta); subject = from
+----
+
+`!!on`/`!!off`, `,,` (inline + block), `!!verbatim` (inline + block, see link:site/verbatim.md[verbatim]),
+and continuation are all handled by *ordering + registers* — not by the triple grammar.
+
+== `SPLIT(triplePart)` — one per-line regex
+
+[source,regex]
+----
+^((?:(?!\.\.).)*)\.\.((?:(?!\.\.).)*)\.\.((?!\.).+)$
+     subject          relation          object
+----
+
+* *subject* and *relation* — runs with no `..` (single dots like `3.0` are fine); either may be empty,
+  giving continuation (empty subject) and untyped links (empty relation, i.e. `....`).
+* *object* — everything after the second separator. The guard `(?!\.)` requires the character right after
+  the operator to be a *non-dot* (a space counts); after that the object may contain `..` freely. This
+  accepts URLs (`http://h/a..b`) and relative paths (`.. rel .. ../../x`), and rejects the degenerate
+  dot-runs where dots continue into the separator (`S ...... O`, `S ..... O`, `S ... B`).
+
+== Answers
+
+[cols="3,4",options="header"]
+|===
+| Question | Answer
+| One regex for the whole document? | No — needs the FSM (mode, subject register, block accumulation)
+| One regex per *normal* line?      | Yes — the single split regex above
+| Multiple passes?                  | No — one streaming pass
+| Can the highlighter match it too? | Yes — the link:../ddot.it-syntax-tools/textmate/ddot.tmLanguage.json[TextMate grammar] matches each triple line with *capture groups* (not a `\.{4}\|\.{2}` separator scan), so the same rule — operator followed by a non-dot, object may contain `..` — is a one-guard widening of the object capture. Parser and highlighter stay in agreement.
+|===
+
+== Consequence
+
+One pass, one FSM, one per-line regex — for both the event parser and the capture-based highlighter, which
+share the object rule. The earlier worry that relaxing the object would force a permanent lexer/parser split
+does not apply: it assumed a separator-scan highlighter, but the actual grammar is capture-based and adopts
+the same `(?!\.)` guard. See the link:site/spec/ddot-it-parse.adoc[Parse Specification].
