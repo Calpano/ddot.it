@@ -1,0 +1,934 @@
+= CDS & Standards Alignment 1.1.0
+:toc: macro
+:ddd: Ddot.it
+:dd: ddot.it
+:toclevels: 4
+:page-title: CDS & Standards Alignment
+:page-nav_order: 6
+:page-parent: Specifications
+
+toc::[]
+
+This document delivers background information about design decisions.
+
+This document describes the relation vocabularies of {dd} and the inference rules that come with
+them.
+It is the semantic layer that a {dd} tool may apply on top of the plain triple stream produced by
+parsing (see the parsing spec).
+Nothing here affects the syntax: to the parser, all these relations are ordinary strings.
+
+Two vocabularies are described:
+
+<<ddot-relations>>:: The small set of common relation names suggested for everyday {dd} use.
+<<cds>>:: *CDS* (_Conceptual Data Structures_), the full formal vocabulary with inverses, a
+relation hierarchy and inference rules.
+
+The first is a human-facing subset; the second is what a reasoner works with.
+See <<mapping>> for how they relate.
+
+<<ecore>> supplies the cardinality model, and <<standards>> aligns CDS with RDFS, OWL, SKOS and
+WordNet.
+
+
+[[ddot-relations]]
+== The ddot.it Relation Names
+The {dd}-facing relation names -- `related`, `links to`, `has type`, `has subtype`, `text`,
+`label` and the rest -- are **not** defined here. They are declared in the
+xref:ddot-it-vocabulary.adoc[Vocabulary Specification], where each is a machine-readable
+built-in carrying its own `has type`, `has supertype`, `has inverse`, `uri` and `has alias`
+triples, checked against `ddot-it-vocabulary.ddot` by CI.
+
+This document previously repeated those names in a hand-written table. The copy drifted from the
+declarations -- listing `has content` as a relation of its own when it is an *alias* of
+xref:ddot-it-vocabulary.adoc#text[`text`], and carrying aliases that were never declared -- so it
+has been removed rather than re-synchronised. For the canonical name of any relation, and for its
+full set of aliases, read the vocabulary.
+
+What remains here is the alignment material: the <<cds,CDS vocabulary>> and its
+<<rules,inference rules>>, the <<mapping,mapping between CDS and {dd}>>, the
+<<ecore,ECore>> cardinality kernel, and the <<standards,mappings to RDFS, OWL, SKOS and
+WordNet>>.
+
+[[cds]]
+== The CDS Vocabulary
+*CDS* = _Conceptual Data Structures_.
+
+Source of truth: `de.xam.cds.CdsId` (names, labels, inverses, transitivity),
+`de.xam.cds.CdsIdT` (axiomatic triples) and `de.xam.cds.CdsRules` (inference rules).
+
+Background: "Personal Knowledge Models with Semantic Technologies", page 148 pp.,
+available from http://xam.de/go/pkm[xam.de/go/pkm].
+
+Namespace: `http://www.semanticdesktop.org/ontologies/2007/09/01/cds#`
+
+
+[[relation-table]]
+=== Relations
+Each relation has a technical _id_, a human-readable _label_, an _inverse_ relation and — except for
+the root — a _super-relation_.
+The `T` column marks transitive relations, the `S` column marks symmetric relations
+(a relation is symmetric exactly when it is its own inverse).
+
+[cols="2l,2d,2l,2l,^1,^1",options="header"]
+|===
+| Id | Label | Inverse | Super-relation | T | S
+
+6+h| Layer 0 — root
+
+|hasRelated          | is related to |hasRelated          |_(none, root)_      | | ✓
+
+6+h| Layer 1 — linking
+
+|hasSimilar          | is similar to |hasSimilar          |hasRelated          | | ✓
+|hasTarget           | links to      |hasSource           |hasRelated          | |
+|hasSource           | is linked from |hasTarget           |hasRelated          | |
+
+6+h| Layer 2 — ordering, detail, annotation
+
+|hasAfter            | comes before  |hasBefore           |hasTarget           | ✓ |
+|hasBefore           | comes after   |hasAfter            |hasSource           | ✓ |
+|hasDetail           | has detail    |hasContext          |hasTarget           | |
+|hasContext          | has context   |hasDetail           |hasSource           | |
+|hasAnnotationMember | annotates |hasAnnotation       |hasTarget           | |
+|hasAnnotation       | has annotation |hasAnnotationMember |hasSource           | |
+
+6+h| Layer 3 — tagging
+
+|hasTagMember        | is tag of      |hasTag              |hasAnnotationMember | |
+|hasTag              | is tagged with |hasTagMember        |hasAnnotation       | |
+
+6+h| Layer 4 — typing
+
+|hasInstance         | has instance |hasType             |hasTagMember        | |
+|hasType             | has type     |hasInstance         |hasTag              | |
+
+6+h| Part-of and type hierarchy
+
+|hasPart             | has part      |isPartOf            |hasDetail           | ✓ |
+|isPartOf            | is part of    |hasPart             |hasContext          | ✓ |
+|hasSubType          | has subtype   |hasSuperType        |hasDetail           | ✓ |
+|hasSuperType        | is subtype of |hasSubType          |hasContext          | ✓ |
+
+6+h| Identity and aliasing
+
+|sameAs              | is same as     |sameAs              |hasSimilar          | ✓ | ✓
+|isAliasOf           | is alias for   |hasAlias            |hasSimilar          | |
+|hasAlias            | has alias      |isAliasOf           |hasSimilar          | |
+|replaces            | replaces       |replacedBy          |hasSimilar          | |
+|replacedBy          | is replaced by |replaces            |hasSimilar          | |
+
+6+h| Wiki / auto linking (added 2014-07-13)
+
+|hasAutoLinkTarget   | auto-links to    |hasAutoLinkSource   |hasTarget           | |
+|hasAutoLinkSource   | auto-linked from |hasAutoLinkTarget   |hasSource           | |
+|hasManualLinkTarget | wiki-links to    |hasManualLinkSource |hasTarget           | |
+|hasManualLinkSource | wiki-linked from |hasManualLinkTarget |hasSource           | |
+
+6+h| CDS data model (the meta level)
+
+|hasInverse          | has inverse |hasInverse          |_(none)_            | | ✓
+|===
+
+NOTE: The super-relation is asserted in the axioms only for one direction of each inverse pair
+(e.g. `hasRelated hasSubType hasTarget`).
+The super-relation of the _inverse_ side is not asserted; it follows from <<r17>>.
+The table lists it explicitly for readability.
+
+[[relation-labels]]
+==== Reading the labels
+The label reads in _subject-first_ direction: `(x, hasAfter, y)` is read as "x comes before y",
+and `(x, hasSuperType, y)` as "x is subtype of y".
+The id is written from the perspective of what the subject _has_; the label from the perspective of
+what the subject _does_.
+This is why some pairs look inverted at first glance.
+
+
+[[item-types]]
+=== Item Types
+Three items — not relations — classify relations themselves:
+
+[cols="2l,3d",options="header"]
+|===
+| Id | Label
+
+|type_relation           | relation
+|type_symmetricRelation  | symmetric relation
+|type_transitiveRelation | transitive relation
+|===
+
+Both `type_symmetricRelation` and `type_transitiveRelation` are sub-types of `type_relation`.
+
+
+[[axioms]]
+=== Axiomatic Triples
+For every relation pair `(r, inv)` with super-relation `sup`, these triples are asserted:
+
+----
+(r,   hasType,    type_relation)
+(inv, hasType,    type_relation)
+(r,   hasInverse, inv)
+(sup, hasSubType, r)
+----
+
+Plus the relation-type assertions:
+
+----
+(hasAfter,      hasType, type_transitiveRelation)
+(hasBefore,     hasType, type_transitiveRelation)
+(sameAs,        hasType, type_transitiveRelation)
+(hasSubType,    hasType, type_transitiveRelation)
+(hasSuperType,  hasType, type_transitiveRelation)
+(hasPart,       hasType, type_transitiveRelation)
+
+(hasInverse,    hasType, type_symmetricRelation)
+(sameAs,        hasType, type_symmetricRelation)
+(hasRelated,    hasType, type_symmetricRelation)
+
+(type_relation, hasSubType, type_symmetricRelation)
+(type_relation, hasSubType, type_transitiveRelation)
+----
+
+
+[[rules]]
+== Inference Rules
+The rules are forward-chaining production rules over triples.
+`?x` denotes a variable, quoted names denote fixed relations from <<relation-table>>.
+Conditions are listed above the `==>`, the derived triple below.
+
+[[r01]]
+=== r01 — transitive
+Transitive closure for any relation declared transitive.
+
+----
+?x   ?p        ?y
+?y   ?p        ?z
+?p   'hasType' 'type_transitiveRelation'
+  ==>
+?x   ?p        ?z
+----
+
+[[r02]]
+=== r02 — inverse (A-box)
+Every statement also holds in the inverse direction.
+
+----
+?x   ?p           ?y
+?p   'hasInverse' ?q
+  ==>
+?y   ?q           ?x
+----
+
+[[r03]]
+=== r03 — inverse (T-box) — *not active*
+`hasInverse` symmetry. This rule is configured but *not registered* with the engine: the axiomatic
+triple `(hasInverse, hasType, type_symmetricRelation)` combined with <<r09>> achieves the same.
+
+----
+?p   'hasInverse' ?q
+  ==>
+?q   'hasInverse' ?p
+----
+
+[[r04]]
+=== r04 — type inheritance
+An instance of a type is also an instance of that type's super-types.
+
+----
+?x   'hasType'      ?t
+?t   'hasSuperType' ?u
+  ==>
+?x   'hasType'      ?u
+----
+
+[[r05]]
+=== r05 — relation inheritance
+A statement using a relation also holds for that relation's super-relations.
+
+----
+?x   ?p              ?y
+?p   'hasSuperType'  ?u
+  ==>
+?x   ?u              ?y
+----
+
+NOTE: <<r05>> can trigger <<r01>>, so the two must be registered together for a complete closure.
+
+[[r06]]
+=== r06 — alias in subject position
+----
+?alias    'isAliasOf' ?resolved
+?alias    ?p          ?o
+  ==>
+?resolved ?p          ?o
+----
+
+[[r07]]
+=== r07 — alias in predicate position
+----
+?alias    'isAliasOf' ?resolved
+?s        ?alias      ?o
+  ==>
+?s        ?resolved   ?o
+----
+
+[[r08]]
+=== r08 — alias in object position
+----
+?alias    'isAliasOf' ?resolved
+?s        ?p          ?alias
+  ==>
+?s        ?p          ?resolved
+----
+
+[[r09]]
+=== r09 — symmetric (A-box)
+----
+?x   ?p        ?y
+?p   'hasType' 'type_symmetricRelation'
+  ==>
+?y   ?p        ?x
+----
+
+[[r10]]
+=== r10 — self-inverse implies symmetric
+----
+?p   'hasInverse' ?p
+  ==>
+?p   'hasType'    'type_symmetricRelation'
+----
+
+[[r11]]
+=== r11 — symmetric implies self-inverse
+The converse of <<r10>>; together they make the two formulations equivalent.
+
+----
+?p   'hasType'    'type_symmetricRelation'
+  ==>
+?p   'hasInverse' ?p
+----
+
+[[r12]]
+=== r12 — inverse of inverse is the same relation
+----
+?p   'hasInverse' ?q
+?q   'hasInverse' ?r
+  ==>
+?p   'sameAs'     ?r
+----
+
+[[r13]]
+=== r13 — inverse inherits type
+A relation and its inverse share all types (both transitive, both symmetric, …).
+
+----
+?p   'hasInverse' ?q
+?p   'hasType'    ?t
+  ==>
+?q   'hasType'    ?t
+----
+
+[[r14]]
+=== r14 — sameAs in subject position
+----
+?a   'sameAs' ?b
+?a   ?p       ?c
+  ==>
+?b   ?p       ?c
+----
+
+[[r15]]
+=== r15 — sameAs in predicate position
+----
+?p   'sameAs' ?r
+?a   ?p       ?b
+  ==>
+?a   ?r       ?b
+----
+
+[[r16]]
+=== r16 — sameAs in object position
+----
+?b   'sameAs' ?c
+?a   ?p       ?b
+  ==>
+?a   ?p       ?c
+----
+
+[[r17]]
+=== r17 — sub-type relation carries over to inverses
+If `a` is a sub-relation of `c`, then the inverse of `a` is a sub-relation of the inverse of `c`.
+This is what gives the inverse-side relations in <<relation-table>> their super-relation.
+
+----
+?a   'hasInverse'   ?b
+?c   'hasInverse'   ?d
+?a   'hasSuperType' ?c
+  ==>
+?b   'hasSuperType' ?d
+----
+
+[[r18]]
+=== r18 — tags propagate to parts
+Added 2015-12-29. A tag on a whole applies to each of its parts.
+
+----
+?a    'hasTag'  ?tag
+?a    'hasPart' ?part
+  ==>
+?part 'hasTag'  ?tag
+----
+
+
+[[rule-sets]]
+=== Rule Sets
+Rules are grouped so that an implementation can trade completeness for speed:
+
+[cols="2d,4d,3d",options="header"]
+|===
+| Group | Rules | Note
+
+| transitive       | <<r01>>                            | The expensive one — closure can blow up
+| inverse          | <<r02>>, <<r13>>                   | <<r03>> configured but not registered
+| symmetric        | <<r09>>, <<r10>>, <<r11>>          |
+| alias            | <<r06>>, <<r07>>, <<r08>>          |
+| sameAs           | <<r12>>, <<r14>>, <<r15>>, <<r16>> | <<r12>> derives `sameAs` from inverse chains
+| type inheritance | <<r04>>, <<r05>>, <<r17>>          |
+| part             | <<r18>>                            |
+|===
+
+Predefined configurations:
+
+`All`:: All of the above.
+`AllExceptTransitive`:: Everything but <<r01>>. The common choice when the closure is too costly.
+`OnlyTransitive`:: <<r01>> only.
+`None`:: No inference.
+
+[[cost-model]]
+==== Cost Model
+When a rule engine picks an evaluation order for the conditions of a rule, it counts unbound
+variables and adds a penalty per relation, reflecting how often that relation typically occurs:
+
+[cols="3l,^1,3d",options="header"]
+|===
+| Relation | Penalty | Frequency
+
+|hasSubType   | 0.2 | rare
+|hasSuperType | 0.2 | rare
+|hasInverse   | 0.2 | rare
+|sameAs       | 0.7 | medium
+|hasAlias     | 0.8 | medium
+|isAliasOf    | 0.8 | medium
+|hasType      | 0.9 | frequent
+|hasInstance  | 0.9 | frequent
+|_all others_ | 0   |
+|===
+
+The penalty applies only when the predicate itself is bound but subject or object are not.
+
+
+[[mapping]]
+== Mapping the Two Vocabularies
+Every relation declared in the xref:ddot-it-vocabulary.adoc[Vocabulary Specification], and how it
+corresponds to CDS. {ddd} uses the CDS _labels_ rather than the CDS _ids_.
+
+.Relations between things
+[cols="2l,2l,4d",options="header"]
+|===
+| ddot.it name | CDS id | Note
+
+|related        |hasRelated          | Symmetric root relation
+|has inverse    |hasInverse          | Symmetric; pairs a relation with its opposite
+|has similar    |hasSimilar          | Symmetric
+|same as        |sameAs              | Symmetric and transitive
+|is alias of    |isAliasOf           | Inverse `hasAlias` ("has alias")
+|replaces       |replaces            | Inverse `replacedBy`; transitive in {dd} only, see <<ddot-additions>>
+|links to       |hasTarget           | Inverse `hasSource` ("is linked from")
+|has next       |hasAfter            | Inverse `hasBefore` ("has previous"); transitive
+|has detail     |hasDetail           | Inverse `hasContext` ("has context")
+|has part       |hasPart             | Inverse `isPartOf` ("is part of"); transitive
+|has subtype    |hasSubType          | Inverse `hasSuperType` ("has supertype"); transitive
+|annotates      |hasAnnotationMember | Inverse `hasAnnotation` ("has annotation")
+|is tag of      |hasTagMember        | Inverse `hasTag` ("has tag")
+|has instance   |hasInstance         | Inverse `hasType` ("has type")
+|===
+
+.Relations carrying a value
+None of these has a CDS counterpart: CDS models values through its own data model rather than
+through a property hierarchy.
+
+[cols="2l,2l,4d",options="header"]
+|===
+| ddot.it name | CDS id | Note
+
+|has property  |--  | Root of the value-carrying family; the type is `property`
+|label         |--  | The visible name of a node
+|text          |--  | Free content; alias `has content`. Carries the `,,` meta text
+|uri           |--  | Identifying relation
+|prefix        |--  | A parsing directive, not a semantic relation
+|source uri    |--  | Provenance
+|collected     |--  | Provenance
+|valid since   |--  | Provenance
+|valid until   |--  | Provenance
+|last modified |--  | Provenance
+|grade         |--  | Replaces the four CDS auto/manual-link relations, see below
+|===
+
+[[cds-coverage]]
+.Coverage
+Of the 28 relations in the <<relation-table,CDS relation table>>, **24 have a {dd} counterpart**
+above -- both directions of every inverse pair. The remaining four are deliberately *not*
+carried over:
+
+[cols="3l,5d",options="header"]
+|===
+| CDS | Superseded by
+
+|hasAutoLinkTarget / hasAutoLinkSource     | `links to` + `+,, ..grade.. unreviewed+`
+|hasManualLinkTarget / hasManualLinkSource | `links to` + `+,, ..grade.. manual+`
+|===
+
+CDS encoded link provenance in the *relation name*; {dd} encodes it as
+xref:ddot-it-vocabulary.adoc#grade[`grade`] meta on an ordinary `links to`, which keeps the link
+itself one relation. The exact rewrite is tabulated in the vocabulary's "Migration from CDS".
+
+Differences to reconcile:
+
+* {dd} says tags are *not* transitive; CDS does not declare `hasTag` transitive either — consistent.
+* {dd} says a `has subtype` cycle collapses to `same as`; CDS has no rule for this.
+  <<r12>> derives `sameAs` from inverse chains only.
+
+[[ddot-additions]]
+.Where {dd} adds to CDS
+`replaces` / `is replaced by` are declared **transitive** in the
+xref:ddot-it-vocabulary.adoc#replaces[Vocabulary Specification], and in the generated
+`ddot-it-vocabulary.ddot`. CDS does *not*: neither `replaces` nor `replacedBy` appears in the
+<<axioms,transitive axiom list>>, and the CDS relation table above accordingly leaves their
+`T` column empty.
+
+This is a deliberate {dd} addition, not a transcription error. If `a` replaces `b` and `b`
+replaces `c`, then `a` replaces `c` is what a reader expects, and the inference is
+xref:ddot-it-vocabulary.adoc#monotonicity[monotonic] like every other. The CDS tables in this document describe **CDS**, so
+they are left unmarked; the divergence is recorded here instead of being hidden by editing
+either side.
+
+**`has subtype` cycles collapse to `same as`.** If `a` has subtype `b` and `b` has subtype `a`,
+xref:ddot-it-vocabulary.adoc#has-subtype[the vocabulary] concludes `a ..same as.. b` -- every
+participant of the cycle is one entity. CDS has no such rule: <<r12>> derives `sameAs` from
+chains of *inverses* only, and nothing in the CDS rule set closes a subtype cycle.
+
+The addition is what keeps a cycle from being an error. In a <<settled-scope,monotonic>>
+language nothing can be rejected, so a subtype cycle has to *mean* something; reading it as
+identity is both the useful answer and the one that adds inferences rather than removing them.
+
+NOTE: By contrast, `isPartOf` **is** marked transitive in the CDS table above even though the
+axiom list names only `hasPart`. That is not an addition: <<r13>> ("a relation and its inverse
+share all types") forces it, and CDS spells out both sides for the comparable
+`hasSubType`/`hasSuperType` pair. The unmarked `isPartOf` was an omission in the table.
+
+
+[[ecore]]
+== ECore Kernel
+https://eclipse.dev/modeling/emf/[Ecore] is the meta-model of EMF.
+It is the closest well-established model to what {dd} needs for _cardinalities_, so we borrow its
+kernel here.
+
+Indentation is `rdfs:subClassOf`:
+
+* ENamedElement    ..hasName.. String
+** EClassifier
+*** EClass
+*** EDataType
+** ETypedElement    ..hasEType.. an EClassifier
+*** EStructuralFeature
+**** EAttribute
+**** EReference
+
+
+[[ecore-cardinality]]
+=== Cardinality
+Cardinality in Ecore is not a separate class. It is four attributes on `ETypedElement`, and
+therefore inherited by every `EAttribute` and `EReference`:
+
+[cols="2l,1l,1d,4d",options="header"]
+|===
+| Attribute | Type | Default | Meaning
+
+|lowerBound |EInt     | 0    | Minimum number of values. `>= 1` means required.
+|upperBound |EInt     | 1    | Maximum number of values. `-1` means unbounded (`*`).
+|ordered    |EBoolean | true | Whether the order of multiple values is meaningful.
+|unique     |EBoolean | true | Whether duplicate values are forbidden.
+|===
+
+Two further attributes are *derived* — they are not stored, they follow from the bounds:
+
+[cols="2l,4d",options="header"]
+|===
+| Derived attribute | Definition
+
+|required | `lowerBound >= 1`
+|many     | `upperBound > 1` or `upperBound == -1`
+|===
+
+The four combinations that cover almost all practical cases:
+
+[cols="1d,1l,1l,3d",options="header"]
+|===
+| Notation | lowerBound | upperBound | Meaning
+
+| `0..1` |0 |1  | Optional single value
+| `1..1` |1 |1  | Exactly one — required single value
+| `0..*` |0 |-1 | Any number, including none
+| `1..*` |1 |-1 | At least one
+|===
+
+TIP: `ordered` and `unique` only matter when `many` is true. With `unique = true` and
+`ordered = false` a multi-valued feature behaves like a set, with both true like an ordered set,
+with `unique = false` and `ordered = true` like a list.
+
+[[ecore-cardinality-ddot]]
+==== Writing Cardinality in ddot.it
+{ddd} declares this model as built-ins -- see
+xref:ddot-it-vocabulary.adoc#cardinality[Cardinality] in the Vocabulary Specification. Bounds are
+written as **two separate properties**, each taking a plain integer:
+
+----
+Person ..has address.. Address ,, ..min cardinality.. 1 ;; ..max cardinality.. 3
+Person ..has name.. String ,, ..cardinality.. 1
+----
+
+An omitted `max cardinality` means unbounded; there is no `*` or `-1` sentinel. The named
+shorthands xref:ddot-it-vocabulary.adoc#cardinality-types[`required`, `single valued` and
+`multi valued`] cover the common cases as relation *types*.
+
+CAUTION: A range written as one value -- `+1..3+` -- is **not** used. It parses where it stands,
+since a meta object may contain `+..+`, but the same string reused as a subject silently
+misparses (`+1..3 ..has type.. cardinality+` reads as subject `1`, relation `3`). Two bounds
+avoid the collision entirely.
+
+.Name mapping
+[cols="2l,2l,4d",options="header"]
+|===
+| ECore | ddot.it | Note
+
+|lowerBound |min cardinality | Declared alias `lowerBound`
+|upperBound |max cardinality | Declared alias `upperBound`; omit for unbounded
+|required   |required        | ECore derives it; {dd} declares it as a relation type
+|many       |multi valued    | ECore derives it; in {dd} it is the default, so it only documents intent
+|ordered    |--              | Not modelled: {dd} triples have no inherent order
+|unique     |--              | Not modelled: a {dd} triple base is a set, so duplicates do not arise
+|===
+
+[[ecore-other]]
+=== Beyond Cardinality
+The remaining Ecore kernel attributes are listed here for completeness; {dd} does not currently
+assign them a meaning.
+
+[cols="2l,3l,4d",options="header"]
+|===
+| Class | Attribute | Meaning
+
+|EClass             |abstract     | Cannot be instantiated directly
+|EClass             |interface    | Has no implementation
+|EStructuralFeature |changeable   | May be modified after creation
+|EStructuralFeature |derived      | Computed, not stored
+|EStructuralFeature |transient    | Not serialised
+|EAttribute         |iD           | Serves as the identifier of its instances
+|EReference         |containment  | The target is *owned* by the source (composition)
+|EReference         |eOpposite    | The inverse reference — compare CDS `hasInverse`
+|EDataType          |serializable | Values can be converted to and from a string
+|===
+
+NOTE: `EReference.eOpposite` and CDS <<relation-table,`hasInverse`>> express the same idea, and
+`EReference.containment` overlaps with CDS `hasPart`. Those equivalences are recorded here, but
+the rest of the ECore kernel is **not** imported: {dd} borrows ECore only as its
+<<ecore-cardinality,cardinality>> model. The remaining attributes above are implementation
+concerns of a modelling framework (serialisation, mutability, abstractness) rather than
+statements about a knowledge graph, and they have no {dd} counterpart.
+
+
+[[standards]]
+== Mapping to Standard Vocabularies
+CDS was designed independently, but it overlaps heavily with the established semantic web
+vocabularies.
+This chapter lists the relations that actually get used in practice from each, and how they map.
+
+The _Fit_ column is used throughout:
+
+[cols="1,5"]
+|===
+| `=` | Exact. Same meaning, same direction, same formal properties.
+| `~` | Close. Usable, but something is lost — direction, transitivity, or scope.
+| `–` | No CDS equivalent.
+|===
+
+CAUTION: CDS has *no negation* and *no notion of inconsistency*.
+The rules in <<rules>> derive triples and nothing else — there is no way to write "not", and no
+outcome other than "here are more triples".
+Constructs such as `owl:differentFrom`, `owl:disjointWith` or WordNet's `antonym` therefore have no
+CDS counterpart: they do their work by making a knowledge base *unsatisfiable*, which presupposes a
+reasoner that can detect and report a contradiction.
+Adding them to CDS means adding a consistency check, not just a relation.
+
+NOTE: This is *not* a monotonicity difference — RDFS, OWL and CDS are all monotonic. Adding
+statements never retracts an earlier conclusion in any of them.
+
+
+[[rdfs]]
+=== RDFS
+Namespaces: `rdf:` = `http://www.w3.org/1999/02/22-rdf-syntax-ns#`,
+`rdfs:` = `http://www.w3.org/2000/01/rdf-schema#`
+
+RDFS is the smallest of the four and the closest to CDS in spirit — a handful of relations, a
+subclass hierarchy, and entailment rules that only add triples.
+
+[cols="3l,^1,3l,5d",options="header"]
+|===
+| RDFS | Fit | CDS | Note
+
+|rdf:type                     | = |hasType      | Same direction, same meaning.
+|rdfs:subClassOf              | = |hasSuperType | `X subClassOf Y` = `X hasSuperType Y`. Both transitive.
+|rdfs:subPropertyOf           | ~ |hasSuperType | CDS uses *one* hierarchy for items and relations alike;
+                                          RDFS keeps class and property hierarchies apart.
+|rdfs:label                   | ~ |--           | Maps to the {dd} `label` relation, not to a CDS relation.
+|rdfs:comment                 | ~ |hasDetail    | Or the {dd} `has content` relation.
+|rdfs:seeAlso                 | = |hasTarget    | The untyped directed link. {dd} `links to`.
+|rdfs:isDefinedBy             | ~ |hasContext   | `rdfs:subPropertyOf rdfs:seeAlso` in RDFS; CDS has no
+                                         equivalent narrowing.
+|rdfs:member                  | ~ |isPartOf     | CDS `hasPart` is transitive, `rdfs:member` is not.
+|rdfs:domain                  | – |--           | Constrains the subject of a property. See <<ecore>>.
+|rdfs:range                   | – |--           | Constrains the object of a property. See <<ecore>>.
+|rdf:value                    | – |--           | Structured-value idiom; the {dd} `,,` meta part covers
+                                         this use case differently.
+|rdf:first, rdf:rest, rdf:nil | – |--           | RDF list encoding. No CDS ordering primitive; CDS has
+                                          `hasAfter` / `hasBefore` instead.
+|===
+
+Classes rather than relations, listed for orientation: `rdfs:Resource`, `rdfs:Class`,
+`rdf:Property`, `rdfs:Literal`, `rdfs:Datatype`, `rdfs:Container`.
+
+NOTE: RDFS entailment rules `rdfs9` (type inheritance) and `rdfs7` (property inheritance)
+correspond exactly to CDS <<r04>> and <<r05>>.
+`rdfs5` and `rdfs11` (transitivity of `subPropertyOf` / `subClassOf`) correspond to <<r01>> applied
+to `hasSuperType`.
+
+
+[[owl]]
+=== OWL
+Namespace: `owl:` = `http://www.w3.org/2002/07/owl#`
+
+OWL is where CDS finds its closest formal matches: `hasInverse`, `sameAs`,
+`type_symmetricRelation` and `type_transitiveRelation` are all direct OWL analogues.
+It is also where CDS stops — OWL's class constructors and negation have no counterpart.
+
+[cols="3l,^1,3l,5d",options="header"]
+|===
+| OWL | Fit | CDS | Note
+
+|owl:inverseOf                                                          | = |hasInverse              | Direct match. Compare <<r02>>.
+|owl:sameAs                                                             | = |sameAs                  | Direct match. Compare <<r14>>–<<r16>>.
+|owl:SymmetricProperty                                                  | = |type_symmetricRelation  | Direct match. Compare <<r09>>.
+|owl:TransitiveProperty                                                 | = |type_transitiveRelation | Direct match. Compare <<r01>>.
+|owl:equivalentClass                                                    | ~ |sameAs                  | CDS does not separate class-level from
+                                                          individual-level identity.
+|owl:equivalentProperty                                                 | ~ |sameAs                  | CDS derives this via <<r12>>.
+|owl:topObjectProperty                                                  | = |hasRelated              | The root of the relation hierarchy.
+|owl:ObjectProperty                                                     | ~ |type_relation           | Compare Ecore `EReference`.
+|owl:DatatypeProperty                                                   | ~ |--                      | Compare Ecore `EAttribute`.
+|owl:FunctionalProperty                                                 | ~ |--                      | Ecore `upperBound = 1`. See
+                                                          <<ecore-cardinality>>.
+|owl:InverseFunctionalProperty                                          | ~ |--                      | Ecore `EAttribute.iD`.
+|owl:minCardinality                                                     | ~ |--                      | Ecore `lowerBound`.
+|owl:maxCardinality                                                     | ~ |--                      | Ecore `upperBound`.
+|owl:differentFrom                                                      | – |--                      | Negative. Not expressible in CDS.
+|owl:disjointWith                                                       | – |--                      | Negative. Not expressible in CDS.
+|owl:complementOf                                                       | – |--                      | Negative. Not expressible in CDS.
+|owl:unionOf, owl:intersectionOf                                        | – |--                      | Class constructors. CDS has no anonymous
+                                                          classes.
+|owl:Restriction, owl:onProperty, owl:someValuesFrom, owl:allValuesFrom | – |--                      |
+  Property restrictions. CDS has no anonymous classes.
+|owl:imports                                                            | – |--                      | Document-level, not statement-level.
+|owl:deprecated                                                         | ~ |replacedBy              | Only when a successor is named.
+|===
+
+NOTE: CDS is roughly at the expressiveness of *OWL RL* minus the negative constructs — property
+hierarchies, inverses, symmetry, transitivity and identity, all as forward-chaining rules that only
+ever add triples.
+
+
+[[skos]]
+=== SKOS
+Namespace: `skos:` = `http://www.w3.org/2004/02/skos/core#`
+
+SKOS models *concept schemes* — thesauri, taxonomies, subject headings — rather than logical
+classes.
+Because it is deliberately informal about what a hierarchy means, it sits closer to everyday {dd}
+usage than OWL does.
+
+[cols="3l,^1,3l,5d",options="header"]
+|===
+| SKOS | Fit | CDS | Note
+
+|skos:related                                         | = |hasRelated                           | Symmetric, non-transitive. The best match in the whole
+                                             chapter.
+|skos:closeMatch                                      | = |hasSimilar                           | Symmetric. Direct match.
+|skos:exactMatch                                      | = |sameAs                               | Transitive and symmetric in both vocabularies.
+|skos:broaderTransitive                               | = |hasSuperType                         | Transitive in both.
+|skos:narrowerTransitive                              | = |hasSubType                           | Transitive in both.
+|skos:broader                                         | ~ |hasSuperType                         | *Mismatch:* `skos:broader` is deliberately **not**
+                                             transitive; CDS `hasSuperType` is.
+|skos:narrower                                        | ~ |hasSubType                           | Same mismatch, mirrored.
+|skos:prefLabel                                       | ~ |--                                   | The {dd} `label` relation.
+|skos:altLabel                                        | ~ |hasAlias                             | CDS aliasing also rewrites triples (<<r06>>–<<r08>>);
+                                             SKOS labels do not.
+|skos:hiddenLabel                                     | – |--                                   | Search-only label. No CDS concept.
+|skos:definition                                      | ~ |hasDetail                            | Or {dd} `has content`.
+|skos:note, skos:scopeNote, skos:editorialNote        | ~ |hasAnnotation                        | The CDS annotation layer.
+|skos:example                                         | ~ |hasInstance                          | Informal in SKOS, formal in CDS.
+|skos:member                                          | ~ |hasPart                              | For `skos:Collection`. CDS `hasPart` is transitive.
+|skos:inScheme                                        | ~ |hasTag                               | Membership in a concept scheme.
+|skos:hasTopConcept                                   | ~ |hasPart                              | Entry point of a scheme.
+|skos:notation                                        | – |--                                   | A code in a notation system.
+|skos:broadMatch, skos:narrowMatch, skos:relatedMatch | ~ |hasSuperType, hasSubType, hasRelated |
+  Cross-scheme variants of the corresponding intra-scheme relations. CDS does not distinguish.
+|===
+
+WARNING: The `skos:broader` transitivity mismatch is the one to watch when importing a thesaurus.
+SKOS separates `broader` from `broaderTransitive` precisely so that hierarchies with mixed
+part-of / kind-of steps do not produce nonsense conclusions.
+Importing `skos:broader` as CDS `hasSuperType` re-enables exactly the inference SKOS was avoiding.
+Map to `hasDetail` / `hasContext` instead when this matters.
+
+
+[[wordnet]]
+=== WordNet
+Namespace (W3C 2006 conversion): `wn:` = `http://www.w3.org/2006/03/wn/wn20/schema/`.
+See also the https://globalwordnet.github.io/schemas/[Global WordNet] schemas.
+
+WordNet is a *lexical* database: its nodes are word senses grouped into _synsets_, not concepts.
+The mapping is therefore approximate throughout — a WordNet relation holds between meanings of
+words, a CDS relation between things.
+
+[[wordnet-direction]]
+.Direction convention
+A WordNet row names a **pointer**, and a pointer is read *from* the synset that carries it *to*
+the synset it names. The CDS column gives the relation holding in that same direction, so the
+carrier of the pointer is always the CDS **subject**.
+
+This matters most for the part/whole pairs, where the names invite the opposite reading: a
+*holonym* pointer runs from the part to the whole (`tree --member holonym--> forest`), so its
+subject is the part and it maps to `isPartOf`. A *meronym* pointer runs from the whole to the
+part, and maps to `hasPart`. The prose notes below read in the same direction.
+
+[cols="3l,^1,3l,5d",options="header"]
+|===
+| WordNet | Fit | CDS | Note
+
+|hypernym                    | = |hasSuperType | "is a kind of". Transitive in both.
+|hyponym                     | = |hasSubType   | Inverse of hypernym.
+|instance hypernym           | = |hasType      | For named individuals — _Berlin_ is an instance of
+                                           _city_.
+|instance hyponym            | = |hasInstance  | Inverse of the above.
+|member holonym              | ~ |isPartOf     | _tree_ is a member of _forest_.
+|member meronym              | ~ |hasPart      | Inverse.
+|part holonym                | ~ |isPartOf     | _branch_ is a part of _tree_.
+|part meronym                | ~ |hasPart      | Inverse.
+|substance holonym           | ~ |isPartOf     | _wood_ is the substance of _tree_.
+|substance meronym           | ~ |hasPart      | Inverse.
+|similar to                  | = |hasSimilar   | Adjective satellites. Symmetric in both.
+|also see                    | = |hasTarget    | The untyped "see also" link.
+|derivationally related form | ~ |hasRelated   | Symmetric in both. _decide_ / _decision_.
+|domain — topic              | ~ |hasTag       | The subject field of a synset. A good `hasTag` fit.
+|member of domain — topic    | ~ |hasTagMember | Inverse.
+|synset membership           | ~ |sameAs       | Words in one synset share a meaning. Lossy: synonymy is
+                                           context-dependent, `sameAs` is absolute.
+|gloss / definition          | ~ |hasDetail    | Or {dd} `has content`.
+|lemma / word form           | ~ |--           | The {dd} `label` relation.
+|antonym                     | – |--           | Negative. Not expressible in CDS.
+|entailment                  | – |--           | _snore_ entails _sleep_. Verb-specific.
+|cause                       | – |--           | _kill_ causes _die_. Verb-specific.
+|verb group                  | – |--           | Groups related verb senses.
+|attribute                   | – |--           | Links a noun to a descriptive adjective.
+|pertainym                   | – |--           | _dental_ pertains to _tooth_.
+|===
+
+CAUTION: The `synset membership → sameAs` mapping is the dangerous one.
+CDS `sameAs` is transitive and symmetric and rewrites triples through <<r14>>–<<r16>>, so importing
+synonymy as `sameAs` will merge word senses that WordNet keeps carefully apart.
+Prefer `hasSimilar`, which is symmetric but *not* transitive and triggers no rewriting.
+
+
+[[standards-summary]]
+=== Summary
+The relations that map exactly across all four:
+
+[cols="2l,4d",options="header"]
+|===
+| CDS | Corresponds to
+
+|hasType                 | `rdf:type`, WordNet _instance hypernym_
+|hasSuperType            | `rdfs:subClassOf`, `skos:broaderTransitive`, WordNet _hypernym_
+|hasInverse              | `owl:inverseOf`
+|sameAs                  | `owl:sameAs`, `skos:exactMatch`
+|hasRelated              | `skos:related`, `owl:topObjectProperty`
+|hasSimilar              | `skos:closeMatch`, WordNet _similar to_
+|hasTarget               | `rdfs:seeAlso`, WordNet _also see_
+|type_symmetricRelation  | `owl:SymmetricProperty`
+|type_transitiveRelation | `owl:TransitiveProperty`
+|===
+
+What CDS has that the others lack: a single unified hierarchy for items *and* relations, and the
+alias mechanism (<<r06>>–<<r08>>), which rewrites triples rather than merely asserting equivalence.
+
+What CDS lacks: negation of any kind, cardinality (borrowed from <<ecore>>), domain and range
+constraints, and anonymous classes.
+
+
+[[open-issues]]
+== Design Decisions
+
+.Settled
+[[settled-scope]]
+**Which CDS relations belong to the {dd} core.** All of them that have a counterpart: the
+<<mapping,mapping tables>> list every relation the
+xref:ddot-it-vocabulary.adoc[Vocabulary Specification] declares, and <<cds-coverage,Coverage>>
+records that 24 of the 28 CDS relations map directly while the four link-provenance relations are
+superseded by `grade`. Anything in the <<relation-table,CDS relation table>> that does not appear
+in the mapping is CDS-only and not part of {dd}.
+
+[[settled-surface-form]]
+**Surface form.** {ddd} writes the **vocabulary's own names** -- `has subtype`, `links to`,
+`same as` -- not CDS ids and not CDS labels. Those names, and their aliases, are declared as
+built-ins and checked by CI. This side-steps the
+<<relation-labels,label/id direction hazard>> entirely: a {dd} name means what the vocabulary
+declares, and the CDS id is given alongside it in the mapping tables for anyone reading CDS
+sources.
+
+[[settled-cardinality]]
+**Cardinality.** Settled in
+xref:ddot-it-vocabulary.adoc#cardinality[the Vocabulary Specification]: two integer bounds
+(`min cardinality` / `max cardinality`), an omitted maximum meaning unbounded, `cardinality` as
+the equal-bounds shorthand, and `required` / `single valued` / `multi valued` as relation types.
+`ordered` and `unique` are **out of scope** -- see the name mapping in
+<<ecore-cardinality-ddot>> for why.
+
+.Still open
+[[settled-alignment-status]]
+**Status of the alignment tables.** The mappings in <<standards>> are **descriptive**, with one
+normative core.
+
+.Spec
+****
+A {dd} RDF importer or exporter MUST implement the mappings marked `=` (an exact fit):
+`rdf:type`, `rdfs:subClassOf`, `owl:inverseOf` and `owl:sameAs` among them. These are
+round-trippable in both directions and are what makes two independent exporters agree.
+
+Every mapping marked `~` (an approximation) is **advisory**. A tool MAY implement it and SHOULD
+document that it does. The approximations carry real hazards -- `skos:broader` is not
+transitive while CDS `hasSubType` is, and WordNet synonymy is not `owl:sameAs` -- which is
+exactly why they are not required.
+****
+
+NOTE: `hasInstance` has `hasTagMember` as its super-relation, which places typing below tagging in
+the CDS hierarchy. This is intentional: Fig. 4.5 of the source thesis (_Personal Knowledge Models
+with Semantic Technologies_, p. 122) shows `has instance` as a sub-relation of `is tag of`, so that
+`a hasType b` implies `a hasTag b` and type- and tag-browsing share one user interface.

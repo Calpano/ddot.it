@@ -1,0 +1,256 @@
+entity ..has type.. entity
+entity ..has type.. type
+entity ..uri.. https://ddot.it/vocabulary/2026-07-20#entity
+thing ..has type.. type
+thing ..has supertype.. entity
+thing ..uri.. https://ddot.it/vocabulary/2026-07-20#thing
+value ..has type.. type
+value ..has supertype.. entity
+value ..uri.. https://ddot.it/vocabulary/2026-07-20#value
+type ..has type.. type
+type ..has supertype.. thing
+type ..uri.. https://ddot.it/vocabulary/2026-07-20#type
+relation ..has type.. type
+relation ..has supertype.. type
+relation ..uri.. https://ddot.it/vocabulary/2026-07-20#relation
+symmetric relation ..has type.. type
+symmetric relation ..has supertype.. relation
+symmetric relation ..uri.. https://ddot.it/vocabulary/2026-07-20#symmetric-relation
+transitive relation ..has type.. type
+transitive relation ..has supertype.. relation
+transitive relation ..uri.. https://ddot.it/vocabulary/2026-07-20#transitive-relation
+has inverse ..has type.. relation
+has inverse ..has type.. symmetric relation
+has inverse ..has supertype.. related
+has inverse ..uri.. https://ddot.it/vocabulary/2026-07-20#has-inverse
+has type ..has type.. relation
+has type ..has supertype.. has tag
+has type ..has inverse.. has instance
+has type ..uri.. https://ddot.it/vocabulary/2026-07-20#has-type
+has type ..has alias.. hasType
+a ..is replaced by.. has type
+has instance ..has type.. relation
+has instance ..has supertype.. is tag of
+has instance ..has inverse.. has type
+has instance ..uri.. https://ddot.it/vocabulary/2026-07-20#has-instance
+has instance ..has alias.. hasInstance
+has subtype ..has type.. relation
+has subtype ..has type.. transitive relation
+has subtype ..has supertype.. has detail
+has subtype ..has inverse.. has supertype
+has subtype ..uri.. https://ddot.it/vocabulary/2026-07-20#has-subtype
+has subtype ..has alias.. subtype
+has supertype ..has type.. relation
+has supertype ..has type.. transitive relation
+has supertype ..has supertype.. has context
+has supertype ..has inverse.. has subtype
+has supertype ..uri.. https://ddot.it/vocabulary/2026-07-20#has-supertype
+has supertype ..has alias.. supertype
+related ..has type.. relation
+related ..has type.. symmetric relation
+related ..uri.. https://ddot.it/vocabulary/2026-07-20#related
+related ..has alias.. is related to
+related ..has alias.. hasRelated
+property ..has type.. type
+property ..has supertype.. relation
+property ..uri.. https://ddot.it/vocabulary/2026-07-20#property
+has property ..has type.. relation
+has property ..has type.. property
+has property ..uri.. https://ddot.it/vocabulary/2026-07-20#has-property
+has property ..has alias.. hasProperty
+has similar ..has type.. relation
+has similar ..has type.. symmetric relation
+has similar ..has supertype.. related
+has similar ..uri.. https://ddot.it/vocabulary/2026-07-20#has-similar
+has similar ..has alias.. is similar to
+has similar ..has alias.. hasSimilar
+same as ..has type.. relation
+same as ..has type.. symmetric relation
+same as ..has type.. transitive relation
+same as ..has supertype.. has similar
+same as ..uri.. https://ddot.it/vocabulary/2026-07-20#same-as
+same as ..has alias.. is same as
+has alias ..has type.. relation
+has alias ..has supertype.. has similar
+has alias ..has inverse.. is alias of
+has alias ..uri.. https://ddot.it/vocabulary/2026-07-20#has-alias
+has alias ..has alias.. alias
+is alias of ..has type.. relation
+is alias of ..has supertype.. has similar
+is alias of ..has inverse.. has alias
+is alias of ..uri.. https://ddot.it/vocabulary/2026-07-20#is-alias-of
+is replaced by ..has type.. relation
+is replaced by ..has supertype.. has similar
+is replaced by ..has inverse.. replaces
+is replaced by ..uri.. https://ddot.it/vocabulary/2026-07-20#is-replaced-by
+is replaced by ..has alias.. replacedBy
+is replaced by ..has type.. transitive relation
+replaces ..has type.. relation
+replaces ..has supertype.. has similar
+replaces ..has inverse.. is replaced by
+replaces ..uri.. https://ddot.it/vocabulary/2026-07-20#replaces
+replaces ..has type.. transitive relation
+identifier ..has type.. type
+identifier ..has supertype.. value
+identifier ..uri.. https://ddot.it/vocabulary/2026-07-20#identifier
+identifying relation ..has type.. type
+identifying relation ..has supertype.. relation
+identifying relation ..has supertype.. property
+identifying relation ..uri.. https://ddot.it/vocabulary/2026-07-20#identifying-relation
+has next ..has type.. relation
+has next ..has type.. transitive relation
+has next ..has supertype.. links to
+has next ..has inverse.. has previous
+has next ..uri.. https://ddot.it/vocabulary/2026-07-20#has-next
+has next ..has alias.. has after
+has next ..has alias.. hasAfter
+has previous ..has type.. relation
+has previous ..has type.. transitive relation
+has previous ..has supertype.. is linked from
+has previous ..has inverse.. has next
+has previous ..uri.. https://ddot.it/vocabulary/2026-07-20#has-previous
+has previous ..has alias.. has prev
+has previous ..has alias.. has before
+has previous ..has alias.. hasBefore
+links to ..has type.. relation
+links to ..has supertype.. related
+links to ..has inverse.. is linked from
+links to ..uri.. https://ddot.it/vocabulary/2026-07-20#links-to
+links to ..has alias.. has target
+links to ..has alias.. hasTarget
+links to ..has alias.. ^is linked from
+is linked from ..has type.. relation
+is linked from ..has supertype.. related
+is linked from ..has inverse.. links to
+is linked from ..uri.. https://ddot.it/vocabulary/2026-07-20#is-linked-from
+is linked from ..has alias.. has source
+is linked from ..has alias.. hasSource
+is linked from ..has alias.. ^links to
+has detail ..has type.. relation
+has detail ..has supertype.. links to
+has detail ..has inverse.. has context
+has detail ..uri.. https://ddot.it/vocabulary/2026-07-20#has-detail
+has detail ..has alias.. hasDetail
+has context ..has type.. relation
+has context ..has supertype.. is linked from
+has context ..has inverse.. has detail
+has context ..uri.. https://ddot.it/vocabulary/2026-07-20#has-context
+has context ..has alias.. hasContext
+has part ..has type.. relation
+has part ..has type.. transitive relation
+has part ..has supertype.. has detail
+has part ..has inverse.. is part of
+has part ..uri.. https://ddot.it/vocabulary/2026-07-20#has-part
+has part ..has alias.. hasPart
+is part of ..has type.. relation
+is part of ..has type.. transitive relation
+is part of ..has supertype.. has context
+is part of ..has inverse.. has part
+is part of ..uri.. https://ddot.it/vocabulary/2026-07-20#is-part-of
+is part of ..has alias.. isPartOf
+annotates ..has type.. relation
+annotates ..has supertype.. links to
+annotates ..has inverse.. has annotation
+annotates ..uri.. https://ddot.it/vocabulary/2026-07-20#annotates
+annotates ..has alias.. has annotation member
+annotates ..has alias.. hasAnnotationMember
+has annotation ..has type.. relation
+has annotation ..has supertype.. is linked from
+has annotation ..has inverse.. annotates
+has annotation ..uri.. https://ddot.it/vocabulary/2026-07-20#has-annotation
+has annotation ..has alias.. hasAnnotation
+has tag ..has type.. relation
+has tag ..has supertype.. has annotation
+has tag ..has inverse.. is tag of
+has tag ..uri.. https://ddot.it/vocabulary/2026-07-20#has-tag
+has tag ..has alias.. tag
+is tag of ..has type.. relation
+is tag of ..has supertype.. annotates
+is tag of ..has inverse.. has tag
+is tag of ..uri.. https://ddot.it/vocabulary/2026-07-20#is-tag-of
+is tag of ..has alias.. has tag member
+is tag of ..has alias.. hasTagMember
+label ..has type.. relation
+label ..has type.. property
+label ..has supertype.. has property
+label ..uri.. https://ddot.it/vocabulary/2026-07-20#label
+label ..has alias.. has label
+text ..has type.. relation
+text ..has type.. property
+text ..has supertype.. has property
+text ..uri.. https://ddot.it/vocabulary/2026-07-20#text
+text ..has alias.. has text
+text ..has alias.. has content
+uri ..has type.. relation
+uri ..has type.. property
+uri ..has supertype.. has property
+uri ..uri.. https://ddot.it/vocabulary/2026-07-20#uri
+prefix ..has type.. relation
+prefix ..has type.. property
+prefix ..has supertype.. has property
+prefix ..uri.. https://ddot.it/vocabulary/2026-07-20#prefix
+ddot ..prefix.. https://ddot.it/vocabulary/2026-07-20#
+source uri ..has type.. relation
+source uri ..has type.. property
+source uri ..has supertype.. has property
+source uri ..uri.. https://ddot.it/vocabulary/2026-07-20#source-uri
+source uri ..has alias.. sourceUri
+collected ..has type.. relation
+collected ..has type.. property
+collected ..has supertype.. has property
+collected ..uri.. https://ddot.it/vocabulary/2026-07-20#collected
+collected ..has alias.. collected at
+valid since ..has type.. relation
+valid since ..has type.. property
+valid since ..has supertype.. has property
+valid since ..uri.. https://ddot.it/vocabulary/2026-07-20#valid-since
+valid since ..has alias.. validSince
+valid until ..has type.. relation
+valid until ..has type.. property
+valid until ..has supertype.. has property
+valid until ..uri.. https://ddot.it/vocabulary/2026-07-20#valid-until
+valid until ..has alias.. validUntil
+last modified ..has type.. relation
+last modified ..has type.. property
+last modified ..has supertype.. has property
+last modified ..uri.. https://ddot.it/vocabulary/2026-07-20#last-modified
+last modified ..has alias.. lastModified
+source ..has type.. type
+source ..has supertype.. thing
+source ..uri.. https://ddot.it/vocabulary/2026-07-20#source
+grade ..has type.. relation
+grade ..has type.. property
+grade ..has supertype.. has property
+grade ..uri.. https://ddot.it/vocabulary/2026-07-20#grade
+unreviewed ..has type.. grade value
+unreviewed ..uri.. https://ddot.it/vocabulary/2026-07-20#unreviewed
+reviewed ..has type.. grade value
+reviewed ..uri.. https://ddot.it/vocabulary/2026-07-20#reviewed
+manual ..has type.. grade value
+manual ..uri.. https://ddot.it/vocabulary/2026-07-20#manual
+grade value ..has type.. type
+grade value ..has supertype.. value
+grade value ..uri.. https://ddot.it/vocabulary/2026-07-20#grade-value
+min cardinality ..has type.. relation
+min cardinality ..has type.. property
+min cardinality ..has supertype.. has property
+min cardinality ..uri.. https://ddot.it/vocabulary/2026-07-20#min-cardinality
+min cardinality ..has alias.. lowerBound
+max cardinality ..has type.. relation
+max cardinality ..has type.. property
+max cardinality ..has supertype.. has property
+max cardinality ..uri.. https://ddot.it/vocabulary/2026-07-20#max-cardinality
+max cardinality ..has alias.. upperBound
+cardinality ..has type.. relation
+cardinality ..has type.. property
+cardinality ..has supertype.. has property
+cardinality ..uri.. https://ddot.it/vocabulary/2026-07-20#cardinality
+required ..has type.. type
+required ..has supertype.. relation
+required ..uri.. https://ddot.it/vocabulary/2026-07-20#required
+single valued ..has type.. type
+single valued ..has supertype.. relation
+single valued ..uri.. https://ddot.it/vocabulary/2026-07-20#single-valued
+multi valued ..has type.. type
+multi valued ..has supertype.. relation
+multi valued ..uri.. https://ddot.it/vocabulary/2026-07-20#multi-valued

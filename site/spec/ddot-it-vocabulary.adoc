@@ -4,6 +4,9 @@
 :dd: ddot.it
 :toclevels: 4
 :toc:
+:page-title: Vocabulary
+:page-nav_order: 5
+:page-parent: Specifications
 
 // Parsing is OFF for the whole document; only the built-in blocks below
 // switch it back ON. See "Declaration Conventions".
@@ -55,7 +58,8 @@ ___________________________________
 - Self-Referential:
 To make {dd} self-sufficient, the relations in this document are defined using the relations in this document. This is common practice.
 
-  [[declaration-conventions]]
+
+[[declaration-conventions]]
 === Declaration Conventions
 Every built-in in this document is declared with the same shape, so that a tool can load the
 vocabulary without special-casing:
@@ -67,17 +71,29 @@ vocabulary without special-casing:
   own block with their own `has type`, `has supertype`, `has inverse` and `uri`.
 . **Hierarchies point upwards only.** A built-in block states `has supertype`, never `has subtype`;
   each entry names its parent, so the full tree is the union of those edges. Only the three roots
-  — <<type-entity,`entity`>> for types, <<related,`related`>> and <<property,`property`>> for
-  relations — state no `has supertype` at all.
+  — <<type-entity,`entity`>> for types, <<related,`related`>> and <<has-property,`has property`>>
+  for relations — state no `has supertype` at all.
 . **Symmetric relations are their own inverse.** For a relation of type <<symmetric-relation,`symmetric relation`>>
   the `has inverse` triple is implied and therefore not stated.
 . **Every built-in has a `uri`** in the {dd} namespace (see <<prefix>>).
-. **Only built-ins are machine-readable.** The document turns {dd} parsing off in its second line
-  with an https://ddot.it/off[`https://ddot.it/off`] command, and each built-in block switches it
-  back on with https://ddot.it/on[`https://ddot.it/on`] and off again straight after. Everything
-  else — prose, `link:` macros, the `Given / Inferred` rules, the `Example` blocks and the CDS
-  migration table — is therefore *never* parsed. Indexing this file with a {dd} tool yields exactly
-  the built-in triples and nothing else:
+. **This document is authoritative; the `.ddot` file is derived.** `ddot-it-vocabulary.ddot`
+  next to this file is the machine-readable twin of the built-in blocks below. It is *generated*
+  from this document, never edited by hand, and CI asserts the two agree:
++
+[source,shell]
+----
+./check-vocabulary.sh            # verify; non-zero exit on mismatch
+./check-vocabulary.sh --update   # accept the current output as the new baseline
+----
++
+So a built-in is changed *here*, and the `.ddot` file is regenerated. If the two ever disagree,
+this document wins and the `.ddot` file is stale.
+. **Only built-ins are machine-readable.** The document turns {dd} parsing off immediately below
+  the title block with an https://ddot.it/off[`https://ddot.it/off`] command, and each built-in
+  block switches it back on with https://ddot.it/on[`https://ddot.it/on`] and off again straight
+  after. Everything else — prose, `link:` macros, the `Given / Inferred` rules, the `Example`
+  blocks and the CDS migration table — is therefore *never* parsed. Indexing this file with a
+  {dd} tool yields exactly the built-in triples and nothing else:
 +
 [source,shell]
 ----
@@ -85,7 +101,13 @@ ddot index -f vocabulary.ddot --ext adoc site/spec/
 ----
 +
 The commands are written inside AsciiDoc comments (`+// https://ddot.it/off+`), so they steer the
-parser without showing up in the rendered document.
+parser without showing up in the rendered document. This relies on two properties, both now
+guaranteed by the xref:ddot-it-parse.adoc#pre-parse-recognition[Parse Specification]:
+pre-parse commands are recognised **anywhere on a line**, so the leading `+//+` does not hide
+them; and the reader is a **plain** {dd} parser working on the raw file, which is what the
+`ddot index` invocation above uses. A host-aware AsciiDoc parser that discarded comment lines
+would lose this steering, which is why such parsers SHOULD preserve pre-parse commands found in
+host comments.
 
 [[top-level-types]]
 == Top-Level Types
@@ -105,6 +127,10 @@ class relation
 class symmetric_relation as "symmetric\nrelation"
 class transitive_relation as "transitive\nrelation"
 class identifying_relation as "identifying\nrelation"
+class property
+class required
+class single_valued as "single\nvalued"
+class multi_valued as "multi\nvalued"
 class value
 class identifier
 
@@ -114,6 +140,11 @@ type <|-- relation
 relation <|-- symmetric_relation
 relation <|-- transitive_relation
 relation <|-- identifying_relation
+relation <|-- property
+relation <|-- required
+relation <|-- single_valued
+relation <|-- multi_valued
+identifying_relation --|> property
 entity <|-- value
 value <|-- identifier
 'identifier ... identifying_relation
@@ -129,12 +160,20 @@ The absolute root type. Everything in {dd} is an <<has-instance>> or <<has-subty
 [ddot.it]
 ----
 entity ..has type.. entity
+..has type.. type
 ..uri.. https://ddot.it/vocabulary/2026-07-20#entity
 ----
 // https://ddot.it/off
 
 `entity` has no supertype — it is the root. Its subtypes <<type-thing,`thing`>> and
 <<type-value,`value`>> state the edge from their side, see below.
+
+It carries **two** types, and both are wanted. `entity ..has type.. type` says the same thing
+<<type-thing,`thing`>>, <<type-value,`value`>> and <<type-type,`type`>> say about themselves: it
+is a type, usable as the object of a <<has-type>>. `entity ..has type.. entity` says it is also
+an instance of itself, which follows from being the root — everything, types included, is an
+entity. Neither triple contradicts the other; in a <<monotonicity,monotonic>> language they
+simply both hold.
 
 === Types `thing` and `value`
 .Motivation
@@ -176,9 +215,8 @@ value ..has type.. type
 === Types `type` and `relation`
 
 [[type-type]]
-[[type]]
 .Type `type`
-The "mother of all types" is the type `type` — the super-type of all types.
+[[type]]The "mother of all types" is the type `type` — the super-type of all types.
 It is its own type.
 // {ddd} requires no strict separation of class and instance.
 
@@ -319,6 +357,18 @@ foo ..has inverse.. ^foo
 
 And you can always give `^foo` a better <<label>>.
 
+.Spec
+****
+**`^` does not nest.** Only the *first* character is the operator; everything after it is the
+relation name, taken literally. So `^^foo` is not a double inverse -- it is a relation whose
+name happens to be `^foo`, i.e. the inverse of the relation named `^foo`. There is no
+cancellation rule and no `^^^foo`. If you want the forward relation, write `foo`.
+
+**`^` binds the whole name, prefix included.** `^foaf:knows` is the inverse of the relation
+`foaf:knows`; the `^` is not part of, and does not interact with, the
+<<prefix,prefix mechanism>>. It is never written `foaf:^knows`.
+****
+
 
 
 
@@ -428,6 +478,35 @@ has supertype ..has type.. relation
 
 
 
+[[type-or-subtype]]
+.Which one do I write?
+`has type` and `has subtype` are deliberately **not** the same relation, and the difference is
+member-versus-set:
+
+[cols="3,3,5"]
+|===
+| Write | When | Example
+
+| `has type`    | the subject is *one thing* that belongs to a category | `myCar ..has type.. Car`
+| `has subtype` | the subject is *a category* of things                 | `Vehicle ..has subtype.. Car`
+|===
+
+It is tempting to merge them, since one transitive relation would give inheritance for free --
+`myCar isa Car`, `Car isa Vehicle`, done. Three things are lost by doing so, and they are why
+{dd} keeps both:
+
+. **Member and set stay distinguishable.** Merged, `Sportscar` and `myCar` would sit under `Car`
+identically, and "how many cars are there" would stop having an answer.
+. **RDF round-trips.** `has type` maps to `rdf:type` and `has subtype` to `rdfs:subClassOf`;
+these are distinct in RDF, and the xref:ddot-it-cds.adoc[CDS & Standards Alignment] maps to
+RDFS, OWL, SKOS and WordNet throughout.
+. **Membership stays non-transitive.** A member of a set is not a member of that set's members.
+`has subtype` is transitive; `has type` is not.
+
+What {dd} does *not* require is a strict separation of class and instance: an entity may carry
+both, and several built-ins do (see <<type-entity,`entity`>>, which is both a type and an
+instance of itself). Punning is allowed; merging the two relations is not.
+
 .Cycles
 If `has subtype` forms a cycle, all participants of the cycle are considered to be the same entity (<<same-as,`same as`>>).
 This is exactly what the RDFS specification also states. This is the logicians' solution to "nothing is forbidden".
@@ -450,10 +529,15 @@ The relation hierarchy has *two* roots, because {dd} relations do two different 
 
 <<related,`related`>>:: connects a <<type-thing,thing>> to a *thing*. Both ends have an identity of
 their own, so the link is worth following in either direction.
-<<property,`property`>>:: attaches a <<type-value,value>> to a thing. The value end has no identity
-of its own; it merely describes the thing.
+<<has-property,`has property`>>:: attaches a <<type-value,value>> to a thing. The value end has no
+identity of its own; it merely describes the thing.
 
 Every other relation in this document is a <<has-subtype,subtype>> of one of these two.
+
+Each root is paired with a **type** that marks which family a relation belongs to --
+<<type-relation,`relation`>> and `property` respectively (see
+<<property-type-and-relation>>). The root is the relation you inherit *from*; the type is what
+you *are*.
 
 .Overview
 [plantuml]
@@ -466,11 +550,14 @@ hide circle
 ' because a forward relation's supertype is always forward and an inverse's is always inverse.
 
 class related <<symmetric>>
-class property <<no inverse>>
+class has_property as "has property" <<no inverse>>
 note right of property
   Value-carrying relations.
   Subtypes: see "Relation property".
 end note
+
+' === the relation that pairs two relations (symmetric: its own inverse)
+class has_inverse as "has inverse" <<symmetric>>
 
 ' === identity / similarity branch (parent is symmetric, so no forward/inverse split)
 class has_similar as "has similar" <<symmetric>>
@@ -489,6 +576,7 @@ class tag as "is tag of /\nhas tag"
 class instance as "has instance /\nhas type"
 
 ' === generalization = 'has supertype' (one edge = both directions)
+related <|-- has_inverse
 related <|-- has_similar
 has_similar <|-- same_as
 has_similar <|-- alias
@@ -507,7 +595,7 @@ tag <|-- instance
 .Reading the diagram
 - Each box holds a relation and its <<has-inverse,inverse>> as `forward / inverse`. The upper name is a `has subtype` of its parent's upper name; the lower name likewise on the inverse side. So one arrow `A <|-- B` states both _B.forward_ `has supertype` _A.forward_ and _B.inverse_ `has supertype` _A.inverse_.
 - The symmetric relations (`related`, `has similar`, `same as`) are their own inverse, so they carry a single name.
-- `property` is the second root and carries a single name for the opposite reason: its inverse exists but is not worth naming — see <<property>>.
+- `has property` is the second root and carries a single name for the opposite reason: its inverse exists but is not worth naming — see <<property-type-and-relation>>.
 - An arrow `A <|-- B` means: a statement using _B_ also holds for _A_ (via <<has-subtype,relation inheritance>>).
 - `«symmetric»` and `«transitive»` mark relations of that <<type-relation,type>>; on a pair, the marker applies to both directions.
 - Typing (`has instance` / `has type`) is deliberately a refinement of tagging, which is itself a refinement of annotation. This mirrors Fig. 4.5 of the source thesis (see <<has-instance>>).
@@ -544,7 +632,7 @@ its single string datatype cannot express:
 [ddot.it]
 ----
 aaa ..ppp.. vvv
-ppp ..has supertype.. property
+ppp ..has type.. property
 ___________________________________
 aaa ..has type.. thing
 vvv ..has type.. value
@@ -559,18 +647,52 @@ values as things.
 Where the inverse is genuinely needed, the <<inverse-relations-on-the-fly,`^` syntax>> supplies it
 without a name: `^property`, `^label`, `^grade` always exist and can be given a <<label>> locally.
 
+[[property-type-and-relation]]
+.A type and a relation, in parallel with `relation` / `related`
+The value-carrying family is described by **two** built-ins, exactly mirroring how the
+thing-to-thing family works:
+
+[cols="3,3,3"]
+|===
+| Family | Top-level relation | Type
+
+| between things  | <<related,`related`>>          | <<type-relation,`relation`>>
+| value-carrying  | <<has-property,`has property`>> | `property`
+|===
+
+`property` is a **type**: it marks a relation as one that attaches a value. `has property` is
+the **relation** at the root of that family, the one every value-carrying relation has as its
+supertype. Writing `label ..has type.. property` says what kind of relation `label` is; writing
+`label ..has supertype.. has property` places it in the relation hierarchy. Both are declared,
+just as <<has-subtype,`has subtype`>> declares both `..has type.. transitive relation` and
+`..has supertype.. has detail`.
+
 // https://ddot.it/on
+.Type `property`
 [ddot.it]
 ----
-property ..has type.. relation
+property ..has type.. type
+..has supertype.. relation
 ..uri.. https://ddot.it/vocabulary/2026-07-20#property
-..has alias.. has property
+----
+// https://ddot.it/off
+
+[[has-property]]
+// https://ddot.it/on
+.Relation `has property`
+[ddot.it]
+----
+has property ..has type.. relation
+..has type.. property
+..uri.. https://ddot.it/vocabulary/2026-07-20#has-property
 ..has alias.. hasProperty
 ----
 // https://ddot.it/off
 
 NOTE: A <<identifying-relation,`identifying relation`>> is always a subtype of `property`: it carries
-a value that happens to pin down its subject.
+a value that happens to pin down its subject. This is *declared*, as
+`identifying relation ..has supertype.. property` in its built-in block — and both ends are now
+types, so the edge sits wholly inside the type hierarchy.
 
 .The built-in properties
 [plantuml]
@@ -578,7 +700,7 @@ a value that happens to pin down its subject.
 hide empty members
 hide circle
 
-class property <<no inverse>>
+class has_property as "has property" <<no inverse>>
 
 class label
 class text
@@ -593,16 +715,16 @@ class valid_until as "valid until"
 class last_modified as "last modified"
 class grade
 
-property <|-- label
-property <|-- text
-property <|-- uri
-property <|-- prefix
-property <|-- source_uri
-property <|-- collected
-property <|-- valid_since
-property <|-- valid_until
-property <|-- last_modified
-property <|-- grade
+has_property <|-- label
+has_property <|-- text
+has_property <|-- uri
+has_property <|-- prefix
+has_property <|-- source_uri
+has_property <|-- collected
+has_property <|-- valid_since
+has_property <|-- valid_until
+has_property <|-- last_modified
+has_property <|-- grade
 ....
 
 `label` and `text` are defined under <<content-management-relations,Content Management Relations>>,
@@ -633,7 +755,7 @@ has similar ..has type.. relation
 `has similar` is symmetric but *not* transitive.
 From `a ..has similar.. b` and `b ..has similar.. c` nothing follows about `a` and `c`.
 That is what makes it the safe target for importing fuzzy links such as `skos:closeMatch` or
-WordNet's _similar to_ — see link:ddot-it-relations.adoc#standards[the alignment tables].
+WordNet's _similar to_ — see xref:ddot-it-cds.adoc#standards[the alignment tables].
 
 
 [[same-as]]
@@ -764,6 +886,7 @@ See <<same-as>>.
 ----
 identifying relation ..has type.. type
 ..has supertype.. relation
+..has supertype.. property
 ..uri.. https://ddot.it/vocabulary/2026-07-20#identifying-relation
 ----
 // https://ddot.it/off
@@ -860,7 +983,7 @@ is linked from ..has type.. relation
 ----
 // https://ddot.it/off
 
-See also link:ddot-it-parse.adoc#grammar[parsing].
+See also xref:ddot-it-parse.adoc#grammar[parsing].
 
 
 
@@ -974,7 +1097,7 @@ has annotation ..has type.. relation
 // https://ddot.it/off
 
 TIP: Annotating a *triple* rather than an entity is what the `,,` meta part is for.
-See link:ddot-it-parse.adoc#parsing[parsing].
+See xref:ddot-it-parse.adoc#parsing[parsing].
 
 
 
@@ -1027,14 +1150,16 @@ is tag of ..has type.. relation
 `foo ..label.. bar` sets the visible label of `foo` to `bar`.
 The semantic layer therefore gives every node an _id_ and a _label_, the latter defaulting to the
 _id_ string. Tools that display the knowledge graph show the label and hide the relabelled id.
-Outside a triple relation, `label` has no defined semantics — using labels happens in higher layers
-and tools.
+Only the use **as a triple relation** is defined here. What a tool then *does* with a label —
+showing it in place of the id, using it for search, exporting it — belongs to higher layers, and
+this document says nothing about it.
 
 // https://ddot.it/on
 [ddot.it]
 ----
 label ..has type.. relation
-..has supertype.. property
+..has type.. property
+..has supertype.. has property
 ..uri.. https://ddot.it/vocabulary/2026-07-20#label
 ..has alias.. has label
 ----
@@ -1048,16 +1173,19 @@ NOTE: In previous versions of {dd}, this was modelled as a command (`!!label`).
 [[text]]
 === Relation `text`
 This relation is one of the relations built into {dd} parsing.
-It carries the free text of a `,,` link:ddot-it-parse.adoc#parsing[meta] that holds no triple (`MetaTextInline` / `MetaTextBlock`).
-Or assigns arbitrary content to a subject.
+It carries the free text of a `,,` xref:ddot-it-parse.adoc#parsing[meta] that holds no triple (`MetaTextInline` / `MetaTextBlock`).
+Used as an ordinary relation (`foo ..text.. some content`) it assigns free-form content to a
+subject — the same relation, written explicitly rather than produced by the `,,` shorthand.
 
-When parsing link:ddot-it-parse.adoc#parsing[meta-text], as in `s..p..o,, meta-text`, this is reported on the triple event layer as (`meta: [{"r":"text","o":"meta-text"}]`).
+When parsing xref:ddot-it-parse.adoc#parsing[meta-text], as in `s..p..o,, meta-text`, this is reported on the triple event layer as (`meta: [{"p":"text","o":"meta-text"}]`).
+The key is `p`, matching the meta object in the xref:ddot-it-parse.adoc#information_model[Data Model JSON Schema] -- a meta pair uses the same `p`/`o` keys as a triple.
 
 // https://ddot.it/on
 [ddot.it]
 ----
 text ..has type.. relation
-..has supertype.. property
+..has type.. property
+..has supertype.. has property
 ..uri.. https://ddot.it/vocabulary/2026-07-20#text
 ..has alias.. has text
 ..has alias.. has content
@@ -1080,7 +1208,8 @@ For that reason, we **give every {dd} relation a URI** via {dd} `uri`.
 [ddot.it]
 ----
 uri ..has type.. relation
-..has supertype.. property
+..has type.. property
+..has supertype.. has property
 ..uri.. https://ddot.it/vocabulary/2026-07-20#uri
 ----
 // https://ddot.it/off
@@ -1094,7 +1223,8 @@ If an entity has several URIs, all of them denote the same entity.
 [ddot.it]
 ----
 prefix ..has type.. relation
-..has supertype.. property
+..has type.. property
+..has supertype.. has property
 ..uri.. https://ddot.it/vocabulary/2026-07-20#prefix
 ----
 // https://ddot.it/off
@@ -1129,7 +1259,7 @@ ddot ..prefix.. https://ddot.it/vocabulary/2026-07-20#
 
 [[provenance]]
 == Provenance
-In this section we define some common relations to be used in the link:ddot-it-parse.adoc#information_model[meta] part of a triple (after the `,,` marker).
+In this section we define some common relations to be used in the xref:ddot-it-parse.adoc#information_model[meta] part of a triple (after the `,,` marker).
 All of them take a <<type-value,value>> as object; all dates and times are ISO 8601 strings.
 
 [[source-uri]]
@@ -1142,7 +1272,8 @@ e.g. `+file:///home/me/notes.adoc#L12-L14+`.
 [ddot.it]
 ----
 source uri ..has type.. relation
-..has supertype.. property
+..has type.. property
+..has supertype.. has property
 ..uri.. https://ddot.it/vocabulary/2026-07-20#source-uri
 ..has alias.. sourceUri
 ----
@@ -1156,7 +1287,8 @@ When the triple was collected, as an ISO 8601 date-time.
 [ddot.it]
 ----
 collected ..has type.. relation
-..has supertype.. property
+..has type.. property
+..has supertype.. has property
 ..uri.. https://ddot.it/vocabulary/2026-07-20#collected
 ..has alias.. collected at
 ----
@@ -1171,12 +1303,14 @@ collected ..has type.. relation
 [ddot.it]
 ----
 valid since ..has type.. relation
-..has supertype.. property
+..has type.. property
+..has supertype.. has property
 ..uri.. https://ddot.it/vocabulary/2026-07-20#valid-since
 ..has alias.. validSince
 
 valid until ..has type.. relation
-..has supertype.. property
+..has type.. property
+..has supertype.. has property
 ..uri.. https://ddot.it/vocabulary/2026-07-20#valid-until
 ..has alias.. validUntil
 ----
@@ -1198,7 +1332,8 @@ notes.adoc ..has type.. source
 [ddot.it]
 ----
 last modified ..has type.. relation
-..has supertype.. property
+..has type.. property
+..has supertype.. has property
 ..uri.. https://ddot.it/vocabulary/2026-07-20#last-modified
 ..has alias.. lastModified
 
@@ -1216,11 +1351,19 @@ An *unreviewed* triple is a tool's guess and should be treated as disposable.
 A tool that re-runs its matcher is expected to drop the `..grade.. unreviewed` triples it previously emitted.
 Never store an author's intent as an auto-link.
 
+NOTE: Dropping those triples does **not** violate <<monotonicity,monotonicity>>. Monotonicity is a
+property of *inference over one knowledge base state*: no statement present can invalidate a
+conclusion drawn from the others. Regenerating a derived file is a *lifecycle* operation on the
+inputs — the tool is not retracting a conclusion, it is producing a new set of triples to reason
+over. The same distinction applies to editing any source file: deleting a line changes the input,
+not the logic.
+
 // https://ddot.it/on
 [ddot.it]
 ----
 grade ..has type.. relation
-..has supertype.. property
+..has type.. property
+..has supertype.. has property
 ..uri.. https://ddot.it/vocabulary/2026-07-20#grade
 
 unreviewed ..has type.. grade value
@@ -1244,9 +1387,148 @@ NOTE: In CDS some triple provenance was modelled by using relations. This is now
 | CDS | {dd}
 
 |a ..hasManualLinkTarget.. b |a....b ,, ..grade.. manual
-|b ..hasManualLinkSource.. b |a....b ,, ..grade.. manual
+|b ..hasManualLinkSource.. a |a....b ,, ..grade.. manual
 |a ..hasAutoLinkTarget.. b |a....b ,, ..grade.. unreviewed
 |b ..hasAutoLinkSource.. a |a....b ,, ..grade.. unreviewed
+|===
+
+
+
+[[cardinality]]
+== Cardinality
+How many values a relation may carry. {ddd} borrows the model from
+xref:ddot-it-cds.adoc#ecore-cardinality[ECore], which expresses cardinality as bounds rather than
+as a separate construct.
+
+Bounds are written as **two separate properties**footnote:[Do **not** write a range like `+1..3+` as a single value. It parses where it stands,
+because a meta object may contain `+..+` -- but the same string used as a *subject* silently
+misparses: `+1..3 ..has type.. cardinality+` reads as subject `1`, relation `3`. Two bounds
+avoid the trap entirely.]
+, each taking a plain integer:
+
+[ddot.it]
+----
+Person ..has address.. Address ,, ..min cardinality.. 1 ;; ..max cardinality.. 3
+----
+
+
+An **omitted** `max cardinality` means *unbounded*. There is no `*` or `-1` sentinel: saying
+nothing is how "no upper limit" is said.
+
+[[cardinality-shorthand]]
+=== Relation `cardinality`
+For the common case where a relation carries exactly _n_ values, `cardinality` sets both bounds
+at once.
+
+.Given / Inferred
+[ddot.it]
+----
+rel ..cardinality.. nnn
+___________________________________
+rel ..min cardinality.. nnn
+rel ..max cardinality.. nnn
+----
+
+// https://ddot.it/on
+.Built-in
+[ddot.it]
+----
+min cardinality ..has type.. relation
+..has type.. property
+..has supertype.. has property
+..uri.. https://ddot.it/vocabulary/2026-07-20#min-cardinality
+..has alias.. lowerBound
+----
+// https://ddot.it/off
+
+// https://ddot.it/on
+[ddot.it]
+----
+max cardinality ..has type.. relation
+..has type.. property
+..has supertype.. has property
+..uri.. https://ddot.it/vocabulary/2026-07-20#max-cardinality
+..has alias.. upperBound
+----
+// https://ddot.it/off
+
+// https://ddot.it/on
+[ddot.it]
+----
+cardinality ..has type.. relation
+..has type.. property
+..has supertype.. has property
+..uri.. https://ddot.it/vocabulary/2026-07-20#cardinality
+----
+// https://ddot.it/off
+
+[[cardinality-types]]
+=== Types `required`, `single valued` and `multi valued`
+Three named shorthands cover almost every practical case. They are <<type-relation,relation
+types>>, declared the same way as <<symmetric-relation,`symmetric relation`>> and
+<<transitive-relation,`transitive relation`>>, and they describe the relation itself rather than
+one triple that uses it.
+
+.Given / Inferred
+[ddot.it]
+----
+rel ..has type.. required
+___________________________________
+rel ..min cardinality.. 1
+----
+
+.Given / Inferred
+[ddot.it]
+----
+rel ..has type.. single valued
+___________________________________
+rel ..max cardinality.. 1
+----
+
+// https://ddot.it/on
+.Built-in
+[ddot.it]
+----
+required ..has type.. type
+..has supertype.. relation
+..uri.. https://ddot.it/vocabulary/2026-07-20#required
+----
+// https://ddot.it/off
+
+// https://ddot.it/on
+[ddot.it]
+----
+single valued ..has type.. type
+..has supertype.. relation
+..uri.. https://ddot.it/vocabulary/2026-07-20#single-valued
+----
+// https://ddot.it/off
+
+// https://ddot.it/on
+[ddot.it]
+----
+multi valued ..has type.. type
+..has supertype.. relation
+..uri.. https://ddot.it/vocabulary/2026-07-20#multi-valued
+----
+// https://ddot.it/off
+
+NOTE: `multi valued` infers **nothing**, and that is deliberate. Being unbounded is the default
+-- it is what an absent `max cardinality` already means -- and {dd} is
+<<monotonicity,monotonic>>, with no way to state "there is no maximum" as a constraint that
+would forbid one being added later. `multi valued` is therefore documentation: it says the
+author considered the bound and meant it to be open. Its counterpart `single valued` *does*
+infer, because `max cardinality 1` is a positive statement.
+
+.The four common combinations
+[cols="1d,2,2,4d",options="header"]
+|===
+| UML | ddot.it | Shorthand | Meaning
+
+| `0..1` | `+++..max cardinality.. 1+++`                            | `single valued`              | Optional single value
+| `1..1` | `+++..min cardinality.. 1 ;; ..max cardinality.. 1+++`   | `required` + `single valued` | Exactly one
+| `0..*` | _(nothing)_                                          | `multi valued`               | Any number, including none
+| `1..*` | `+++..min cardinality.. 1+++`                            | `required` + `multi valued`  | At least one
 |===
 
 
@@ -1270,12 +1552,13 @@ The `has subtype` tree, rooted at <<type-entity,`entity`>>. Each entry links to 
 === Relation Hierarchy
 The `has supertype` forest, mirroring the overview diagram in <<top-level-relations>> and Fig. 4.5
 of the source thesis. There are two trees: <<related,`related`>> for relations between
-<<type-thing,things>>, and <<property,`property`>> for relations carrying a <<type-value,value>>.
+<<type-thing,things>>, and <<has-property,`has property`>> for relations carrying a <<type-value,value>>.
 Each entry links to its definition; the inverse relation is shown in parentheses.
 `_s_` marks <<symmetric-relation,symmetric>> and `_t_` <<transitive-relation,transitive>> relations.
 
 .Relations between things
 * <<related,related>> `_s_`
+** <<has-inverse,has inverse>> `_s_`
 ** <<has-similar,has similar>> `_s_`
 *** <<same-as,same as>> `_s_` `_t_`
 *** <<is-alias-of,is alias of>> (<<has-alias,has alias>>)
@@ -1290,9 +1573,13 @@ Each entry links to its definition; the inverse relation is shown in parentheses
 **** <<has-part,has part>> (is part of) `_t_`
 
 .Relations carrying a value
-None of these has a named inverse; use `^` if you need one (see <<property>>).
+None of these has a named inverse; use `^` if you need one (see <<property-type-and-relation>>).
+Each also carries `..has type.. property`.
 
-* <<property,property>>
+* <<has-property,has property>>
+** <<cardinality-shorthand,min cardinality>>
+** <<cardinality-shorthand,max cardinality>>
+** <<cardinality-shorthand,cardinality>>
 ** <<label,label>>
 ** <<text,text>>
 ** <<uri,uri>>
