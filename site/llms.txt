@@ -13,33 +13,60 @@ For writing ddot.it, just read write.md and skip the rest.
 Newline normalisation is applied before parsing: `CR LF` → NL, `LF` → NL, `CR` → NL.
 Space and Tab are stripped from the start and end of names.
 
+### Tokens
+
+Symbol characters (`.`, `,`, `;`, `!`) form **maximal runs**; a run is a special token only at its
+special length. Everything else is text (`TX`), so `Node.js` and `U.S.A.` contain no operator.
+
+| Token | Meaning                       | Regex                |
+|-------|-------------------------------|----------------------|
+| `DT2` | exactly two dots              | `(?<!\.)\.{2}(?!\.)` |
+| `DT4` | exactly four dots             | `(?<!\.)\.{4}(?!\.)` |
+| `CM2` | exactly two commas            | `(?<!,),{2}(?!,)`    |
+| `SC2` | exactly two semicolons        | `(?<!;);{2}(?!;)`    |
+| `EM2` | exactly two exclamation marks | `(?<!!)!{2}(?!!)`    |
+
 ### Formal Grammar (EBNF)
 
+A document is a sequence of lines. There is no chunking construct: an omitted subject continues
+the subject of the previous line.
+
 ```
-SPACE        := (Space | Tab)+
-NAME         := SPACE? ([^ \t]+) SPACE?
-SUBJECT_NAME := NAME | 'ddot.it/this'
+Snippet     := Line*
 
-TEXT  := BLOCK (Newline Newline Newline BLOCK)*
-BLOCK := LINE (Newline Newline? LINE)*
+// Ordered choice: a Line is a Triple if one can be derived, otherwise NotATriple.
+Line        := WS* Triple WS* NL
+              | NotATriple NL
 
-LINE       := TRIPLE | ADDITIONAL | COMMAND
+NotATriple  := (WS | DT2 | DT4 | CM2 | SC2 | EM2 | TX)*
 
-TRIPLE     :=   SUBJECT_NAME Newline? '..' NAME   '..' NAME META?
-              | SUBJECT_NAME Newline? '..' SPACE? '..' NAME META?
+DoubleDot   := WS* DT2 WS*
+QuadDot     := WS* ( DT4 | DT2 WS+ DT2 ) WS*
 
-ADDITIONAL :=                '..' NAME   '..' NAME META?
-              |              '..' SPACE? '..' NAME META?
+Triple      := Subject?
+               ( DoubleDot Relation DoubleDot | QuadDot )
+               Object
+               WS* Meta?
 
-COMMAND    := 'ddot.it[^ \n\t]*' (Space | Tab | Newline)
+Subject     := TextExcept{NL,DT2,DT4}
+Relation    := TextExcept{NL,DT2,DT4}
+Object      := TextExcept{NL,CM2}
 
-META       := META_LINE | META_BLOCK
-META_TEXT  := NAME | ( '..' NAME '..' NAME )+
-META_LINE  := SPACE? ',,' SPACE? META_TEXT SPACE?
-META_BLOCK := SPACE? ',,' Newline META_TEXT (Newline META_TEXT)* Newline ',,'
+Meta              := CM2 WS* MetaInline WS*
+                   | MetaBlockOpen NL (MetaBlock NL)? WS* CM2 WS*
+MetaBlockOpen     := CM2 | NL WS* CM2
+MetaInline        := ( MetaTripleInline (SC2 MetaTripleInline)* )
+                   | MetaTextInline
+MetaTripleInline  := DoubleDot MetaRelation DoubleDot MetaObjectInline
+                   | QuadDot MetaObjectInline
+MetaBlock         := MetaTripleInBlock (NL MetaTripleInBlock)*
+                   | MetaTextBlock
 ```
 
-Text is chunked into blocks at three consecutive newlines. Blocks are split into lines. At the end of a block the current subject and meta-mode are reset. Triples cannot span blocks. Incomplete triples are silently ignored.
+Fields may contain spaces; only the operators delimit them. Leading/trailing space and tab are
+stripped. `Object` is mandatory and non-empty. Incomplete triples are silently ignored.
+
+The normative definition is the Parse Specification (`site/spec/ddot-it-parse.adoc` (rendered at /spec/ddot-it-parse.html)).
 
 ### Typed Link
 
@@ -73,8 +100,13 @@ aaa .. bbb .. ccc ,,
 ,,
 ```
 
+Several inline pairs are separated by `;;`: `,, ..since.. 2025 ;; ..until.. 2027`.
+Inside a multi-line `,,` block a `;;` is ordinary text.
+
 Metadata can also be a plain string: `aaa .. bbb .. ccc ,, see also the appendix`.
-This is treated like ``,, .... see also the appendix`.
+Free metadata text carries the built-in relation `text`, so that is
+`{"type": "text", "to": "see also the appendix"}` — NOT `links to`. The untyped form
+`,, .... 2025` is the one that means `links to`, and it is emitted with no `type` at all.
 
 ### Standard Relation Types
 
@@ -100,12 +132,19 @@ Project Eagle .... Moonshot
 
 ## Commands
 
-Commands are URLs starting with `ddot.it` (or abbreviated with `!!`):
+Commands are URLs starting with `ddot.it/` (or abbreviated with `!!`). The **slash and a name are
+required**; `?` and `#` do not terminate a command but introduce its query and fragment, so
+`!!block?end=EOS` is a single command. A command is part of the text of the field holding it.
 
-- `ddot.it` — marks a document as double-dotted. This is optional but good practice.
+- `ddot.it` — a document *marker*, not a command. It hints that the file contains ddot.it syntax.
+  Readers scan **every** file by default, so the marker only selects files in the optional
+  "exclude non-marked files" mode.
 - `ddot.it/this` — refers to the current document as the triple subject
 - `ddot.it/on` — start processing this region (include)
 - `ddot.it/off` — stop processing this region (exclude)
+- `ddot.it/block` — the rest of the value is taken verbatim from the following lines,
+  up to a blank line or a custom `?end=MARKER`. Allowed in the subject, object and
+  metadata-object slots, and only when it ends its line.
 
 ## Output: Triple Events
 

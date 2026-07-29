@@ -5,8 +5,12 @@ nav_order: 1
 ---
 # ⚇ ddot.it &ndash; Syntax Specification
 
-Non-terminals are UPPERCASED.
-Terminal symbols (characters) are CamelCased.
+This page summarises the syntax. The **normative** definition is the
+[Parse Specification](spec/ddot-it-parse.html) — where the two disagree, the Parse Specification
+wins. Related normative documents: the
+[Vocabulary](spec/ddot-it-vocabulary.html),
+[Highlight](spec/ddot-it-highlight.html) and
+[Autocomplete](spec/ddot-it-autocomplete.html) specifications.
 
 ## Codepoints
 Ddot.it syntax assumes newline normalisation:
@@ -15,73 +19,109 @@ Ddot.it syntax assumes newline normalisation:
 2. Single 'LF' -> NL;
 3. Single 'CR' -> NL.
 
-| Name            |  Character  | Code Point | Usage              |
-|-----------------|:-----------:|-----------:|--------------------|
-| Tab             |    `\t`     |          9 | Sometimes stripped |
-| Newline         | NL (LF, CR) |     10, 13 | Block separation   |
-| Space           |     ` `     |         32 | Sometimes stripped |
-| Comma           |     `,`     |         44 | Metadata           |
-| Dot             |     `.`     |         46 | Triples            |
+| Name             |  Character  | Code Point | Usage                   |
+|------------------|:-----------:|-----------:|-------------------------|
+| Tab              |    `\t`     |          9 | Sometimes stripped      |
+| Newline          | NL (LF, CR) |     10, 13 | Line separation         |
+| Space            |     ` `     |         32 | Sometimes stripped      |
+| Exclamation mark |     `!`     |         33 | Commands (`!!`)         |
+| Comma            |     `,`     |         44 | Metadata                |
+| Dot              |     `.`     |         46 | Triples                 |
+| Semicolon        |     `;`     |         59 | Metadata pair separator |
 
-## Syntax
+## Tokens
+Symbol characters (`.`, `,`, `;`, `!`) are grouped into **maximal runs** of the same character,
+and a run is a special token only at its special length:
 
-- Space and Tab character are stripped from name start or name end
-- Example: `Dirk Hagemann   .. works at ..  Big Corp` becomes (`Dirk Hagemann`, `works at`, `Big Corp`)
-```
-SPACE        := (Space | Tab)+
-NAME         := SPACE? ([^ \t]+) SPACE?
-SUBJECT_NAME := NAME | `ddot.it/this`
-```
+| Token | Meaning                       | Regex                |
+|-------|-------------------------------|----------------------|
+| `DT2` | exactly two dots              | `(?<!\.)\.{2}(?!\.)` |
+| `DT4` | exactly four dots             | `(?<!\.)\.{4}(?!\.)` |
+| `CM2` | exactly two commas            | `(?<!,),{2}(?!,)`    |
+| `SC2` | exactly two semicolons        | `(?<!;);{2}(?!;)`    |
+| `EM2` | exactly two exclamation marks | `(?<!!)!{2}(?!!)`    |
+| `TX`  | everything else               | —                    |
 
-- Text is chunked at three newlines into blocks
-- Blocks are split into lines.
-- At the end of a block, the current subject and meta-mode are reset.
-- Triples cannot span blocks.
+Every other run — a single `.`, three or five dots, a lone `,` — is ordinary text (`TX`).
+So `Node.js`, `Mr. Smith` and `U.S.A.` are plain values containing no operator.
 
-```
-TEXT  := BLOCK (Newline Newline Newline BLOCK)*
-BLOCK := LINE (Newline Newline? LINE)*
-```
-
-- A line is either a triple, an additional property, or a command.
-
-```
-LINE       := TRIPLE | ADDITIONAL | COMMAND
-```
-
-- A triple may state the link/property type (`..` type `..`).
-- A triple can also omit the link type (`....`, `.. ..`), resulting in the default link type `links to`.
+## Grammar
+A document is simply a sequence of lines. There is **no** chunking construct: an omitted subject
+continues the subject of the previous line.
 
 ```
-TRIPLE     :=   SUBJECT_NAME Newline? `..` NAME   `..` NAME META?
-              | SUBJECT_NAME Newline? `..` SPACE? `..` NAME META?
+Snippet     := Line*
+
+// Ordered choice: a Line is a Triple if one can be derived, otherwise NotATriple.
+Line        := WS* Triple WS* NL
+              | NotATriple NL
+
+NotATriple  := (WS | DT2 | DT4 | CM2 | SC2 | EM2 | TX)*
+
+DoubleDot   := WS* DT2 WS*
+QuadDot     := WS* ( DT4 | DT2 WS+ DT2 ) WS*
+
+Triple      := Subject?
+               ( DoubleDot Relation DoubleDot | QuadDot )
+               Object
+               WS* Meta?
+
+Subject     := TextExcept{NL,DT2,DT4}
+Relation    := TextExcept{NL,DT2,DT4}
+Object      := TextExcept{NL,CM2}
 ```
 
-- Additional properties on the same subject can be made by omitting the first part of the triple.
+- `Subject?` is optional: an omitted subject means _continue with the subject of the previous line_.
+- `Object` is mandatory and non-empty: `a ..b..` with nothing after the closing `..` is not a triple.
+- `QuadDot` is the shorthand for an implicit relation: `a....b` and `a .. .. b` both mean
+  `a ..links to.. b`. The two spellings are the same operator, not two operators.
+- Space and Tab are stripped from the start and end of every field, so
+  `Dirk Hagemann   .. works at ..  Big Corp` yields (`Dirk Hagemann`, `works at`, `Big Corp`).
+  A field **may contain spaces** — only the operators delimit it.
+
+### Metadata
 
 ```
-ADDITIONAL :=                `..` NAME   `..` NAME META?
-              |              `..` SPACE? `..` NAME META?
+Meta              := CM2 WS* MetaInline WS*
+                   | MetaBlockOpen NL (MetaBlock NL)? WS* CM2 WS*
 
+MetaBlockOpen     := CM2 | NL WS* CM2
+
+MetaInline        := ( MetaTripleInline (SC2 MetaTripleInline)* )
+                   | MetaTextInline
+
+MetaTripleInline  := DoubleDot MetaRelation DoubleDot MetaObjectInline
+                   | QuadDot MetaObjectInline
+
+MetaBlock         := MetaTripleInBlock (NL MetaTripleInBlock)*
+                   | MetaTextBlock
 ```
 
-- A [command](user-guide.md#commands) is any string starting with `ddot.it` and ending with whitespace.
+- `;;` separates **inline** metadata pairs: `,, ..since.. 2025 ;; ..until.. 2027` is two pairs.
+  Inside a `,,` block a `;;` is ordinary text, because a block's metadata object runs to the end
+  of its line.
+- A metadata part holds **either** triples **or** free text, never both. Free text carries the
+  built-in relation `text`; the untyped `,, .... value` form carries `links to`. See the
+  [Vocabulary Specification](spec/ddot-it-vocabulary.html).
+
+### Commands
+A command has four interchangeable spellings, and the **slash is required** — bare `ddot.it` is a
+document marker, not a command:
 
 ```
-COMMAND    := 'ddot.it[^ \n\t]*' (Space | Tab | Newline)
+command-begin := ( 'https://ddot.it/' | 'http://ddot.it/' | 'ddot.it/' | '!!' )
+command       := command-begin command-name uri-query? uri-fragment?
+command-name  := one or more characters that are not WS, NL, '?' or '#'
+uri-query     := '?' then any characters up to WS, NL or '#'
+uri-fragment  := '#' then any characters up to WS or NL
 ```
 
-- Meta is usually a single line from double comma to the end of line (... `,,` META)
-- Meta can also span multiple lines, if terminated by another double comma. (... `,,` Newline META-LINES `,,`).
-- Meta can contain additional properties to annotate a triple
+`?` and `#` do **not** terminate a command — they introduce its query and fragment, so
+`!!block?end=EOS` is one command. A command is part of the text of the field holding it, not a
+replacement for it.
 
-```
-META       := META_LINE | META_BLOCK
-META_TEXT  := NAME | ( '..' NAME '..' NAME )+
-META_LINE  := SPACE? ',,' SPACE? META_TEXT SPACE?
-META_BLOCK := SPACE? ',,' Newline META_TEXT (Newline META_TEXT)* Newline ',,'
-```
-
+See [`ddot.it/on`](on.md), [`ddot.it/off`](off.md), [`ddot.it/this`](this.md) and
+[`ddot.it/block`](block.md).
 
 ## Syntax Example
 

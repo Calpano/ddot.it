@@ -1,0 +1,93 @@
+[
+  {
+    "line": 0,
+    "start": 0,
+    "end": 6,
+    "token": "subject",
+    "text": "Active"
+  },
+  {
+    "line": 0,
+    "start": 7,
+    "end": 9,
+    "token": "doubledot",
+    "text": ".."
+  },
+  {
+    "line": 0,
+    "start": 9,
+    "end": 14,
+    "token": "relation",
+    "text": "likes"
+  },
+  {
+    "line": 0,
+    "start": 14,
+    "end": 16,
+    "token": "doubledot",
+    "text": ".."
+  },
+  {
+    "line": 0,
+    "start": 17,
+    "end": 23,
+    "token": "object",
+    "text": "Coffee"
+  },
+  {
+    "line": 1,
+    "start": 5,
+    "end": 16,
+    "token": "command",
+    "text": "ddot.it/off"
+  },
+  {
+    "line": 2,
+    "start": 0,
+    "end": 23,
+    "token": "excluded",
+    "text": "Draft ..maybe.. ship it"
+  },
+  {
+    "line": 3,
+    "start": 2,
+    "end": 6,
+    "token": "command",
+    "text": "!!on"
+  },
+  {
+    "line": 4,
+    "start": 0,
+    "end": 4,
+    "token": "subject",
+    "text": "Back"
+  },
+  {
+    "line": 4,
+    "start": 5,
+    "end": 7,
+    "token": "doubledot",
+    "text": ".."
+  },
+  {
+    "line": 4,
+    "start": 7,
+    "end": 12,
+    "token": "relation",
+    "text": "works"
+  },
+  {
+    "line": 4,
+    "start": 12,
+    "end": 14,
+    "token": "doubledot",
+    "text": ".."
+  },
+  {
+    "line": 4,
+    "start": 15,
+    "end": 18,
+    "token": "object",
+    "text": "now"
+  }
+]

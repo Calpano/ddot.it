@@ -1,0 +1,114 @@
+[
+  {
+    "line": 0,
+    "start": 0,
+    "end": 4,
+    "token": "subject",
+    "text": "john"
+  },
+  {
+    "line": 0,
+    "start": 5,
+    "end": 7,
+    "token": "doubledot",
+    "text": ".."
+  },
+  {
+    "line": 0,
+    "start": 7,
+    "end": 14,
+    "token": "relation",
+    "text": "address"
+  },
+  {
+    "line": 0,
+    "start": 14,
+    "end": 16,
+    "token": "doubledot",
+    "text": ".."
+  },
+  {
+    "line": 0,
+    "start": 17,
+    "end": 24,
+    "token": "command",
+    "text": "!!block"
+  },
+  {
+    "line": 0,
+    "start": 24,
+    "end": 29,
+    "token": "command-param",
+    "text": "?end="
+  },
+  {
+    "line": 0,
+    "start": 29,
+    "end": 32,
+    "token": "block-end",
+    "text": "END"
+  },
+  {
+    "line": 1,
+    "start": 0,
+    "end": 11,
+    "token": "verbatim",
+    "text": "1 Broad Way"
+  },
+  {
+    "line": 2,
+    "start": 0,
+    "end": 15,
+    "token": "verbatim",
+    "text": "Lower Manhatten"
+  },
+  {
+    "line": 4,
+    "start": 0,
+    "end": 6,
+    "token": "verbatim",
+    "text": "U.S.A."
+  },
+  {
+    "line": 5,
+    "start": 0,
+    "end": 3,
+    "token": "block-end",
+    "text": "END"
+  },
+  {
+    "line": 6,
+    "start": 0,
+    "end": 4,
+    "token": "subject",
+    "text": "Dirk"
+  },
+  {
+    "line": 6,
+    "start": 5,
+    "end": 7,
+    "token": "doubledot",
+    "text": ".."
+  },
+  {
+    "line": 6,
+    "start": 7,
+    "end": 15,
+    "token": "relation",
+    "text": "works at"
+  },
+  {
+    "line": 6,
+    "start": 15,
+    "end": 17,
+    "token": "doubledot",
+    "text": ".."
+  },
+  {
+    "line": 6,
+    "start": 18,
+    "end": 21,
+    "token": "object",
+    "text": "SAP"
+  }
+]

@@ -1,0 +1,107 @@
+[
+  {
+    "line": 0,
+    "start": 0,
+    "end": 8,
+    "token": "subject",
+    "text": "John Doe"
+  },
+  {
+    "line": 0,
+    "start": 9,
+    "end": 11,
+    "token": "doubledot",
+    "text": ".."
+  },
+  {
+    "line": 0,
+    "start": 11,
+    "end": 16,
+    "token": "relation",
+    "text": "leads"
+  },
+  {
+    "line": 0,
+    "start": 16,
+    "end": 18,
+    "token": "doubledot",
+    "text": ".."
+  },
+  {
+    "line": 0,
+    "start": 19,
+    "end": 32,
+    "token": "object",
+    "text": "Project Eagle"
+  },
+  {
+    "line": 0,
+    "start": 33,
+    "end": 35,
+    "token": "meta-delim",
+    "text": ",,"
+  },
+  {
+    "line": 0,
+    "start": 36,
+    "end": 38,
+    "token": "meta-doubledot",
+    "text": ".."
+  },
+  {
+    "line": 0,
+    "start": 38,
+    "end": 43,
+    "token": "meta-relation",
+    "text": "since"
+  },
+  {
+    "line": 0,
+    "start": 43,
+    "end": 45,
+    "token": "meta-doubledot",
+    "text": ".."
+  },
+  {
+    "line": 0,
+    "start": 46,
+    "end": 50,
+    "token": "meta-object",
+    "text": "2025"
+  },
+  {
+    "line": 0,
+    "start": 51,
+    "end": 53,
+    "token": "meta-separator",
+    "text": ";;"
+  },
+  {
+    "line": 0,
+    "start": 54,
+    "end": 56,
+    "token": "meta-doubledot",
+    "text": ".."
+  },
+  {
+    "line": 0,
+    "start": 56,
+    "end": 61,
+    "token": "meta-relation",
+    "text": "until"
+  },
+  {
+    "line": 0,
+    "start": 61,
+    "end": 63,
+    "token": "meta-doubledot",
+    "text": ".."
+  },
+  {
+    "line": 0,
+    "start": 64,
+    "end": 68,
+    "token": "meta-object",
+    "text": "2027"
+  }
+]

@@ -1,0 +1,100 @@
+[
+  {
+    "line": 0,
+    "start": 0,
+    "end": 7,
+    "token": "command",
+    "text": "!!block"
+  },
+  {
+    "line": 1,
+    "start": 0,
+    "end": 5,
+    "token": "verbatim",
+    "text": "Alice"
+  },
+  {
+    "line": 2,
+    "start": 0,
+    "end": 8,
+    "token": "verbatim",
+    "text": "Anderson"
+  },
+  {
+    "line": 4,
+    "start": 0,
+    "end": 2,
+    "token": "doubledot",
+    "text": ".."
+  },
+  {
+    "line": 4,
+    "start": 2,
+    "end": 7,
+    "token": "relation",
+    "text": "knows"
+  },
+  {
+    "line": 4,
+    "start": 7,
+    "end": 9,
+    "token": "doubledot",
+    "text": ".."
+  },
+  {
+    "line": 4,
+    "start": 10,
+    "end": 17,
+    "token": "command",
+    "text": "!!block"
+  },
+  {
+    "line": 5,
+    "start": 0,
+    "end": 3,
+    "token": "verbatim",
+    "text": "Bob"
+  },
+  {
+    "line": 6,
+    "start": 0,
+    "end": 5,
+    "token": "verbatim",
+    "text": "Baker"
+  },
+  {
+    "line": 8,
+    "start": 0,
+    "end": 2,
+    "token": "meta-delim",
+    "text": ",,"
+  },
+  {
+    "line": 8,
+    "start": 3,
+    "end": 5,
+    "token": "meta-doubledot",
+    "text": ".."
+  },
+  {
+    "line": 8,
+    "start": 5,
+    "end": 10,
+    "token": "meta-relation",
+    "text": "since"
+  },
+  {
+    "line": 8,
+    "start": 10,
+    "end": 12,
+    "token": "meta-doubledot",
+    "text": ".."
+  },
+  {
+    "line": 8,
+    "start": 13,
+    "end": 17,
+    "token": "meta-object",
+    "text": "2016"
+  }
+]

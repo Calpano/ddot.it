@@ -10,7 +10,7 @@
     "line": 0,
     "start": 9,
     "end": 11,
-    "token": "operator",
+    "token": "doubledot",
     "text": ".."
   },
   {
@@ -24,7 +24,7 @@
     "line": 0,
     "start": 16,
     "end": 18,
-    "token": "operator",
+    "token": "doubledot",
     "text": ".."
   },
   {
@@ -43,9 +43,9 @@
   },
   {
     "line": 0,
-    "start": 35,
+    "start": 36,
     "end": 49,
     "token": "meta-text",
-    "text": " a random note"
+    "text": "a random note"
   }
 ]

@@ -1,0 +1,65 @@
+[
+  {
+    "line": 0,
+    "start": 0,
+    "end": 13,
+    "token": "subject",
+    "text": "Dirk Hagemann"
+  },
+  {
+    "line": 0,
+    "start": 14,
+    "end": 16,
+    "token": "doubledot",
+    "text": ".."
+  },
+  {
+    "line": 0,
+    "start": 16,
+    "end": 24,
+    "token": "relation",
+    "text": "works at"
+  },
+  {
+    "line": 0,
+    "start": 24,
+    "end": 26,
+    "token": "doubledot",
+    "text": ".."
+  },
+  {
+    "line": 0,
+    "start": 27,
+    "end": 30,
+    "token": "object",
+    "text": "SAP"
+  },
+  {
+    "line": 0,
+    "start": 31,
+    "end": 33,
+    "token": "meta-delim",
+    "text": ",,"
+  },
+  {
+    "line": 1,
+    "start": 0,
+    "end": 13,
+    "token": "meta-text",
+    "text": "a random note"
+  },
+  {
+    "line": 2,
+    "start": 0,
+    "end": 18,
+    "token": "meta-text",
+    "text": "spanning two lines"
+  },
+  {
+    "line": 3,
+    "start": 0,
+    "end": 2,
+    "token": "meta-delim",
+    "text": ",,"
+  }
+]

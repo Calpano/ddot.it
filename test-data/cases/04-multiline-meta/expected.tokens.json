@@ -10,7 +10,7 @@
     "line": 0,
     "start": 14,
     "end": 16,
-    "token": "operator",
+    "token": "doubledot",
     "text": ".."
   },
   {
@@ -24,7 +24,7 @@
     "line": 0,
     "start": 24,
     "end": 26,
-    "token": "operator",
+    "token": "doubledot",
     "text": ".."
   },
   {
@@ -45,7 +45,7 @@
     "line": 1,
     "start": 0,
     "end": 2,
-    "token": "meta-operator",
+    "token": "meta-doubledot",
     "text": ".."
   },
   {
@@ -59,7 +59,7 @@
     "line": 1,
     "start": 6,
     "end": 8,
-    "token": "meta-operator",
+    "token": "meta-doubledot",
     "text": ".."
   },
   {
@@ -73,7 +73,7 @@
     "line": 2,
     "start": 0,
     "end": 2,
-    "token": "meta-operator",
+    "token": "meta-doubledot",
     "text": ".."
   },
   {
@@ -87,7 +87,7 @@
     "line": 2,
     "start": 9,
     "end": 11,
-    "token": "meta-operator",
+    "token": "meta-doubledot",
     "text": ".."
   },
   {

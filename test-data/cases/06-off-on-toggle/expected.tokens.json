@@ -10,14 +10,14 @@
     "line": 1,
     "start": 0,
     "end": 34,
-    "token": "disabled",
+    "token": "excluded",
     "text": "Draft idea ..maybe.. ship it later"
   },
   {
     "line": 2,
     "start": 0,
     "end": 23,
-    "token": "disabled",
+    "token": "excluded",
     "text": "..maybe not.. who knows"
   },
   {
@@ -38,7 +38,7 @@
     "line": 4,
     "start": 13,
     "end": 15,
-    "token": "operator",
+    "token": "doubledot",
     "text": ".."
   },
   {
@@ -52,7 +52,7 @@
     "line": 4,
     "start": 20,
     "end": 22,
-    "token": "operator",
+    "token": "doubledot",
     "text": ".."
   },
   {

@@ -10,7 +10,7 @@
     "line": 0,
     "start": 2,
     "end": 4,
-    "token": "operator",
+    "token": "doubledot",
     "text": ".."
   },
   {
@@ -24,7 +24,7 @@
     "line": 0,
     "start": 9,
     "end": 11,
-    "token": "operator",
+    "token": "doubledot",
     "text": ".."
   },
   {
@@ -45,7 +45,7 @@
     "line": 1,
     "start": 2,
     "end": 4,
-    "token": "operator",
+    "token": "doubledot",
     "text": ".."
   },
   {
@@ -59,7 +59,7 @@
     "line": 1,
     "start": 9,
     "end": 11,
-    "token": "operator",
+    "token": "doubledot",
     "text": ".."
   },
   {
@@ -80,7 +80,7 @@
     "line": 2,
     "start": 2,
     "end": 4,
-    "token": "operator",
+    "token": "doubledot",
     "text": ".."
   },
   {
@@ -94,7 +94,7 @@
     "line": 2,
     "start": 11,
     "end": 13,
-    "token": "operator",
+    "token": "doubledot",
     "text": ".."
   },
   {
@@ -115,7 +115,7 @@
     "line": 3,
     "start": 2,
     "end": 4,
-    "token": "operator",
+    "token": "doubledot",
     "text": ".."
   },
   {
@@ -129,7 +129,7 @@
     "line": 3,
     "start": 11,
     "end": 13,
-    "token": "operator",
+    "token": "doubledot",
     "text": ".."
   },
   {
@@ -150,7 +150,7 @@
     "line": 4,
     "start": 2,
     "end": 4,
-    "token": "operator",
+    "token": "doubledot",
     "text": ".."
   },
   {
@@ -164,7 +164,7 @@
     "line": 4,
     "start": 11,
     "end": 13,
-    "token": "operator",
+    "token": "doubledot",
     "text": ".."
   },
   {

@@ -10,7 +10,7 @@
     "line": 0,
     "start": 5,
     "end": 7,
-    "token": "operator",
+    "token": "doubledot",
     "text": ".."
   },
   {
@@ -24,7 +24,7 @@
     "line": 0,
     "start": 14,
     "end": 16,
-    "token": "operator",
+    "token": "doubledot",
     "text": ".."
   },
   {
@@ -38,31 +38,22 @@
     "line": 1,
     "start": 0,
     "end": 10,
-    "token": "(unclassified)",
-    "text": "Broadway 1",
-    "scopes": [
-      "source.ddot"
-    ]
+    "token": "verbatim",
+    "text": "Broadway 1"
   },
   {
     "line": 2,
     "start": 0,
     "end": 6,
-    "token": "(unclassified)",
-    "text": "Berlin",
-    "scopes": [
-      "source.ddot"
-    ]
+    "token": "verbatim",
+    "text": "Berlin"
   },
   {
     "line": 3,
     "start": 0,
     "end": 7,
-    "token": "(unclassified)",
-    "text": "Germany",
-    "scopes": [
-      "source.ddot"
-    ]
+    "token": "verbatim",
+    "text": "Germany"
   },
   {
     "line": 5,
@@ -75,7 +66,7 @@
     "line": 5,
     "start": 5,
     "end": 7,
-    "token": "operator",
+    "token": "doubledot",
     "text": ".."
   },
   {
@@ -89,7 +80,7 @@
     "line": 5,
     "start": 10,
     "end": 12,
-    "token": "operator",
+    "token": "doubledot",
     "text": ".."
   },
   {

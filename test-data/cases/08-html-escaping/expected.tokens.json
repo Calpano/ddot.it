@@ -10,7 +10,7 @@
     "line": 0,
     "start": 5,
     "end": 7,
-    "token": "operator",
+    "token": "doubledot",
     "text": ".."
   },
   {
@@ -24,7 +24,7 @@
     "line": 0,
     "start": 12,
     "end": 14,
-    "token": "operator",
+    "token": "doubledot",
     "text": ".."
   },
   {

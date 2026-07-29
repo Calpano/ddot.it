@@ -25,8 +25,8 @@ nav_order: 1
 <!-- TOC -->
 
 ## About this Document
-- Version: 1.1
-- Release Date: 2026-06-18
+- Version: 1.2
+- Release Date: 2026-07-28
 - see [Changelog](/changelog)
 
 ## Syntax Elements
@@ -39,7 +39,9 @@ nav_order: 1
 
 NOTE: Spaces don't matter.
 Any number of spaces (or NBSPs) before and after the double dot is allowed.
-There must be exactly two dots for typed links and exactly four dots for untyped links.
+There must be **exactly** two dots for a typed link. An untyped link is written either as exactly
+four dots (`....`) or as two dot-pairs separated by whitespace (`.. ..`) — the same operator, two
+spellings. A run of three or five dots is ordinary text, not an operator.
 
 ## Typed Link
 - Syntax: `aaa .. bbb .. ccc`
@@ -85,6 +87,13 @@ Short Metadata:
 Dirk Hagemann .. works at .. SAP ,, ..year..2010
 ```
 
+Several inline metadata pairs are separated with a double semicolon (`;;`):
+```
+John Doe ..leads.. Project Eagle ,, ..since.. 2025 ;; ..until.. 2027
+```
+(Inside a multi-line `,,` block a `;;` is ordinary text, because there each metadata value runs
+to the end of its line.)
+
 Longer Metadata:
 ```
 Dirk Hagemann .. works at .. SAP ,,
@@ -106,19 +115,25 @@ Commands allow fine-tuning ddot.it behavior.
 - Effect: Marks a document as double-dotted. Helps human readers and agents to find the documentation.
 
 ### Include and Exclude
-A ddot reader can process
+**By default a ddot reader scans every file it is given.** ddot.it is meant to augment any text
+you already have, so requiring a marker would mean missing most of it: triples are found and
+reported wherever they occur.
 
-- All marked documents (all with `ddot.it` or `ddot.it/on`, but excluding `ddot.it/off` ) -- This is the default
-- Only included documents (Only those with `ddot.it/on`)
-- All documents (Overriding document commands for include/exclude)
+The `ddot.it` marker and the `ddot.it/on` command therefore do *not* switch parsing on. They are
+hints for humans and agents, and they only select files when a reader is explicitly run in the
+optional **"exclude non-marked files"** mode.
+
+Within a file, `ddot.it/off` and `ddot.it/on` always apply — see
+[Include/Exclude Regions](#includeexclude-regions).
 
 #### Include Command
-- Syntax: `ddot.it/on`
-- Effect: Include document in double-dot-processing.
+- Syntax: `ddot.it/on` (or `!!on`)
+- Effect: Resume ddot.it processing from this line on.
 
 #### Exclude Command
-- Syntax: `ddot.it/off`
-- Effect: Exclude this document from double-dot-processing
+- Syntax: `ddot.it/off` (or `!!off`)
+- Effect: Stop ddot.it processing from this line on. Nothing between an `off` and the next `on`
+  is parsed — not even commands.
 
 ### Include/Exclude Regions
 A document may use multiple `on` ([include](#include-command)) and `off` ([exclude](#exclude-command)) commands, indicating regions for double dot processing. The command goes from start of document until the end of the doc or a counter-command.

@@ -1,8 +1,14 @@
-(* ddot.it grammar — line-oriented graph notation                         *)
-(* This describes lexical structure as seen by a syntax highlighter, for   *)
-(* the purpose of producing the canonical token stream in spec/expected/.  *)
-(* Semantic notions like "subject inheritance across continuation lines"   *)
-(* are runtime concerns, not token concerns, and are out of scope here.    *)
+(* ddot.it grammar — line-oriented graph notation                          *)
+(*                                                                         *)
+(* NOT NORMATIVE. The canonical grammar is the EBNF in                      *)
+(*   site/spec/ddot-it-parse.adoc  ("Grammar in EBNF")                      *)
+(* of the ddot.it repo. This file is a highlighter-oriented restatement of  *)
+(* it: it describes lexical structure as seen by a syntax highlighter, for  *)
+(* the purpose of producing the canonical token stream in cases/.           *)
+(* Where the two disagree, the parse spec wins — and this file is a bug.    *)
+(*                                                                         *)
+(* Semantic notions like "subject inheritance across continuation lines"    *)
+(* are runtime concerns, not token concerns, and are out of scope here.     *)
 
 file              = { line, newline } ;
 
@@ -12,16 +18,16 @@ line              = disabled-span
                   | block-meta-marker
                   | text-line ;     (* any line not matching the above *)
 
-triple-line       = slot, op-typed,   slot, op-typed, slot, [ inline-meta ]
-                  | slot, op-untyped,                 slot, [ inline-meta ] ;
+triple-line       = slot, op-typed,   slot, op-typed, object, [ inline-meta ]
+                  | slot, op-untyped,                 object, [ inline-meta ] ;
 
-continuation-line =        op-typed,  slot, op-typed, slot, [ inline-meta ]
-                  |        op-untyped,                slot, [ inline-meta ] ;
+continuation-line =        op-typed,  slot, op-typed, object, [ inline-meta ]
+                  |        op-untyped,                object, [ inline-meta ] ;
 
 inline-meta       = ws, ",,", [ ws, continuation-tail ] ;
 
-continuation-tail = op-typed, slot, op-typed, slot
-                  | op-untyped, slot ;
+continuation-tail = op-typed, slot, op-typed, object
+                  | op-untyped, object ;
 
 block-meta-marker = ",,", ws ;        (* alone on its own line — opens or closes a block *)
 
@@ -35,6 +41,16 @@ op-untyped        = "...." | "..", ws, ".." ;
 slot              = command
                   | slot-text ;
 slot-text         = ? one or more chars that do not introduce "..", ",,", or newline ? ;
+
+(* The object slot (the last slot of a triple) may contain "..", so a URL like http://h/a..b or a       *)
+(* relative path like ../../x is a valid object. The only constraint: the character right after the      *)
+(* separator must be a non-dot (a space counts) — dots may not run straight into the operator. This      *)
+(* rejects the degenerate "S ...... O" while keeping subjects/relations ".."-free.                       *)
+object            = command
+                  | object-text ;
+object-text       = object-head, { object-char } ;
+object-head       = ? one character that is not ".", does not begin ",,", and is not a newline ? ;
+object-char       = ? any character that does not begin ",," and is not a newline ? ;   (* may be "." *)
 
 command           = "ddot.it", [ "/", word ]
                   | "!!", [ word ] ;
