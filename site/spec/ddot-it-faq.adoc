@@ -1,0 +1,76 @@
+= The ddot.it FAQ 1.1.0
+:toc: macro
+:ddd: Ddot.it
+:dd: ddot.it
+:toclevels: 4
+:page-title: FAQ
+:page-nav_order: 7
+:page-parent: Specifications
+
+
+toc::[]
+
+== Datatypes?
+.Q: What about data types in {dd}?
+A: There are no data types in ddot.it.
+Users can use, e.g., JSON primitive syntax to express data types. RDF Turtle syntax works also. Both syntaxes need to be interpreted by higher layers.
+It looks ugly, but it works.
+
+
+== Serializing to {dd}
+.Q: Is it easy to dump data to {dd} syntax?
+A: Yes. In most scenarios, you have total control over your small relation vocabulary.
+Check each value for the character sequences that carry {dd} syntax in its slot:
+
+- `..` markers in subjects and relations (would be re-parsed as triple markers),
+- newlines (would be re-parsed as a shorter value),
+- `,,` markers in objects (would be re-parsed as start of a meta block),
+- `;;` in inline meta-objects (would be re-parsed as a meta separator),
+- `!!off` / `!!on` (in any command spelling) anywhere in any value — these two pre-parse
+  commands act xref:ddot-it-parse.adoc#pre-parse-recognition[anywhere on a line].
+
+If any of these occur, write the value as a
+xref:ddot-it-parse.adoc#block-as-field[`!!block` command filling that slot].
+Since `!!block` may fill *any* field — subject, relation, object, meta-relation, meta-object,
+meta-text — every string value can be serialized this way.
+Other in-text `!!` sequences are harmless: a strict parser keeps them as part of the
+field's text.
+
+== Namespaces
+.Q: Can I use namespaces like in RDF or XML?
+A: See also https://ddot.it/rdf.html[]. In short, you can, but you usually don't need to.
+
+Using Namespaces::
+In all strings, the namespace syntax with prefix + colon can be used.
+E.g. `foaf:knows` is a valid {dd} relation.
+
+Declaring Namespaces::
+– so that they can be resolved
+A ‘natural’ option in ddot.it would be
+
++
+.Example
+[ddot.it]
+----
+rdf ..prefix.. http://www.w3.org/1999/02/22-rdf-syntax-ns#
+dc ..prefix.. http://purl.org/dc/elements/1.1/
+ex ..prefix.. http://example.org/stuff/1.0/
+----
+
++
+This is no longer hypothetical: xref:ddot-it-vocabulary.adoc#prefix[`prefix`] **is** a declared
+built-in relation, with its own URI and semantics -- when a name like `A:foo` is read, `A:` is
+replaced by the prefix's value.
+
+The open question of whether it should be spelled `ddot:prefix` is settled: it is plain
+`prefix`. Qualifying it would need a prefix declaration to *read* the prefix declaration, and
+{dd} keeps its built-ins unqualified. The `ddot` prefix itself is declared in the vocabulary for
+use in ordinary triples.
+
+NOTE: Prefixes matter only when exporting to RDF. A {dd} triple base that is never mapped to RDF
+can use `foaf:knows` as an opaque relation name and never declare anything -- to the parser it is
+just text.
+
+
+== References
+- The https://pomsky-lang.org/[Pomsky] portable regex syntax seems smart
