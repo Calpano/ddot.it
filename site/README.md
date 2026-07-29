@@ -29,15 +29,20 @@ background: #f8f9ed;
 Given some files like **README.md**:
 ```markdown
 ## Project Eagle
-..started in.. 2024
+This project is about ... bla bla
+And then in the middle of normal markdown:
+
+Project Eagle ..started in.. 2024
 ..doc site .. example.com/docbase/8dcjsid
 
-John Doe..leads.. Project Eagle ,, ..since.. 2025
+John Doe ..leads.. Project Eagle ,, ..since.. 2025
 ```
-and **compose.yml**:
+and maybe a **compose.yml**, where we put ddot.it in the comments:
 ```yaml
 # Project Eagle....Moonshot
 services:
+  more: 
+    here
 ```
 they are read by a ddot collector as this single knowledge graph:
 
