@@ -1,0 +1,356 @@
+= The ddot.it Autocomplete Specification 1.2.0
+:toc: macro
+:ddd: Ddot.it
+:dd: ddot.it
+:toclevels: 4
+:page-title: Autocomplete
+:page-nav_order: 4
+:page-parent: Specifications
+
+Builds upon the
+xref:ddot-it-parse.adoc[{ddd} Parse Specification] and
+xref:ddot-it-highlight.adoc[{ddd} Highlight Specification].
+
+.About this document
+- Last Modified: 2026-07-28
+- Version: 1.2.0
+
+.Contents
+toc::[]
+
+
+== Autocompletion
+{ddd} has five completable slots. They use the same letters as the
+xref:ddot-it-parse.adoc#information_model[Information Model], so one vocabulary runs through all
+the specifications:
+
+[cols="1,3,4"]
+|===
+| Letter | Slot | Holds
+
+| `s`  | Subject       | an entity name
+| `p`  | Relation      | a relation name (named after RDF's *predicate*)
+| `o`  | Object        | an entity name or a data value
+| `mr` | MetaRelation  | a relation name
+| `mo` | MetaObject    | an entity name or a data value
+|===
+
+There is no sixth completable slot. **Meta text** -- the free text after a `,,` that holds no
+triple -- is prose, and autocompletion never fires inside it.
+
+
+=== What is completed from what
+The five slots fall into two families:
+
+Value-like (`s`, `o`, `mo`):: they name entities and data values.
+Relation-like (`p`, `mr`):: they name relations.
+
+Completing a slot queries the values already seen in other slots. Each query lists its own slot
+first, then the rest of its own family, then the other family.
+
+[[queries-catalog]]
+.Autocompletion Queries Catalog
+[cols="2,4"]
+|===
+| Cursor in | Query slots, in ranking order
+
+| Subject       | `s`, `o`, `mo`, `p`, `mr`
+| Relation      | `p`, `mr`
+| Object        | `o`, `s`, `mo`, `p`, `mr`
+| MetaRelation  | `mr`, `p`
+| MetaObject    | `mo`, `o`, `s`, `mr`, `p`
+|===
+
+A **relation-like** cursor stays inside its own family: completing a relation from the set of
+*objects* would offer values where a relation name belongs, so the value-like slots are not
+offered there at all.
+
+[[ranking-not-filtering]]
+.The catalog ranks; it does not filter
+****
+The catalog is deliberately **broad**. An entity named as a Subject in one file is a perfectly
+good Object in another, so the Object query includes `s`. A tool MUST NOT narrow a query below
+the catalog -- not even with a signal as good as <<fit,inferred fit>>.
+
+Inferred knowledge is a **ranking** signal: it decides what appears *first*, never what appears
+*at all*. Suppressing a candidate that the catalog admits makes completion wrong exactly when the
+inference is incomplete -- which, in a knowledge base still being authored, is most of the time.
+The author can ignore a candidate ranked low; they cannot insert one that was never offered.
+
+See <<ranking>> for the full order.
+****
+
+[[untyped-relation]]
+.The untyped form still has a completable relation
+`a .... b` and `a .. .. b` carry the implicit relation
+xref:ddot-it-vocabulary.adoc#links-to[`links to`], and have no relation slot in the text. With
+the caret between the two dot pairs, treat that gap as an **empty Relation slot**: offer the
+Relation query, and inserting a name rewrites the untyped form into the typed one, so
+`a .. .. b` becomes `a ..name.. b`. The untyped form is then a natural way to start a triple
+whose relation is not yet decided.
+
+
+[[corpus-and-matching]]
+=== Candidate corpus, matching and triggering
+.Spec
+****
+**Corpus.** Candidates come from **all files** the tool has indexed, not only the file being
+edited. {ddd} is meant to be spread over many files, so completion that saw only the current
+file would miss most of the knowledge base.
+
+**Matching** is **case-insensitive prefix** matching: a candidate is offered when it starts with
+the text typed so far, ignoring case. Substring and fuzzy matching are deliberately not used --
+prefix matching keeps the list short and its order explicable.
+
+**The text already typed is not offered back.** A candidate equal to the current slot text (after
+case-insensitive comparison) is dropped: accepting it would change nothing.
+
+**Triggering.** Completion fires **while typing** inside a slot. Moving the caret into a slot
+does *not* open it, so navigating a document never raises popups. Explicit invocation (the host
+editor's usual key, e.g. kbd:[Ctrl+Space]) MUST always work, including in an empty slot.
+
+**Ranking** is specified separately -- see <<ranking>>.
+****
+
+
+[[ranking]]
+=== Ranking
+Every candidate that the <<queries-catalog,catalog>> admits and that
+<<corpus-and-matching,prefix-matches>> is offered. Ranking decides the
+*order* of that list, and nothing else -- see <<ranking-not-filtering>>.
+
+.Spec
+****
+**Rank by the following keys, in this order.** Compare candidates on the first key; only where
+they tie does the next key apply.
+
+[cols="1,3,6"]
+|===
+| # | Key | Rule
+
+| 1 | **Kind**
+| When a xref:ddot-it-parse.adoc#command[command] prefix has been typed, commands rank above all
+  value candidates (see <<Command completion>>). Otherwise this key is constant.
+
+| 2 | **Fit**
+| Candidates that <<fit,fit the current line>> rank above those that do not.
+
+| 3 | **Recency**
+| For relation-like slots, the *N* most recently accepted relation names, most-recent first.
+  *N* SHOULD be small; the reference implementations use 3.
+
+| 4 | **Query slot**
+| The <<queries-catalog,catalog>> position of the pool the candidate came from,
+  earlier pools first.
+
+| 5 | **Locality**
+| Same-file before other-file -- a name already used in this document is the more likely
+  completion.
+
+| 6 | **Frequency**
+| Number of occurrences in the corpus, descending.
+
+| 7 | **Name**
+| Case-insensitive alphabetical, then code-point order.
+|===
+
+**One name, one entry.** A name reachable through several pools is offered **once**, at its best
+(earliest) catalog position. Duplicated entries would spend list space without adding a choice.
+
+**The order MUST be total and deterministic.** Key 7 never ties for distinct candidates, so the
+same corpus and the same typed prefix always produce the same list. Authors build muscle memory
+from list positions, and a ranking that reshuffles between invocations destroys it. It also makes
+the behaviour testable.
+
+**Fit and Recency outrank the Query slot deliberately.** Keys 4-6 describe where a name was
+*seen*; keys 2-3 describe how well it suits what is being written *now*. A name that fits the
+current relation is a better guess than one that merely occupies the right slot elsewhere, so the
+evidence about the current line wins.
+****
+
+[[fit]]
+==== Fit
+.Spec
+****
+A candidate **fits** when the corpus already links it to what is on the line being written.
+Two forms, one per family:
+
+Object-like fit (`o`, `mo`):: the candidate has been used as an object of the line's relation,
+or it is an xref:ddot-it-vocabulary.adoc#has-type[instance] of a type that some object of that
+relation has.
+Relation-like fit (`p`, `mr`):: the candidate relation has been used with subjects whose type
+the line's subject also has.
+
+Fit is **inferred from usage, never declared**. {ddd} has no relation that states a domain or a
+range: the types come from the xref:ddot-it-vocabulary.adoc#has-type[`has type`] family as
+authored, and the inference is whatever the corpus currently supports. This follows the
+xref:ddot-it-vocabulary.adoc#monotonicity[monotonicity] rule -- writing more triples can only add
+fitting candidates, never retract them.
+
+A tool MAY implement fit partially or not at all; the ranking then simply degenerates to keys
+3-7. What a tool MUST NOT do is treat a missing fit as a reason to withhold a candidate.
+****
+
+.Worked example
+====
+Corpus:
+
+[source,ddot.it]
+----
+Alice ..works at.. Acme
+Acme ..has type.. Company
+Globex ..has type.. Company
+Carol ..has type.. Person
+----
+
+Typing an Object in `Dave ..works at.. `:
+
+. `Acme`, `Globex` -- **fit**: objects of `works at` are `Company` instances, and so are these.
+. `Company`, `Person` -- no fit; pool `o` (they appear as objects of `has type`).
+. `Alice`, `Carol` -- no fit; pool `s`.
+. `has type`, `works at` -- no fit; pool `p`, last because a relation name in an object slot is
+the least likely of the admitted candidates. Alphabetical within the group (key 7).
+
+`Carol` is a `Person` and does not fit `works at` -- and is still offered, ranked below every
+`Company`. Had the author simply not typed `Carol ..has type.. Person` yet, filtering would have
+hidden a name they were about to need.
+====
+
+
+[[cursor-state]]
+=== Knowing which slot the cursor is in
+There is **no separate grammar for autocompletion**, and there should not be one. The slot at
+the cursor is read directly off the
+xref:ddot-it-parse.adoc#state-automaton[parse automaton] that the Parse Specification already
+defines.
+
+.Spec
+****
+**Feed the automaton the text before the cursor; the state it reaches names the slot.**
+
+Start the automaton in the state the document is in at the beginning of the current line --
+`StartOfLine` for an ordinary line, or the pre-parse state if the line sits inside an
+xref:ddot-it-parse.adoc#off-command[excluded] or
+xref:ddot-it-parse.adoc#block-as-field[verbatim] region -- then consume the line's tokens up to
+the caret. No lookahead, no whole-line analysis.
+
+[cols="3,2,4"]
+|===
+| Automaton state | Query | Note
+
+| `StartOfLine`         | `s`  | Nothing typed yet; a subject is what comes next
+| `Subject`             | `s`  |
+| `RelationStart`       | `p`  | Relation still empty
+| `Relation`            | `p`  |
+| `ObjectStart`         | `o`  |
+| `TripleObject`        | `o`  |
+| `MetaStart`           | `mr` | Right after `,,`
+| `MetaRelationInline`  | `mr` |
+| `MetaNextInline`      | `mr` | Right after `;;`, i.e. the next pair
+| `MetaObjectInline`    | `mo` |
+| `BlockFirstLine`      | `mr` | First line of a `,,` block, before it commits
+| `BlockTripleLine`     | `mr` |
+| `MetaRelationInBlock` | `mr` |
+| `MetaObjectInBlock`   | `mo` |
+| `MaybeBlockOpen`      | `s`  | A line-initial `,,` that may still be subject text
+| `MetaTextInline`      | --   | Free-form text, see <<where-completion-fires>>
+| `BlockTextLine`, `MetaTextBlockLine` | -- | Likewise
+| `BlockEnd`            | --   | Only a closing `,,` is expected here
+| `NotATriple`          | --   | The line cannot become a triple
+| *excluded*, *verbatim* | --  | Inert regions
+|===
+
+Two properties make this the right formalism rather than a second one:
+
+. **It is prefix-driven.** The automaton is defined left to right and needs no lookahead, so a
+half-written line lands in a sensible state on its own. Typing `Dir` reaches `Subject` — the
+<<where-completion-fires,permissive behaviour>> autocompletion needs is not a special rule, it
+is what the automaton already does.
+. **It is defined over real tokens.** Slot detection inherits the `DT2`/`DT4` definitions, so
+`+...+` and `+......+` cannot be miscounted as separators. Implementations that count raw `..`
+occurrences instead need a special case for every stray run of dots.
+****
+
+
+[[where-completion-fires]]
+=== Where completion fires
+Autocompletion and highlighting answer *different* questions, and deliberately use different
+rules for what counts as a slot.
+
+.Spec
+****
+**Autocompletion does not use the xref:ddot-it-highlight.adoc#dd-gating[line-shape gate].**
+The gate requires a complete operator skeleton -- two `DT2`, or one `DT4` -- before a line is
+coloured as {dd}. A line being *written* does not have that yet: typing `Dir` on a fresh line
+has no marker at all. Completion therefore treats a line under edit as a potential triple from
+its first character, and offers <<queries-catalog,Subject>> completion straight
+away.
+
+The two rules do not conflict, because they govern different things. Colouring an ordinary
+prose line as a triple is a visible error, so highlighting is conservative. Offering a
+completion the author can ignore is cheap, so completion is permissive -- and being unavailable
+exactly while a new triple is being typed would make it useless.
+
+**Completion is silent in inert regions.** No completion is offered, automatic or explicit,
+when the caret is inside:
+
+- a xref:ddot-it-parse.adoc#block-command[`!!block`] body -- the content is *verbatim*, and
+even commands written there are explicitly inert;
+- an xref:ddot-it-parse.adoc#off-command[`!!off`] … `!!on` excluded region -- nothing in it is
+parsed at all;
+- xref:ddot-it-parse.adoc#parsing[meta text] -- free-form prose (see <<Autocompletion>>).
+
+In all three, anything offered would be syntax that carries no meaning where it was inserted.
+****
+
+
+=== Command completion
+Typing any command prefix switches completion from values to **commands**, ranked above the
+value queries.
+
+.Spec
+****
+**Triggers.** All four xref:ddot-it-parse.adoc#command[command spellings] trigger command
+completion, not only `!!`:
+
+- `!!`
+- `ddot.it/`
+- `http://ddot.it/`
+- `https://ddot.it/`
+
+**Candidates.** The four built-in commands -- `on`, `off`, `block`, `this` -- plus every command
+name found anywhere in the indexed corpus. A new command therefore becomes completable simply by
+being used, without changing this specification.
+
+**Ranking: slot-appropriate first, then the rest.**
+
+[cols="2,2,5"]
+|===
+| Caret in | Ranked first | Why
+
+| Subject       | `this`, `block` | `!!this` names the current document; `block` may fill a Subject
+| Object        | `block`         | `block` may fill an Object
+| MetaObject    | `block`         | `block` may fill a MetaObject
+| Relation      | --              | no built-in belongs in a relation name
+| MetaRelation  | --              | likewise
+|===
+
+Everything else -- the remaining built-ins and all corpus-harvested commands -- follows, ordered
+as above.
+
+`off` and `on` are xref:ddot-it-parse.adoc#pre_parse_commands[pre-parse commands] and not field
+values at all, so they rank **last** inside any slot. They rank *first* only when the caret sits
+outside a triple, where they are the sensible commands to offer.
+
+**Parameters.** After completing `block`, offer `?end=` as a follow-on completion. It is the
+only parameter of the only command that takes one, and the
+xref:ddot-it-parse.adoc#block-end-marker[marked form] is the one that survives blank lines in
+the body -- which is exactly when an author reaches for it.
+
+The marker *value* is not completed: it is an arbitrary string the author chooses, and there is
+nothing to draw candidates from. Complete `?end=` and stop.
+****
+
+NOTE: `block` is slot-appropriate in exactly the three positions
+xref:ddot-it-parse.adoc#block-as-field[block-as-field] allows -- Subject, Object and MetaObject.
+It is not ranked first in a Relation or MetaRelation, where it cannot open a block at all.
