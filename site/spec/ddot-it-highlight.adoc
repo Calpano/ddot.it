@@ -1,0 +1,378 @@
+= The ddot.it Syntax Highlight Specification 1.1.0
+:toc: macro
+:ddd: Ddot.it
+:dd: ddot.it
+:toclevels: 4
+:toc:
+:page-title: Highlight
+:page-nav_order: 2
+:page-parent: Specifications
+
+Builds upon the xref:ddot-it-parse.adoc[{ddd} Parse Specification].
+
+
+
+== Syntax Layers
+The {dd} syntax happens in roughly three layers:
+
+. Finding snippets via `!!on`, `!!off`, and `!!block`.
+. Parsing snippets to triples (s, p,o ) and meta (p, o) via `..` and `,,`.
+
++
+.Syntax
+----
+aaa ..bbb..ccc ,, ..ppp.. qqq ;; ..rrr.. sss
+----
+
+. Processing commands within s, p, o via `!!`.
+
+
+The resulting regions in layer 1 are
+
+- **excluded** -- between `!!off` and `!!on`
+- **verbatim** -- a `!!block` body
+- **plain** -- everything else, refined by layer 2
+- plus the **pre-parse command markers** themselves (`!!off`, `!!on`, `!!block`), which are not
+regions but tokens, and are styled like any other command.
+
+Within _plain_, on layer 2, a line is one of:
+
+.A typed triple
+----
+WS* subject WS* DT2 WS* relation WS* DT2 WS* object WS* Meta? NEWLINE
+----
+
+.An untyped triple -- `DT4` or `DT2 WS+ DT2`, no relation slot
+----
+WS* subject WS* ( DT4 | DT2 WS+ DT2 ) WS* object WS* Meta? NEWLINE
+----
+
+Either form may omit the subject (a <<dd-progressive,continuation line>>), and `Meta?` is one of:
+
+.Meta, inline triple form -- any number of pairs, separated by `SC2`
+----
+CM2 WS* DT2 WS* meta-relation WS* DT2 WS* meta-object ( WS* SC2 WS* … )*
+----
+
+.Meta, inline text form -- no `DT2` after the `CM2`
+----
+CM2 WS* meta-text
+----
+
+.Meta, block form -- opened by `CM2` at end of line or alone on the next line
+----
+CM2 NEWLINE ( meta-triple-line | meta-text-line )* WS* CM2
+----
+
+The meta-relation slot is likewise absent in the untyped (`DT4`) meta form.
+
+And in layer 3 we refine each of _subject_, _relation_, _object_, _meta-relation_, _meta-object_
+and _meta-text_ into:
+
+- text*
+- command
+- text*
+
+
+== Highlighting
+
+=== Regions
+Highlighting happens, as far as _TextMate_ grammars are used, in two layers.
+
+.Upper Layer -- regions
+[cols="2,3,4"]
+|===
+| Region | Visually | Extent
+
+| excluded           | block comment   | `!!off` … `!!on`; the markers themselves are commands, not part of the region
+| verbatim           | string literal  | a `!!block` body; the opener and any `?end=` marker are not part of the region
+| plain              | normal text     | everything else, refined by the Default Layer below
+| pre-parse command  | keyword-style, including the `EM2` (`!!`) | the `!!off` / `!!on` / `!!block` tokens themselves
+|===
+
+.Default Layer -- classes
+[cols="2,3,4"]
+|===
+| Default Layer | Class | Visually
+
+| WS                            | Whitespace       | Default text; whitespace outside an entity is NOT highlighted
+| subject                       | Entity           | Consistent across all five slots, see <<dd-scopes-distinct,D3>>
+| relation                      | Entity           |
+| object                        | Entity           |
+| meta-relation                 | Entity           |
+| meta-object                   | Entity           |
+| meta-text                     | Entity           | Free text after a `,,` that holds no triple
+| DT2 / DT4 / `.. ..`           | Marker           | Signature syntax of {dd}, important to highlight
+| CM2 (`,,`)                    | Marker           | Opens and closes the meta part
+| SC2 (`;;`)                    | Marker           | Only inside the inline meta part
+| EM2 + URI-path                | In-Text-Command  | keyword-style, including the `EM2` (`!!`)
+|===
+
+The concrete role and scope names for every row are in <<Scope Name Mapping>>, which is
+normative; this table only fixes the visual classes.
+
+=== Command Regex
+The one authoritative regex for a <<Token Building Blocks,command>> is given in the TextMate
+chapter below. It is derived from the URI grammar of
+https://datatracker.ietf.org/doc/html/rfc3986[RFC 3986] -- see
+xref:ddot-it-parse.adoc#command[Commands] in the Parse Specification for that derivation and
+for the normative definition of where a command begins and ends.
+
+== TextMate Grammar Encoding
+This section records how the {dd} syntax is encoded as a https://macromates.com/manual/en/language_grammars[TextMate grammar], and the design decisions taken.
+
+TextMate grammars have one hard constraint that shapes everything below: the parser looks at **one line at a time** and matches its regexes **greedily, left to right**. It cannot look ahead to a later line, and it cannot first decide "is this whole line a valid triple?" before styling its tokens. Multi-line constructs are expressed only through paired `begin`/`end` rules.
+
+=== Design Decisions
+
+[[dd-deployment]]
+==== D1 -- Deployment: standalone core + injection wrapper
+Two grammars are shipped, sharing one rule set:
+
+- A **standalone** grammar, `scopeName: source.ddot`, bound to the `.ddot` file extension. The whole file is {dd}.
+- An **injection** grammar that `include`s the same repository so {dd} lights up inside host languages (Markdown, AsciiDoc, ...).
+
+The core rules live in the repository and are written once; each grammar is a thin shell around them.
+
+[[dd-format]]
+==== D2 -- Format-agnostic specification
+This document describes the grammar **abstractly** -- rules, regexes and scope names -- rather than committing to a concrete `.tmLanguage` plist or `tmLanguage.json`. Either serialization is generated from the tables below. The property-list vs. JSON choice is left to the toolchain (see the link:https://www.apeth.com/nonblog/stories/textmatebundle.html[TextMate bundle guide]).
+
+[[dd-scopes-distinct]]
+==== D3 -- Distinct scopes, uniform default appearance
+`subject`, `relation`, `object`, `meta-relation` and `meta-object` each get their **own** scope name, but all share the `entity.name.*` prefix. Under an off-the-shelf theme they therefore render **identically** (as the highlight layer intends -- all are class _Entity_), yet a theme _can_ single out, say, subjects without any grammar change.
+
+[[dd-scopes-standard]]
+==== D4 -- Standard scopes with a `.ddot` suffix
+Scope names reuse the conventional TextMate roots (`keyword`, `comment`, `string`, `entity`, `punctuation`) so existing themes colour {dd} with **zero extra configuration**. The trailing `.ddot` component lets a dedicated theme target {dd} specifically. No bundled theme is required.
+
+[[dd-gating]]
+==== D5 -- Line-shape gated, progressive
+A line is treated as {dd} only when it matches the triple **skeleton**; ordinary prose stays unstyled. To keep live editing responsive (D8), the gate fires on the **leading** skeleton -- a subject (possibly empty) followed by the first `..`/`....` marker -- rather than the complete line. Everything after the first marker (relation, closing marker, object, meta) is **optional** in the match, so a half-typed `Dirk ..works at..` already highlights.
+
+The practical effect: what "looks like {dd}" is a line carrying a complete operator skeleton -- either **two** `DT2` markers, or one `DT4` / `.. ..`. Each marker must be a run of exactly two (or four) dots, not part of a longer run.
+
+That gate is considerably tighter than "contains `..`", and prose survives it well: a *lone* `..`, an ellipsis `...`, `Node.js`, `Mr. Smith` and `U.S.A.` all stay plain, because none of them completes the skeleton (see corpus case `23-not-a-triple`). The only place the gate is suppressed outright is an <<dd-excluded,excluded region>>.
+
+[[dd-off-anywhere]]
+==== D5b -- `!!off` / `!!on` are recognised anywhere on a line
+An excluded region opens on any line **containing** `!!off`, not only on a line that holds
+nothing else, because the command is normally written inside a host-language comment
+(`+<!-- ddot.it/off -->+`, `+# !!off+`). On such a line only the **command token itself** is
+coloured; the surrounding comment markers are left unscoped, exactly as they are on any other
+line. The region's content begins with the next line. `!!on` closes it by the same rule.
+
+The command name is matched exactly -- the character after it must be whitespace, `?`, `#` or
+end-of-line -- so `!!office` does not open a region. See corpus case `31-off-in-comment`.
+
+[[dd-commands]]
+==== D6 -- All four command spellings recognised
+`!!name`, `ddot.it/name`, `http://ddot.it/name` and `https://ddot.it/name` are all highlighted as
+commands, per the regex in <<Token Building Blocks>>. A bare `ddot.it/foo` inside object text
+lights up too -- command shape is recognised wherever it occurs, see
+xref:ddot-it-parse.adoc#command-syntax-vs-vocabulary[Command syntax vs. vocabulary].
+
+The **slash is required and the name must be non-empty**: a bare `ddot.it` -- in a URL, or as a
+word in prose -- is not a command and is not highlighted as one. That is deliberate, and is what
+keeps every prose mention of the project from lighting up. It is also independent of the
+xref:ddot-it-parse.adoc#file-selection[file-selection marker], which *is* satisfied by the bare
+string but is a substring test, not command recognition.
+
+[[dd-multiline]]
+==== D7 -- Full multi-line fidelity
+The `,,` meta **block** and the `!!block` **verbatim** region are modelled as real `begin`/`end` regions with correct inner structure, not flattened. The custom `!!block?end=MARKER` terminator is handled with an Oniguruma **back-reference** from `end` to a group captured in `begin` (the same technique heredocs use). Because one rule can carry only one `end`, the default blank-line block and the custom-marker block are **two separate rules** (see <<dd-rules>>).
+
+[[dd-progressive]]
+==== D8 -- Progressive highlighting while typing
+Consequence of D5: an incomplete triple highlights its valid prefix as it is typed, instead of staying dark until the object exists. This dovetails with the xref:ddot-it-autocomplete.adoc[autocomplete spec].
+
+[[dd-injection]]
+==== D9 -- No host trigger; gate self-selects
+The injection grammar carries **no** magic-marker or fenced-block precondition. It is offered to host text broadly (via a low-priority `injectionSelector`, e.g. `L:text, L:source`, minus host `comment`/`string` scopes) and the line-shape gate (D5) decides, line by line, what is {dd}. "Whenever it looks like {dd}, highlight it -- except inside an excluded region."
+
+NOTE: In injection mode the {dd} rules are **additive** over the host grammar. An <<dd-excluded,excluded>> span stops {dd}'s _own_ rules from firing but does not silence the host's tokeniser, which keeps colouring its own syntax underneath.
+
+[[dd-naming]]
+==== D10 -- Role vocabulary named after the language
+The canonical **role** names asserted by the golden corpus were revised to match this spec's own vocabulary:
+
+[cols="2,2,4"]
+|===
+| Was | Now | Rationale
+
+| `operator`      | `doubledot`      | Named after the language's defining mark, not a generic category. Covers `..`, `....` and `.. ..` alike -- all three are one role.
+| `meta-operator` | `meta-doubledot` | Follows `doubledot`.
+| `disabled`      | `excluded`       | The Parse Spec and the <<Syntax Layers>> section already say _excluded_.
+| _(untokenized)_ | `verbatim`       | The `!!block` body was previously left unclassified; it is now a role of its own, per the <<Regions,Upper Layer>> table's "verbatim -- string literal".
+|===
+
+Two roles are new, covering syntax the corpus did not previously exercise: `meta-separator` (`;;`) and `block-end` (the `MARKER` in `!!block?end=MARKER`).
+
+=== Scope Name Mapping
+The abstract classes of the <<Regions,Regions>> tables map to concrete TextMate scopes as follows.
+The middle column is the canonical **role** name asserted by `test-data/cases/*/expected.tokens.json`;
+`test-data/tokens.md` is normative for it.
+
+.Regions and markers
+[cols="3,2,3,3"]
+|===
+| Element | Role | Scope | Notes
+
+| Excluded region (`!!off` … `!!on`)   | `excluded`       | `comment.block.excluded.ddot`          | `contentName`, no inner patterns. D9 NOTE applies in injection
+| `!!off` / `!!on` markers              | `command`        | `keyword.control.command.ddot`         | Via `beginCaptures`/`endCaptures`
+| `!!block` verbatim content            | `verbatim`       | `string.unquoted.block.ddot`           | `contentName`; no inner patterns (commands inert)
+| `!!block` opener                      | `command`        | `keyword.control.command.ddot`         | Fills a whole field (see xref:ddot-it-parse.adoc#block-as-field[block-as-field]): Subject, Object or MetaObject
+| `?end=MARKER` marker name             | `block-end`      | `variable.parameter.block-end.ddot`    | Captured, back-referenced by `end` (D7)
+| `DT2` / `DT4` / `.. ..`               | `doubledot`      | `keyword.operator.doubledot.ddot`      | One role for all three spellings (D10)
+| `CM2` meta marker (`,,`)              | `meta-delim`     | `punctuation.section.meta.ddot`        | Opening and closing alike
+| `SC2` inline meta separator (`;;`)    | `meta-separator` | `punctuation.separator.meta.ddot`      | Only inside the `,,` meta part
+| `DT2` inside meta                     | `meta-doubledot` | `keyword.operator.doubledot.meta.ddot` |
+|===
+
+.Entities (D3 -- distinct scopes, shared `entity.name` prefix, uniform default look)
+[cols="3,2,4"]
+|===
+| Field | Role | Scope
+
+| subject        | `subject`       | `entity.name.subject.ddot`
+| relation       | `relation`      | `entity.name.relation.ddot`
+| object         | `object`        | `entity.name.object.ddot`
+| meta-relation  | `meta-relation` | `entity.name.relation.meta.ddot`
+| meta-object    | `meta-object`   | `entity.name.object.meta.ddot`
+| meta-text      | `meta-text`     | `entity.name.object.meta.text.ddot`
+|===
+
+Metadata deliberately shares the `entity.name.*` / `keyword.operator.*` roots with the main triple, so it renders as **first-class content** rather than as a comment. The trailing `.meta` component exists only so a theme _can_ single metadata out later -- the same reasoning as D3.
+
+.In-text command (D6 -- keyword-style, incl. the prefix)
+[cols="3,2,4"]
+|===
+| Part | Role | Scope
+
+| Whole command (prefix + name) | `command`       | `keyword.control.command.ddot`
+| Query / fragment (`?…` / `#…`)  | `command-param` | `variable.parameter.command.ddot`
+|===
+
+One command splits its query further. In `!!block?end=MARKER` the query **key** `?end=` is a
+`command-param` like any other, but the marker **value** is broken out as its own `block-end`
+role, because the identical marker also appears as the block's terminator line and the two are
+meant to read as a pair. So `!!block?end=END` yields three tokens -- `command`, `command-param`,
+`block-end` -- and the closing `END` line yields a fourth, also `block-end`. See
+xref:ddot-it-parse.adoc#block-end-marker[The `?end=` Parameter] for the full semantics.
+
+The command rule is nested **inside** every field capture. A field that is entirely a command (`ddot.it/this` as a subject, `ddot.it/block` as an object) therefore carries both scopes, and the **deepest one wins** -- which is exactly the corpus rule "a slot whose text is a command is emitted as `command`, not `subject`".
+
+The rule matches command **shape**, not a list of names, so a retired or unknown command still
+highlights as one -- corpus case `15-label` keeps `!!label` in a relation slot for exactly this
+reason, even though `label` is now an ordinary relation. See
+xref:ddot-it-parse.adoc#command-syntax-vs-vocabulary[Command syntax vs. vocabulary].
+
+Whitespace outside an entity is left **unscoped** (D4 note in the <<Regions,Default Layer - Visually>> table). Every slot is whitespace-trimmed -- **without exception**, inline and block alike. Free-form meta text after a `,,` therefore starts at its first non-whitespace character, matching `Meta := CM2 WS* MetaInline WS*` in the parse spec: the `WS` between the `,,` and the text belongs to neither token (corpus case `13-inline-meta-text`).
+
+=== Token Building Blocks
+The counted tokens from the xref:ddot-it-parse.adoc[Parse Spec] become these regexes. The lookarounds enforce "a run of exactly N, neither preceded nor followed by the same character", so a lone `.`, a run of three dots, etc. stay plain text (`TX`).
+
+[cols="2,5l"]
+|===
+| Token | Regex (Oniguruma)
+
+| `DT2` |(?<!\.)\.{2}(?!\.)
+| `DT4` |(?<!\.)\.{4}(?!\.)
+| `CM2` |(?<!,),,(?!,)
+| `SC2` |(?<!;);;(?!;)
+| `EM2` |(?<!!)!!(?!!)
+| command |(?:(?<!!)!!(?!!)\|(?:https?://)?ddot\.it/)([^\s?#]*)(\?[^\s#]*)?(#\S*)?
+|===
+
+Note `DT2`'s trailing `(?!\.)` makes it decline to match the first two dots of `+++....+++`, so `DT4` wins there; the leading `(?<!\.)` keeps it from matching the middle of `+++...+++`.
+
+[[dd-rules]]
+=== Repository Rule Structure
+Top-level `patterns`, in order (**order matters** -- first match wins, so most specific first):
+
+. **`#excluded`** -- `begin` = the `off` command, `end` = the `on` command; `contentName` = `comment.block.excluded.ddot`, with **no** inner patterns. Listed first so nothing inside is parsed. +
+  [[dd-excluded]]This is the only construct that suppresses the gate (D5, D9).
+. **`#block-verbatim-marked`** -- a gated triple line whose object is `!!block?end=MARKER`. `begin` matches the line through that opener and **captures the marker**; `end` = `+++^[ \t]*\8[ \t]*$+++` (back-reference to that capture, D7); `contentName` = `string.unquoted.block.ddot`; **no** inner patterns. A blank line does _not_ end this form.
+. **`#block-verbatim`** -- a gated triple line whose object is a plain `!!block`. `end` = `+++^[ \t]*$+++` (first blank line). Otherwise as above. Placed after the marked variant.
+. **`#meta-block-after-triple`** -- a gated triple line that ends in `,,`. `begin` styles the triple + opening `,,`; `end` = `+++^[ \t]*,,[ \t]*$+++` (closing `,,`); the content holds nested `#meta-block-triple-line` / `#meta-block-text-line` patterns (the block form, part 3 of the Parse automaton).
+. **`#meta-block-standalone`** -- a line consisting solely of `,,` also opens a meta block, after an already-complete triple line. Required by golden-corpus case `09-standalone-comma-block`, which the `Triple := … Object WS* Meta?` production does not by itself allow; the corpus has the last word.
+. **`#triple-line`** -- the common case: one physical line carrying a triple and any **inline** meta (`,, ..mr.. mo ;; ..mr2.. mo2` or `,, text`). A single-line `match` with captures; each field capture carries a nested `patterns` list of `#command`. Progressive (D8): relation, closing marker, object and meta are all optional.
+
+Anything matching none of these is a `NotATriple` line and stays plain.
+
+.Field capture pattern (inside D5's gated match)
+Each of subject / relation / object / meta-* is captured as the text between its bounding markers (lazily, respecting its `TextExcept{…}` set from the grammar), assigned its <<Scope Name Mapping,entity scope>>, and given a nested `patterns` list containing `#command` so an in-text command inside the field is highlighted on top of the entity colour.
+
+.Two regex details worth keeping
+- **Operator alternation, not rule ordering.** `QuadDot` and `DoubleDot` are alternatives *within one regex* (`QUAD` listed first), not two rules in priority order. Leftmost-first then does the right thing in both directions: `Alpha .. .. Beta` yields one `doubledot` spanning `.. ..`, while `a ..b.. c .. .. d` still parses as a typed triple, because its first marker sits further left.
+- **The object is lazy with an optional trailing meta group.** That makes it stop at a `,,` when one is present, yet otherwise run to end of line -- so an object may itself contain `..` (corpus case `20-object-dotdot`: `http://h/x..y`, `../../b.adoc`).
+
+=== Verification
+`syntaxes/ddot.tmLanguage.json` is checked against the golden corpus by
+`tools/test-grammar.mjs`, which tokenises each `input.ddot` with the real
+`vscode-textmate` + `vscode-oniguruma` engine, maps the emitted scopes back to the
+canonical <<Scope Name Mapping,role names>> (deepest scope wins) and diffs against
+`expected.tokens.json`.
+
+----
+npm install && npm test          # the whole corpus
+node tools/test-grammar.mjs 17   # a single case
+node tools/test-grammar.mjs --update
+----
+
+All cases in `test-data/cases/` pass. The corpus is authoritative for the count; this document
+deliberately does not repeat it, so it cannot go stale.
+
+Behaviours once verified only by hand now have cases of their own: `21-block-end-marker`
+(the `?end=MARKER` back-reference, and that a blank line does *not* end that form),
+`22-inline-meta-separator` (`;;`), and `23-not-a-triple` (prose that must stay plain --
+`...`, a lone `..`, `Node.js`, `U.S.A.`, and non-{dd} `https://` URLs). `24`--`28` cover the
+remaining grammar productions: `QuadDot` in meta, the empty `,,` block, a `DT4` continuation
+line, multi-line meta text, and `;;` as *content* inside a `,,` block.
+
+=== Known Limitations
+- **Loose over-matching (accepted, D5/D9).** A line of prose that happens to complete the operator skeleton -- two `..` markers, or a `....` -- is styled as a triple. The gate is a shape test, not a semantic one.
+- **Host bleed-through in excluded spans (D9 NOTE).** In injection mode the host keeps colouring its own syntax inside an `!!off`…`!!on` region; {dd} only adds the comment scope.
+- **A block's continuation line is not styled as a continuation.** `!!block` may open in the
+Subject, Object or MetaObject position, and all three are implemented. What TextMate cannot do is
+carry the *logical line* across the block: after the terminator, the
+xref:ddot-it-parse.adoc#block-continuation[continuation line] is tokenised from scratch with no
+memory of which field was interrupted. In practice this reads correctly anyway -- `..knows.. Bob`
+after a block subject is already a valid omitted-subject line and highlights as relation +
+object (corpus case `29-block-subject`) -- but a `,,` or `;;` continuation after a block object
+or meta object is not recognised as resuming the triple and stays plain.
+- **`begin`/`end` never backtracks.** If a `!!block`/`,,` region's terminator is never typed, the region runs to end of document -- standard TextMate behaviour.
+
+.On continuation lines
+A line whose subject is omitted (`..ppp.. ooo`) is highlighted **completely**: the markers,
+the relation and the object all get their normal scopes -- exactly as on a line that spells its
+subject out (corpus case `07-leading-separator-continuation`). Nothing is lost for
+highlighting purposes.
+
+What a TextMate grammar cannot do is *show* the inherited subject, because the value comes from
+an earlier line and TextMate carries no cross-line state. But that is a matter of **displaying a
+value that was never typed on this line** -- an inlay-hint or code-lens feature of an editor
+integration, not a gap in the highlighting. Rendering the same character twice is not something
+a highlighter does at all.
+
+
+=== Rules
+- **Quoted strings (`"..."`)** are NOT a separate scope.
+Single and double quotes are legal, uninterpreted characters and belong to whichever slot encloses
+them (subject / relation / object / meta-*).
+- **Whitespace** between tokens is not scoped. Every slot is whitespace-trimmed, inline and
+block alike -- including free-form meta text after a `,,`, which starts at its first
+non-whitespace character. This follows `Meta := CM2 WS* MetaInline WS*`: the space between the
+`,,` and the text belongs to neither token.
+- **The `.. ..` form** is one `doubledot` region spanning the full literal `.. ..` (inner
+whitespace included). It is semantically equivalent to `....` -- both denote an untyped link,
+and all three spellings share the single `doubledot` role (D10).
+- **Command spelling is not a scope distinction.** All four spellings produce **one**
+`command` region covering prefix *and* name together -- `!!`, `ddot.it/`, `http://ddot.it/` or
+`https://ddot.it/` are not split from the name that follows.
+A theme must not be able to tell `+!!off+` from `+https://ddot.it/off+` by colour.
+Note that the prefix is 2 characters in one spelling and up to 17 in another, so an implementation
+matching a fixed-width `!!` will get the URL spellings wrong.
++
+A command's **query or fragment** is the one part that is scoped separately, as
+`command-param` -- see <<Scope Name Mapping>>, which is normative for all role names.

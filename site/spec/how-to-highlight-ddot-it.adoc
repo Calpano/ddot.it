@@ -1,0 +1,454 @@
+= How to Highlight ddot.it
+:toc: macro
+:ddd: Ddot.it
+:dd: ddot.it
+:toclevels: 3
+:page-title: Highlighting How-To
+:page-nav_order: 3
+:page-parent: Specifications
+
+A practical guide to writing a {dd} syntax highlighter, written after building
+seven of them: TextMate, Shiki, Rouge, Pygments, Chroma, highlight.js and Prism.
+
+It is not a specification. The normative documents are the
+xref:ddot-it-parse.adoc[Parse Specification] and the
+xref:ddot-it-highlight.adoc[Highlight Specification]; this is the accumulated
+"we tried that, here is what happened".
+
+.About this document
+- Last Modified: 2026-07-27
+- Applies to: the 30-case golden corpus in `test-data/cases/`
+
+toc::[]
+
+
+== Start here: the three things that go wrong
+
+Nearly every bug we hit falls into one of three buckets. Get these right first
+and most of the corpus passes.
+
+. **Counting dots.** `..` is a run of *exactly two*. Naive `\.{2}` is wrong.
+. **The gate.** Deciding whether a line is {dd} *at all*, before scoping
+  anything in it.
+. **Slot anchoring.** Which `..` a slot belongs to, when the object may itself
+  contain `..`.
+
+Everything after that -- blocks, `,,` regions, `;;` -- is ordinary multi-line
+region work, plus one construct that several engines simply cannot express
+(<<the-dynamic-terminator>>).
+
+
+== 1. Counting dots
+
+`..` is `DT2`: a run of **exactly two** dots, neither preceded nor followed by
+another dot. `....` is `DT4`, a different token. Three dots are ordinary text.
+
+The rule cannot be written with a quantifier alone -- `\.{2}` happily matches the
+first two dots of `...`, and the first two of `....`. Lookarounds are what
+express it:
+
+[cols="1,4"]
+|===
+| Token | Regex
+
+| `DT2`  | `+++(?<!\.)\.{2}(?!\.)+++`
+| `DT4`  | `+++(?<!\.)\.{4}(?!\.)+++`
+| `QUAD` | `+++(?<!\.)(?:\.{4}\|\.{2}[ \t]+\.{2})(?!\.)+++`
+| `CM2`  | `+++(?<!,),{2}(?!,)+++`
+| `SC2`  | `+++(?<!;);{2}(?!;)+++`
+|===
+
+Three consequences worth internalising:
+
+Prose stays plain for free::
+`Wait... what?`, `Node.js`, `Mr. Smith`, `U.S.A.` contain no `DT2` at all, so
+they never reach your slot rules. Corpus case `23-not-a-triple` exists to pin
+this down.
+
+`DT2` and `DT4` are mutually exclusive by construction::
+At position 0 of `....`, `\.{2}` matches but `(?!\.)` fails. At positions 1 and
+2, `(?<!\.)` fails. So `DT2` never matches inside `....` and you do not need
+ordering rules between them.
+
+`QUAD` must be tried before `DT2` **at the same position**::
+`.. ..` is ONE operator spanning both pairs and the space between
+(`10-spaced-untyped`). If `DT2` wins, you emit two operators and an empty
+relation. But this is a *same-position* preference, not a global rule ordering
+-- see <<leftmost-first>>.
+
+.Does your engine have lookbehind?
+All seven engines we used do. Chroma is the one to check: it uses
+https://github.com/dlclark/regexp2[regexp2], not Go's RE2, precisely because RE2
+has no lookarounds. If your engine lacks them, you can emulate `DT2` with an
+explicit "preceded by a non-dot or line start" alternation, but every rule
+referencing it gets noisier.
+
+
+[[leftmost-first]]
+== 2. The gate: is this line ddot.it at all?
+
+{ddd} is a *guest* language. Most lines in a host document are not triples, and a
+highlighter that colours a stray `..` in prose is worse than one that colours
+nothing.
+
+The gate is a lookahead over the whole line, checking for a complete operator
+skeleton -- **two** `DT2`, or one `DT4`/`.. ..`:
+
+[source,text]
+----
+(?=[^\n]*(?:(?<!\.)\.{4}(?!\.)|(?<!\.)\.{2}(?!\.)[^\n]*(?<!\.)\.{2}(?!\.)))
+----
+
+Apply it *before* any slot rule fires. In a state machine, gate at the
+line-dispatch state; in a pattern-priority engine, make the whole line one
+pattern with an `inside` grammar.
+
+[TIP]
+====
+The gate is much stricter than "contains `..`", and that is the point. `A lone
+.. in prose, only one marker.` has a `DT2` but no second one, so it fails the
+gate and stays plain.
+====
+
+.QuadDot vs DoubleDot: alternation, not rule order
+Put `QUAD` and `DT2` as *alternatives inside one regex*, `QUAD` first — not as
+two separately-ordered rules. Leftmost-first then does the right thing in both
+directions:
+
+[cols="3,4"]
+|===
+| Input | Correct reading
+
+| `Alpha .. .. Beta`     | one `doubledot` spanning `.. ..`
+| `a ..b.. c .. .. d`    | a *typed* triple — its first marker is further left
+|===
+
+Two ordered rules get the second case wrong: a "QUAD first" rule would jump to
+the `.. ..` later in the line and mis-read the whole triple.
+
+
+[[slot-anchoring]]
+== 3. Slot anchoring
+
+The slots are `Subject .. Relation .. Object`, plus the meta part after `,,`.
+Two asymmetries drive every bug here:
+
+* `Subject` and `Relation` **may not contain** `DT2`.
+* `Object` and `MetaObject` **may** (`20-object-dotdot`: `http://h/x..y`,
+  `../../b.adoc`). The object runs to end of line or to a `,,`.
+
+=== Subject and Relation need tempered patterns
+A lazy `[^\n]*?` for the subject will happily run past the first marker to the
+second, giving `a ..knows` as the subject of `a ..knows.. b`. Guard every
+character:
+
+[source,text]
+----
+(?:(?!DT2)[^\s,])(?:(?:(?!DT2)[^\n,])*(?:(?!DT2)[^\s,]))?
+----
+
+In a state machine you get this for free -- the state transitions on the first
+`DT2` -- which is one reason state machines were easier here than
+pattern-priority engines.
+
+=== Anchoring the object is genuinely ambiguous
+This cost the most debugging time, in Prism. Anchoring the object to "some `..`"
+is wrong in *both* directions:
+
+[cols="1,3,3"]
+|===
+| Case | Anchor to the FIRST marker | Let `relation` match first
+
+| `ddot.it/this .. project .. Code Red`
+| object = `project .. Code Red` ❌
+| correct ✓
+
+| `a ..spec.. http://h/x..y`
+| correct ✓
+| `relation` matches a second time inside the object ❌
+|===
+
+The fix is to anchor the object to the **closing** marker by making the
+lookbehind span the whole prefix from line start:
+
+[source,text]
+----
+(^[ \t]*<no-DT2>*(?:QUAD|DT2 <no-DT2>* DT2)[ \t]+)(OBJECT)(?=[ \t]*(?:$|CM2))
+----
+
+State machines side-step this entirely: by the time you are in the object state,
+the markers are already consumed.
+
+=== Commands are recognised by shape, not by a list
+Anything matching a <<command-syntax,command spelling>> is a command, whether or
+not the name is one you implement. Do **not** keep a registry in the
+highlighter.
+
+The slash is required and the name must be non-empty: `ddot.it/this` is a
+command, bare `ddot.it` is not. Otherwise every prose mention of the project --
+including in the spec documents themselves -- lights up.
+
+[[command-syntax]]
+A command's query and fragment are *part of it*: `?` and `#` do not terminate a
+command, they only end its *name*. A command ends at whitespace or newline, and
+`WS` is space **or tab**. `[^ ]+` is a bug.
+
+.A slot that IS a command scopes as a command
+`ddot.it/this` as a subject emits `command`, not `subject`. Two ways to
+implement:
+
+Nesting (TextMate, Prism)::
+Put the command rule *inside* the slot capture, and let the deepest scope win in
+your scope→role mapping.
+
+Explicit check (Rouge, Pygments, Chroma, hljs)::
+Test whether the slot's text matches the command pattern *exactly*, and emit the
+command token instead.
+
+Both are fine. What is not fine is a scope map that resolves by *priority* while
+your grammar relies on *depth*, or vice versa -- decide which and be consistent.
+
+
+== 4. Multi-line constructs
+
+Three regions, in decreasing order of how easy they are:
+
+`!!off` … `!!on`::
+An excluded span. Nothing inside is parsed. Easy in every engine.
+
+`,,` … `,,`::
+A meta block. Note it can open *two* ways: at the end of a triple line, or alone
+on the next line (`09-standalone-comma-block`). If your engine needs distinct
+states for the two, remember the one entered from a triple line must unwind
+further when it closes.
+
+`!!block`::
+A verbatim region. See below -- this is where engines diverge.
+
+=== !!block fills a field
+`!!block` opens a verbatim region only when it is the entire content of a
+`Subject`, `Object` or `MetaObject`, **and ends its physical line**. The body is
+the lines that follow, up to the terminator.
+
+Two openers on one physical line is impossible by construction: an opener must
+have end-of-line to its right, so nothing can follow it. In
+`+!!block ..knows.. !!block+` only the *second* token opens; the first is inert
+text.
+
+=== The block must return to the LINE level, not the slot
+The single most common structural bug. When the block ends, you must be back at
+line dispatch -- not in the `object` state that opened it. Otherwise the state
+machine resumes mid-triple and swallows the next line.
+
+[cols="2,4"]
+|===
+| Engine | How
+
+| Rouge     | `goto :verbatim` (replaces the top of the stack)
+| Pygments  | `ctx.stack[:] = ["root", "verbatim"]` — *not* `stack.append`
+| Chroma    | pop ONE level without consuming the newline, and let the `(?=\n)` cascade carry the rest
+|===
+
+We shipped this bug in Pygments first (`stack.append`), and it showed up as case
+17's line 5 being scoped `object` instead of `subject`.
+
+
+[[the-dynamic-terminator]]
+== 5. The one construct several engines cannot express
+
+`!!block?end=MARKER` terminates on a line whose text equals a marker captured
+*earlier in the input*. That needs either a back-reference across two separate
+regexes, or state the highlighter can carry.
+
+[cols="2,1,4"]
+|===
+| Engine | Works? | Mechanism, or why not
+
+| TextMate  | ✅ | `end` back-references a `begin` capture **by number**: `\8`
+| Rouge     | ✅ | an instance variable set in a rule block
+| Pygments  | ✅ | `ExtendedRegexLexer` callbacks with a `LexerContext`
+| Shiki     | ✅ | same grammar as TextMate
+| Chroma    | ❌ | XML lexers have no callbacks and no state variables
+| Prism     | ❌ | patterns are static regexes, no callbacks, no state
+| highlight.js | ❌ | has callbacks, but see below
+|===
+
+.TextMate: the number is not optional
+`end` must use the *numeric* back-reference `\8`. A named group
+`+(?<marker>…)+` with `+\k<marker>+` **does not work**: vscode-textmate compiles
+`begin` and `end` as separate regexes and substitutes the captured *text* by
+numeric index before compiling, so Oniguruma never sees the name and fails with
+`undefined name <`. (Verified against vscode-oniguruma 2.x.)
+
+That makes the number a maintenance hazard -- add a capture group to `begin` and
+the terminator silently breaks, and the region runs to end of document. Comment
+it loudly and keep a corpus case that catches it.
+
+.highlight.js: so close
+hljs has `on:begin` / `on:end` callbacks and `ignoreMatch()`, which looks like
+exactly the right tool, and the opener scopes correctly. But when a `contains`
+rule and `end` match at the **same offset**, hljs prefers `contains`, and calling
+`ignoreMatch()` there resumes scanning from offset+1 rather than giving `end` a
+turn at the same position. So the body rule cannot hand the marker line over to
+the terminator.
+
+Our fallback: keep the opener correctly scoped and terminate the region at a
+blank line, as in the unmarked form. That is wrong for input where the marker
+arrives first, but the error stays *local* instead of turning the remainder of
+the document verbatim. Prefer a bounded wrong answer over an unbounded one.
+
+
+== 6. Engine-specific traps
+
+Each of these cost real debugging time.
+
+=== TextMate / vscode-textmate
+Blank-line terminators are not portable::
+`end: "^[ \t]*$"` is a **zero-width** match. vscode-textmate 9.x ends the region
+correctly. Shiki does not — see below. `while: "^[ \t]*\S"` (non-zero-width)
+behaves identically, so no spelling avoids it.
+
+Rule order is first-match-wins::
+Most specific first. Ours: `excluded` → block variants → meta-block variants →
+the plain triple line.
+
+=== Shiki
+It skips empty lines entirely::
+In `@shikijs/primitive` the per-line loop reads
+`if (line === "") { …; continue }` -- `grammar.tokenizeLine` is never called, so
+grammar state cannot change across a blank line. Any `begin`/`end` rule whose
+terminator matches an empty line never fires.
++
+This is a **Shiki bug, not a TextMate one**: the blank line never reaches the
+engine. Verified by patching that guard, after which the case passes with the
+grammar unmodified. Present in shiki 4.1.0.
+
+Link the grammar, do not copy it::
+If your package depends on the grammar by name, an `npm install` will happily
+replace your local file with the published one and you will validate the wrong
+grammar without any warning. Declare it as `file:` so it stays a symlink.
+
+=== Rouge
+Do not freeze string literals::
+`# frozen_string_literal: true` plus `token Text, "\n"` raises `FrozenError` --
+Rouge mutates the string you hand it. Use `+"\n"` or drop the magic comment.
+Ours crashed at case 17, which silently meant cases 17–30 never ran at all.
+
+Zero-width rules do not advance the scanner::
+`rule(%r/^[ \t]*(?=…)/)` matching the empty string emits nothing and makes no
+progress. Match the whole thing instead.
+
+`rule pat, Token do |m| … end` ignores the Token argument::
+When a block is given you must call `token Token, m[0]` yourself.
+
+=== Pygments
+Use `ExtendedRegexLexer` if you need state::
+Plain `RegexLexer` callbacks cannot change the state stack. `ExtendedRegexLexer`
+passes a `LexerContext` whose `pos` and `stack` a callback may modify -- that is
+what makes the dynamic terminator possible.
+
+A zero-width rule that does not pop is an infinite loop::
+Our blank-line rule inside a *marked* block matched `^[ \t]*(?=\n)`, emitted a
+token, and did not pop -- so `ctx.pos` never advanced. The whole run hung. Make
+the rule consume the newline.
+
+=== Chroma
+One mutator per rule::
+You cannot pop *and* push in a single rule, so the usual "goto" is unavailable.
+The workable idiom is push-only nesting where every non-root state carries a
+`(?=\n)` rule that pops one; on end-of-line the pops cascade back to root, which
+then consumes the newline.
+
+`push` accepts `#pop`::
+`<push state="#pop"/>` pops. Useful, but still one mutator.
+
+Watch the pop depth::
+A state entered via an intermediate state must pop *both* when it closes. Ours
+popped one, landing back in the intermediate state, which would re-push on the
+next newline -- a latent bug that never fired only because every corpus file
+ended at the closing `,,`.
+
+=== highlight.js
+`match` arrays are fixed-length and scope is keyed by POSITION::
+So "command vs name" in a slot cannot be an alternation inside one group -- it
+needs a separate variant per slot kind, and the variants multiply.
+
+Anything unbounded must be a mode, not a match array::
+The inline meta part carries any number of `;;`-separated pairs. Make `,,` a
+`begin`/`end` mode whose `contains` matches one pair at a time, and have the
+triple-head rule stop at `,,` with a lookahead instead of running to EOL.
+
+=== Prism
+Patterns are re-applied to the remaining text::
+A `relation` pattern will match a *second* time inside an object containing
+`..`. Anchor slots so only one match is possible (see
+<<slot-anchoring,slot anchoring>>).
+
+`lookbehind: true` means group 1 is stripped, not consumed::
+The prefix stays in the text for later patterns, which is what lets several
+patterns anchor off the same `..`.
+
+Whole-line patterns with `inside` beat free-floating slot patterns::
+That is how you get a gate at all; a slot pattern matching anywhere lights up
+prose.
+
+
+== 7. Testing
+
+=== Derive expectations from the spec, not from your implementation
+The single most valuable discipline. For each new case, write the expected token
+stream **by hand from the grammar**, then diff against what your highlighter
+produces. If you generate expectations from the implementation, you are testing
+that it agrees with itself.
+
+We did this wrong once and right several times. The wrong one:
+`13-inline-meta-text` recorded the old grammar's behaviour of keeping the leading
+whitespace after `,,`, which contradicts `Meta := CM2 WS* MetaInline WS*`. It
+survived as a "documented exception" until a hand-check caught it.
+
+=== Separate roles from scopes
+Keep a canonical *role* vocabulary (`subject`, `doubledot`, `meta-delim`, …)
+that every implementation maps onto. Each highlighter emits its own native
+tokens, and one small map per implementation converts them. Renaming a scope
+then touches one table, not the corpus.
+
+=== Watch for validating a stale copy
+Twice, a comparison run "failed" only because the harness read a different file
+from the one I had edited. If your grammar exists in more than one place --
+package, editor extension, conformance harness -- make them links, and diff them
+in CI.
+
+=== Waivers must expire
+Where an engine genuinely cannot express something, waive the case *and* make
+the waiver fail when it starts passing:
+
+[source,js]
+----
+if (diffs.length === 0) {
+  if (KNOWN_UNSUPPORTED.has(name)) {
+    failed++;
+    console.log(`FAIL ${name} — now PASSES; remove it from KNOWN_UNSUPPORTED`);
+    continue;
+  }
+  …
+}
+----
+
+Otherwise an upstream fix goes unnoticed and the waiver becomes folklore.
+
+
+== 8. Checklist
+
+. `DT2`/`DT4`/`CM2`/`SC2` use lookarounds, not bare quantifiers.
+. `QUAD` is tried before `DT2` **at the same position**, via alternation.
+. A line-shape gate runs before any slot rule.
+. `Subject` and `Relation` cannot contain `DT2`; `Object` and `MetaObject` can.
+. The object is anchored to the **closing** marker.
+. A slot whose whole text is a command emits `command`.
+. The slash is required; bare `ddot.it` is not a command; `?` and `#` do not end one.
+. `,,` blocks open both at end-of-line and standalone.
+. `!!block` opens in Subject, Object and MetaObject, and must end its line.
+. A block returns to **line** level, not to the slot state that opened it.
+. `;;` separates inline meta pairs, and is ordinary content inside a `,,` block.
+. Inline meta text is whitespace-trimmed, like every other slot.
+. Every waiver fails loudly when it starts passing.
