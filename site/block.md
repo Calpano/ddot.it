@@ -21,7 +21,8 @@ john ..age.. 11
 ```
 You can abbreviate `ddot.it/block` as `!!block`.
 
-Within a block, ddot.it triples MAY NOT be recognized.
+A block body is **verbatim**: no triples, no metadata and no commands are
+recognized inside it. Every character is literal content of the value.
 
 
 ### Newlines
@@ -70,14 +71,51 @@ john ..age.. 11
 ```
 
 ### Meta
-Metadata on a triple is used as usually:
+A block opener must be the **last** thing on its line, so metadata cannot follow it *there*.
+It goes on the line after the block ends, in the ordinary inline form:
 
 ```
-john ..address.. ddot.it/block ,, ..year.. 2123
+john ..address.. ddot.it/block
 Broadway 1
 Berlin
 Germany
 
+,, ..year.. 2123
 ```
+
+The logical line **resumes after the block**: a line starting with `,,` continues the triple
+whose object the block filled, so this attaches `year = 2123` to `john ..address.. …` exactly
+as if the block had been a plain one-line object. Several pairs separate with `;;` as usual:
+
+```
+,, ..year.. 2123 ;; ..source.. census
+```
+
+For a lot of metadata the multi-line `,,` block form works too, and means the same thing:
+
+```
+john ..address.. ddot.it/block
+Broadway 1
+Berlin
+Germany
+
+,,
+..year.. 2123
+,,
+```
+
+If you do write something after the opener, it is **not** a block: the command is then ordinary
+text in the field holding it. So
+
+```
+john ..address.. ddot.it/block ,, ..year.. 2123
+```
+is the triple (`john`, `address`, `ddot.it/block`) with the metadata `year = 2123` — the
+following lines are not swallowed.
+The same resumption applies wherever a block sits: after a block **subject** the next line may
+continue with `..relation.. object`, and after a block **meta object** with `;; ..next.. pair`.
+See [block-continuation](spec/ddot-it-parse.html) in the Parse Specification for the exact rule.
+
 ### Further Reading
-See the [User Guide](user-guide.md#this-command) for the full reference.
+See the [User Guide](user-guide.md#commands) and the
+[Parse Specification](spec/ddot-it-parse.html) for the full reference.
