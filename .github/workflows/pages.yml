@@ -33,6 +33,21 @@ jobs:
       # an ordinary-looking link. Check the built output instead.
       - name: Check internal links
         run: python3 tools/check-site-links.py _site
+      # Rouge emits `<span class="err">` for input it could not lex. That is the
+      # only signal it gives, and it covers two distinct faults: a malformed code
+      # sample, or a genuine lexer bug on valid input — the latter is how the
+      # rouge-ddot 0.1.2 blank-line-in-`?end=`-block defect surfaced. Since the
+      # ddot.it blocks are lexed by a gem released from another repository, this
+      # also catches a bad lexer upgrade reaching the site.
+      - name: Check for unlexable code (Rouge error spans)
+        run: |
+          matches=$(grep -rn '<span class="err">' _site --include='*.html' || true)
+          if [ -n "$matches" ]; then
+            echo "::error::Rouge could not lex some code; each line below holds an unlexable span"
+            printf '%s\n' "$matches" | cut -c1-240
+            exit 1
+          fi
+          echo "no Rouge error spans"
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0 (hash-pinned for security)
 
   deploy:
