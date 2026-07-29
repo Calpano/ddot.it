@@ -29,7 +29,11 @@ update=false
 # instead:  DDOT_INDEX="node ../ddot.it-syntax-tools/parser/bin/ddot-index.js"
 if [[ -z "${DDOT_INDEX:-}" ]]; then
   if command -v npx >/dev/null 2>&1; then
-    DDOT_INDEX="npx --yes @calpano/ddot-parser ddot-index"
+    # `--package=X -- bin` names the binary explicitly. The shorter
+    # `npx X ddot-index ...` does NOT work: npx takes the first word after the
+    # package spec as the start of the ARGUMENTS, so `ddot-index` arrives as a
+    # second positional and the CLI exits 2 on a usage error.
+    DDOT_INDEX="npx --yes --package=@calpano/ddot-parser -- ddot-index"
   else
     echo "error: npx not found, and \$DDOT_INDEX is unset." >&2
     echo "  Install Node.js, or set DDOT_INDEX to a ddot-index command." >&2
