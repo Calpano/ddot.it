@@ -308,16 +308,22 @@ Each of subject / relation / object / meta-* is captured as the text between its
 - **The object is lazy with an optional trailing meta group.** That makes it stop at a `,,` when one is present, yet otherwise run to end of line -- so an object may itself contain `..` (corpus case `20-object-dotdot`: `http://h/x..y`, `../../b.adoc`).
 
 === Verification
-`syntaxes/ddot.tmLanguage.json` is checked against the golden corpus by
-`tools/test-grammar.mjs`, which tokenises each `input.ddot` with the real
+The canonical grammar lives in the `ddot.it-syntax-tools` repository, at
+`textmate/ddot.tmLanguage.json`. It is checked against the golden corpus by
+`tools/conformance-textmate.mjs`, which tokenises each `input.ddot` with the real
 `vscode-textmate` + `vscode-oniguruma` engine, maps the emitted scopes back to the
 canonical <<Scope Name Mapping,role names>> (deepest scope wins) and diffs against
 `expected.tokens.json`.
 
+The same corpus is the contract for every other implementation, so each has its own
+harness in that repository and they all assert the *same* expected tokens:
+
+[source,shell]
 ----
-npm install && npm test          # the whole corpus
-node tools/test-grammar.mjs 17   # a single case
-node tools/test-grammar.mjs --update
+cd ../ddot.it-syntax-tools
+npm run conformance:textmate     # the canonical grammar
+npm run conformance              # all implementations
+npm run regenerate:tokens        # refresh expected.tokens.json after a grammar change
 ----
 
 All cases in `test-data/cases/` pass. The corpus is authoritative for the count; this document

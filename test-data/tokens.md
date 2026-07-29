@@ -30,8 +30,9 @@ the same thing, `cases/` decides.
 | `verbatim`       | Body of a `!!block` span (opener stays `command`)      | `string.unquoted.block.ddot`              |
 | `block-end`      | The `!!block?end=` marker — **both** occurrences        | `variable.parameter.block-end.ddot`       |
 
-The scope column is normative for `syntaxes/ddot.tmLanguage.json`; the mapping is
-applied in reverse by `tools/test-grammar.mjs`. Metadata deliberately shares the
+The scope column is normative for the canonical grammar,
+`../ddot.it-syntax-tools/textmate/ddot.tmLanguage.json`; the mapping is applied in
+reverse by that repository's `tools/conformance-textmate.mjs`. Metadata deliberately shares the
 `entity.name.*` / `keyword.operator.*` roots with the main triple, so it renders as
 **first-class content**, not as a comment. The trailing `.meta` component exists only
 so a theme *can* single metadata out later.

@@ -101,7 +101,7 @@ ruby test-data/regenerate-html.rb --check      # CI: fail on stale
 # After changing DdotEventExporter:
 (cd ../ddot.it-intellij && mvn test -Dgolden.regen=true)   # refresh expected.events.jsonl
 
-# After changing the TextMate grammar (../ddot.it-vscode/syntaxes/…):
+# After changing the TextMate grammar (../ddot.it-syntax-tools/textmate/…):
 (cd ../ddot.it-syntax-tools && npm run regenerate:tokens)         # refresh expected.tokens.json
 (cd ../ddot.it-syntax-tools && npm run regenerate:tokens:check)   # CI: fail on stale
 
