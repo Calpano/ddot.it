@@ -1,0 +1,17 @@
+{
+  "entity.name.subject.ddot": "subject",
+  "entity.name.relation.ddot": "relation",
+  "entity.name.object.ddot": "object",
+  "keyword.operator.doubledot.ddot": "doubledot",
+  "keyword.control.command.ddot": "command",
+  "punctuation.section.meta.ddot": "meta-delim",
+  "punctuation.separator.meta.ddot": "meta-separator",
+  "keyword.operator.doubledot.meta.ddot": "meta-doubledot",
+  "entity.name.relation.meta.ddot": "meta-relation",
+  "entity.name.object.meta.ddot": "meta-object",
+  "entity.name.object.meta.text.ddot": "meta-text",
+  "comment.block.excluded.ddot": "excluded",
+  "string.unquoted.block.ddot": "verbatim",
+  "variable.parameter.block-end.ddot": "block-end",
+  "variable.parameter.command.ddot": "command-param"
+}

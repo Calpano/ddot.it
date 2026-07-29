@@ -28,6 +28,11 @@ jobs:
       - run: bundle exec jekyll build --baseurl "${{ steps.pages.outputs.base_path }}"
         env:
           JEKYLL_ENV: production
+      # Broken cross-references do not fail the Jekyll build, and AsciiDoc has no
+      # source-level validation for them at all — an unresolved <<ref>> renders as
+      # an ordinary-looking link. Check the built output instead.
+      - name: Check internal links
+        run: python3 tools/check-site-links.py _site
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0 (hash-pinned for security)
 
   deploy:

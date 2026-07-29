@@ -1,0 +1,52 @@
+name: Vocabulary
+
+# The vocabulary spec gates ddot.it parsing so that indexing it yields exactly the
+# built-in triples -- no prose, no link: macros, no examples. This job builds the
+# ddot CLI and asserts that the spec still indexes to the checked-in
+# site/spec/ddot-it-vocabulary.ddot.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'site/spec/ddot-it-vocabulary.adoc'
+      - 'site/spec/ddot-it-vocabulary.ddot'
+      - 'check-vocabulary.sh'
+      - '.github/workflows/vocabulary.yml'
+  pull_request:
+    paths:
+      - 'site/spec/ddot-it-vocabulary.adoc'
+      - 'site/spec/ddot-it-vocabulary.ddot'
+      - 'check-vocabulary.sh'
+      - '.github/workflows/vocabulary.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0 (hash-pinned for security)
+
+      - name: Check out the ddot CLI
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0 (hash-pinned for security)
+        with:
+          repository: Calpano/ddot.it-java
+          path: ddot.it-java
+
+      - uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1 (hash-pinned for security)
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Build the ddot CLI
+        working-directory: ddot.it-java
+        run: mvn -B package -DskipTests=true -q
+
+      - name: Assert the spec yields exactly the built-in triples
+        env:
+          DDOT: ${{ github.workspace }}/ddot.it-java/ddot
+        run: ./check-vocabulary.sh
