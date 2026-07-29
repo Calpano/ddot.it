@@ -1,0 +1,30 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "ddot.it (injection)",
+  "scopeName": "source.ddot.injection",
+
+  "_comment": [
+    "D1/D9: ddot.it as a GUEST language inside a host (Markdown, AsciiDoc, ...).",
+    "There is no magic-marker or fenced-block precondition -- the line-shape gate in",
+    "source.ddot decides, line by line, what is ddot.it. The selector below offers the",
+    "rules broadly to text/source documents while staying out of the host's own",
+    "comments and strings, where a stray '..' is never ddot.it.",
+    "",
+    "'L:' makes the injection run BEFORE the host's own patterns, so a ddot.it triple",
+    "wins over host markup on the same line. Drop the 'L:' to let the host win instead.",
+    "",
+    "NOTE: an excluded (!!off..!!on) span stops ddot.it's own rules but does not silence",
+    "the host tokeniser, which keeps colouring its syntax underneath."
+  ],
+
+  "injectionSelector": "L:text -comment -string, L:source -comment -string",
+
+  "patterns": [
+    { "include": "source.ddot#excluded" },
+    { "include": "source.ddot#block-verbatim-marked" },
+    { "include": "source.ddot#block-verbatim" },
+    { "include": "source.ddot#meta-block-after-triple" },
+    { "include": "source.ddot#meta-block-standalone" },
+    { "include": "source.ddot#triple-line" }
+  ]
+}
