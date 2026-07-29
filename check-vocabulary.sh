@@ -10,7 +10,10 @@
 #   ./check-vocabulary.sh            # verify; non-zero exit on mismatch
 #   ./check-vocabulary.sh --update   # accept the current output as the new baseline
 #
-# The ddot CLI is looked up in $DDOT, then ../ddot.it-java/ddot, then $PATH.
+# Indexing is done by @calpano/ddot-parser (npx), the canonical JavaScript
+# parser, whose token and event streams are asserted against the same
+# cross-implementation corpus as the TextMate grammar. Override the command with
+# $DDOT_INDEX to run a local checkout instead of the published package.
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -20,16 +23,16 @@ GOLDEN=site/spec/ddot-it-vocabulary.ddot
 update=false
 [[ "${1:-}" == "--update" ]] && update=true
 
-# --- locate the ddot CLI ---------------------------------------------------
-if [[ -z "${DDOT:-}" ]]; then
-  if [[ -x ../ddot.it-java/ddot ]]; then
-    DDOT=../ddot.it-java/ddot
-  elif command -v ddot >/dev/null 2>&1; then
-    DDOT=$(command -v ddot)
+# --- locate the indexer ----------------------------------------------------
+# Default: the published package, so this repository needs no sibling checkout
+# and no access to any other repository. A local parser/ checkout can be used
+# instead:  DDOT_INDEX="node ../ddot.it-syntax-tools/parser/bin/ddot-index.js"
+if [[ -z "${DDOT_INDEX:-}" ]]; then
+  if command -v npx >/dev/null 2>&1; then
+    DDOT_INDEX="npx --yes @calpano/ddot-parser ddot-index"
   else
-    echo "error: ddot CLI not found." >&2
-    echo "  Set \$DDOT, or check out https://github.com/Calpano/ddot.it-java" >&2
-    echo "  next to this repo and run its ./build-ddot.sh" >&2
+    echo "error: npx not found, and \$DDOT_INDEX is unset." >&2
+    echo "  Install Node.js, or set DDOT_INDEX to a ddot-index command." >&2
     exit 127
   fi
 fi
@@ -39,7 +42,7 @@ tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 actual="$tmp/actual.ddot"
 
-"$DDOT" index -f "$actual" --ext adoc "$SPEC" >/dev/null
+$DDOT_INDEX "$SPEC" -o "$actual"
 
 count=$(grep -c . "$actual" || true)
 if [[ "$count" -eq 0 ]]; then

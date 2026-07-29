@@ -1,8 +1,8 @@
 name: Vocabulary
 
 # The vocabulary spec gates ddot.it parsing so that indexing it yields exactly the
-# built-in triples -- no prose, no link: macros, no examples. This job builds the
-# ddot CLI and asserts that the spec still indexes to the checked-in
+# built-in triples -- no prose, no link: macros, no examples. This job indexes the
+# spec and asserts that it still yields the checked-in
 # site/spec/ddot-it-vocabulary.ddot.
 
 on:
@@ -30,23 +30,30 @@ jobs:
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0 (hash-pinned for security)
 
-      - name: Check out the ddot CLI
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0 (hash-pinned for security)
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          repository: Calpano/ddot.it-java
-          path: ddot.it-java
+          node-version: '22'
 
-      - uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1 (hash-pinned for security)
+      # Indexing uses @calpano/ddot-parser, whose token and event streams are
+      # asserted against the same cross-implementation corpus as the TextMate
+      # grammar. No sibling checkout and no access to any other repository —
+      # the previous ddot.it-java checkout needed a cross-repo token for a
+      # private repo, which the default GITHUB_TOKEN cannot provide.
+      # BOOTSTRAP, remove once @calpano/ddot-parser 0.1.0 is on npm.
+      # npm's trusted publishing is configured per package and can only be set
+      # on a package that already exists, so CI cannot publish a package's very
+      # first version -- that one needs a manual `npm publish`. Until it lands,
+      # `npx @calpano/ddot-parser` 404s. Run the same code from its public
+      # source repo instead, pinned to the tag that carries it. Deleting this
+      # step and the DDOT_INDEX below restores the npx path.
+      - name: Checkout ddot.it-syntax-tools (parser not yet on npm)
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
-          distribution: temurin
-          java-version: '21'
-          cache: maven
-
-      - name: Build the ddot CLI
-        working-directory: ddot.it-java
-        run: mvn -B package -DskipTests=true -q
+          repository: Calpano/ddot.it-syntax-tools
+          ref: v0.1.2
+          path: syntax-tools
 
       - name: Assert the spec yields exactly the built-in triples
-        env:
-          DDOT: ${{ github.workspace }}/ddot.it-java/ddot
         run: ./check-vocabulary.sh
+        env:
+          DDOT_INDEX: node ${{ github.workspace }}/syntax-tools/parser/bin/ddot-index.js
