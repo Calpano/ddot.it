@@ -1,0 +1,165 @@
+// ddot.it customisations.
+//
+// This file overrides just-the-docs' own (empty) `_sass/custom/custom.scss`;
+// the theme imports it last, so plain overrides win without `!important` —
+// except against the theme's `fs-*` font-size mixins, which emit `!important`
+// themselves.
+//
+// Everything below targets phone-sized viewports. The theme is tuned for
+// desktop documentation and only ships `min-width` breakpoints (the `mq()`
+// mixin), so the `max-width` counterparts are derived here from the same
+// `$media-queries` map to keep the two in sync.
+
+$below-sm: "(max-width: #{map-get($media-queries, sm) - 0.02rem})";
+$below-md: "(max-width: #{map-get($media-queries, md) - 0.02rem})";
+
+// Draws a horizontal "there is more to scroll" hint on an overflow container:
+// a solid mask pinned to the content (so it hides the shadow at either end)
+// plus a soft edge shadow pinned to the viewport. Needs no JS — the `local`
+// vs `scroll` attachment makes the shadows appear and vanish on their own.
+@mixin scroll-hint($bg) {
+  background-image:
+    linear-gradient(to right, $bg 40%, rgba($bg, 0)),
+    linear-gradient(to left, $bg 40%, rgba($bg, 0)),
+    radial-gradient(farthest-side at 0 50%, rgba(0, 0, 0, 0.16), rgba(0, 0, 0, 0)),
+    radial-gradient(farthest-side at 100% 50%, rgba(0, 0, 0, 0.16), rgba(0, 0, 0, 0));
+  background-repeat: no-repeat;
+  background-position:
+    left center,
+    right center,
+    left center,
+    right center;
+  background-size:
+    2.5em 100%,
+    2.5em 100%,
+    0.85em 100%,
+    0.85em 100%;
+  background-attachment: local, local, scroll, scroll;
+}
+
+// Diagrams
+//
+// Replaces per-image inline widths. The percentages keep the SVGs from
+// stretching to the full 50rem content column on desktop; on a phone that
+// same percentage shrinks the diagram labels below legibility, so the width
+// cap is lifted there.
+
+.diagram {
+  display: block;
+  max-width: 100%;
+  margin-inline: auto;
+  width: 80%;
+
+  &.diagram-sm {
+    width: 75%;
+  }
+
+  @media #{$below-md} {
+    &,
+    &.diagram-sm {
+      width: 100%;
+    }
+  }
+}
+
+// Phone typography
+//
+// The theme drops the root font to 14px below `sm` and returns to 16px above
+// it. 14px is too small for body copy on a phone, so the `sm`-and-up size is
+// used throughout. Since the theme's spacing and font scales are all in `rem`,
+// this scales the whole phone layout consistently rather than just the text.
+
+@media #{$below-sm} {
+  html {
+    font-size: $font-size-5 !important;
+  }
+}
+
+@media #{$below-md} {
+  // Sticky header
+  //
+  // Pages here run several thousand pixels on a phone. `.side-bar` holds the
+  // logo and the menu button (and, once opened, the nav), so pinning it keeps
+  // navigation and search reachable without scrolling back to the top. The
+  // height cap lets the opened nav scroll internally instead of running off
+  // the bottom of the screen.
+  .side-bar {
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    max-height: 100vh;
+    max-height: 100dvh;
+    overflow-y: auto;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+
+  // Keep the search row (which lives in `.main`, not in `.side-bar`) above the
+  // content it overlaps, but below the pinned header.
+  .main-header {
+    z-index: 999;
+  }
+
+  .main-content {
+    // Anchor links must not land underneath the pinned header.
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
+      scroll-margin-top: 4.5rem;
+    }
+
+    // Definition lists
+    //
+    // The theme lays `dl` out as a 10em/1fr grid with right-aligned terms.
+    // On a phone that leaves ~13em for the definition and wraps the term into
+    // a ragged right-aligned stub. AsciiDoc labeled lists (`term:: text`),
+    // used throughout the specs, all render this way. Stack them instead.
+    dl {
+      display: block;
+    }
+
+    dt {
+      margin-top: 0.75em;
+      text-align: left;
+    }
+
+    dd {
+      margin-left: 0;
+    }
+
+    // Tables
+    //
+    // The theme gives every cell `min-width: 7.5rem`. Three columns therefore
+    // claim more than the phone content column, so each cell wraps to several
+    // lines and rows grow to 150px+ for a couple of words. Let the columns
+    // size to their content — `.table-wrapper` already scrolls if the result
+    // is still too wide.
+    th,
+    td {
+      min-width: 0;
+      padding: $sp-1 $sp-2;
+      vertical-align: top;
+    }
+  }
+
+  // Code blocks
+  //
+  // Long ddot.it examples overflow the content column and the container
+  // scrolls, but nothing says so — it reads as truncated text. The `pre`
+  // background is cleared so the hint painted on the scroll container behind
+  // it stays visible.
+  div.highlighter-rouge > div.highlight {
+    @include scroll-hint($code-background-color);
+  }
+
+  div.listingblock > div.content {
+    @include scroll-hint($code-background-color);
+  }
+
+  pre.highlight,
+  div.listingblock > div.content > pre {
+    background-color: transparent;
+  }
+}

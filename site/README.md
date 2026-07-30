@@ -46,8 +46,8 @@ services:
 ```
 they are read by a ddot collector as this single knowledge graph:
 
-<p style="text-align: center;">
-  <img src="images/triple-structure.svg" alt="Example" style="width: 80%" />
+<p>
+  <img src="images/triple-structure.svg" alt="Example" class="diagram" />
 </p>
 
 </div>
@@ -55,8 +55,8 @@ they are read by a ddot collector as this single knowledge graph:
 **How does it work?**
 
 A uniform 'triple' structure for **typed links**, **simple links**, and **properties**. 
-  <p style="text-align: center;">
-    <img src="images/triple.svg" alt="Example" style="width: 75%" />
+  <p>
+    <img src="images/triple.svg" alt="Example" class="diagram diagram-sm" />
   </p>
 
 
