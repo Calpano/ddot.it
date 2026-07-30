@@ -1,0 +1,5 @@
+{"from":"Berlin","type":"has type","to":"City","kind":"ddot","source":"input.ddot","location":1}
+{"from":"Paris","type":"has type","to":"City","kind":"ddot","source":"input.ddot","location":2}
+{"from":"Tokyo","type":"has type","to":"City","kind":"ddot","source":"input.ddot","location":3}
+{"from":"a","type":"note","to":"b","meta":[{"type":"since","to":"2016"}],"kind":"ddot","source":"input.ddot","location":4}
+{"from":"Zero​Width","type":"has type","to":"City","kind":"ddot","source":"input.ddot","location":5}

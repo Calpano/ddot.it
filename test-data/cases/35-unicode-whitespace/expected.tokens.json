@@ -1,0 +1,212 @@
+[
+  {
+    "line": 0,
+    "start": 0,
+    "end": 6,
+    "token": "subject",
+    "text": "Berlin"
+  },
+  {
+    "line": 0,
+    "start": 7,
+    "end": 9,
+    "token": "doubledot",
+    "text": ".."
+  },
+  {
+    "line": 0,
+    "start": 9,
+    "end": 17,
+    "token": "relation",
+    "text": "has type"
+  },
+  {
+    "line": 0,
+    "start": 17,
+    "end": 19,
+    "token": "doubledot",
+    "text": ".."
+  },
+  {
+    "line": 0,
+    "start": 20,
+    "end": 24,
+    "token": "object",
+    "text": "City"
+  },
+  {
+    "line": 1,
+    "start": 0,
+    "end": 5,
+    "token": "subject",
+    "text": "Paris"
+  },
+  {
+    "line": 1,
+    "start": 6,
+    "end": 8,
+    "token": "doubledot",
+    "text": ".."
+  },
+  {
+    "line": 1,
+    "start": 8,
+    "end": 16,
+    "token": "relation",
+    "text": "has type"
+  },
+  {
+    "line": 1,
+    "start": 16,
+    "end": 18,
+    "token": "doubledot",
+    "text": ".."
+  },
+  {
+    "line": 1,
+    "start": 19,
+    "end": 23,
+    "token": "object",
+    "text": "City"
+  },
+  {
+    "line": 2,
+    "start": 0,
+    "end": 5,
+    "token": "subject",
+    "text": "Tokyo"
+  },
+  {
+    "line": 2,
+    "start": 6,
+    "end": 8,
+    "token": "doubledot",
+    "text": ".."
+  },
+  {
+    "line": 2,
+    "start": 8,
+    "end": 16,
+    "token": "relation",
+    "text": "has type"
+  },
+  {
+    "line": 2,
+    "start": 16,
+    "end": 18,
+    "token": "doubledot",
+    "text": ".."
+  },
+  {
+    "line": 2,
+    "start": 19,
+    "end": 23,
+    "token": "object",
+    "text": "City"
+  },
+  {
+    "line": 3,
+    "start": 0,
+    "end": 1,
+    "token": "subject",
+    "text": "a"
+  },
+  {
+    "line": 3,
+    "start": 2,
+    "end": 4,
+    "token": "doubledot",
+    "text": ".."
+  },
+  {
+    "line": 3,
+    "start": 4,
+    "end": 8,
+    "token": "relation",
+    "text": "note"
+  },
+  {
+    "line": 3,
+    "start": 8,
+    "end": 10,
+    "token": "doubledot",
+    "text": ".."
+  },
+  {
+    "line": 3,
+    "start": 11,
+    "end": 12,
+    "token": "object",
+    "text": "b"
+  },
+  {
+    "line": 3,
+    "start": 13,
+    "end": 15,
+    "token": "meta-delim",
+    "text": ",,"
+  },
+  {
+    "line": 3,
+    "start": 16,
+    "end": 18,
+    "token": "meta-doubledot",
+    "text": ".."
+  },
+  {
+    "line": 3,
+    "start": 18,
+    "end": 23,
+    "token": "meta-relation",
+    "text": "since"
+  },
+  {
+    "line": 3,
+    "start": 23,
+    "end": 25,
+    "token": "meta-doubledot",
+    "text": ".."
+  },
+  {
+    "line": 3,
+    "start": 26,
+    "end": 30,
+    "token": "meta-object",
+    "text": "2016"
+  },
+  {
+    "line": 4,
+    "start": 0,
+    "end": 10,
+    "token": "subject",
+    "text": "Zero​Width"
+  },
+  {
+    "line": 4,
+    "start": 11,
+    "end": 13,
+    "token": "doubledot",
+    "text": ".."
+  },
+  {
+    "line": 4,
+    "start": 13,
+    "end": 21,
+    "token": "relation",
+    "text": "has type"
+  },
+  {
+    "line": 4,
+    "start": 21,
+    "end": 23,
+    "token": "doubledot",
+    "text": ".."
+  },
+  {
+    "line": 4,
+    "start": 24,
+    "end": 28,
+    "token": "object",
+    "text": "City"
+  }
+]

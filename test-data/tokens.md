@@ -7,10 +7,11 @@ maps its native scope/style names onto these canonical names.
 highlighter emits: which span is a `subject`, a `relation`, an `object`. It sits
 on top of a *lexical* layer — the token alphabet (`DT2`, `DT4`, `CM2`, `SC2`,
 `EM2`, `TX`, `WS`, `NL`), the grammar over it, and the parsing state machine —
-which is specified normatively in
-`ddot.it-java/doc/ddot.it-information-model.adoc`, and summarised for
-highlighting purposes in `ddot.ebnf` next to this file. Where the two describe
-the same thing, `cases/` decides.
+which is specified normatively in the
+[Parse Specification](https://ddot.it/spec/ddot-it-parse.html)
+(`site/spec/ddot-it-parse.adoc`), and summarised for highlighting purposes in
+`ddot.ebnf` next to this file. Where the two describe the same thing, `cases/`
+decides.
 
 | Token            | What it covers                                         | TextMate scope                            |
 |------------------|--------------------------------------------------------|-------------------------------------------|
@@ -42,7 +43,9 @@ so a theme *can* single metadata out later.
 - **Quoted strings (`"..."`)** are NOT a separate token. Double quotes are
   legal, uninterpreted characters and belong to whichever slot encloses them
   (subject/relation/object/meta-*).
-- **Whitespace** between tokens is not tokenized.
+- **Whitespace** between tokens is not tokenized. Whitespace is Tab plus every Unicode
+  _space separator_ (category `Zs`), so a NBSP between slots is stripped exactly like a space —
+  see [the `WS` definition](https://ddot.it/spec/ddot-it-parse.html#whitespace).
 - **The `.. ..` operator form** is one `doubledot` token spanning the full
   literal `.. ..` (inner whitespace included). It is semantically
   equivalent to `....` — both denote an untyped link.
@@ -54,8 +57,11 @@ so a theme *can* single metadata out later.
   the on-marker (`ddot.it/on` or `!!on`) themselves are emitted as
   `command`. Everything in between is one or more `excluded` tokens (one
   per non-empty line).
-- **Verbatim span**: the `!!block` opener is a `command` in the object slot;
-  each non-empty line until the terminator is one `verbatim` token. The
+- **Verbatim span**: the `!!block` opener is a `command` in one of the four
+  positions it may fill — subject, object, meta-object or meta-text. It is
+  *not* an opener in a relation or a meta-relation, nor anywhere in running
+  text; there it is ordinary `command`-shaped text and opens nothing.
+  Each non-empty line until the terminator is one `verbatim` token. The
   terminator is the first blank line, or the literal `MARKER` line when the
   opener was `!!block?end=MARKER` (in which case blank lines do *not* end it).
   Neither terminator is itself `verbatim`.

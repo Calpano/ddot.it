@@ -15,7 +15,7 @@ test-data/
     ├── 01-simple-triple/
     │   ├── input.ddot                # the .ddot source
     │   ├── expected.body.html        # body-only HTML preview (no <style>/<pre>)
-    │   ├── expected.events.jsonl     # triple events per https://ddot.it/developer-guide.html#events
+    │   ├── expected.events.jsonl     # triple events per https://ddot.it/spec/ddot-it-parse.html#events
     │   └── expected.tokens.json      # canonical highlighter tokens (line/start/end/token/text)
     ├── 02-untyped-link/
     └── ...
@@ -47,21 +47,28 @@ Two implementations must produce byte-identical output:
 
 ## `expected.events.jsonl` — triple events
 
-The newline-separated event stream defined at
-https://ddot.it/developer-guide.html#events, produced by
-`com.calpano.ddot.export.DdotEventExporter` (the canonical Java parser, a
-direct port of the VS Code extension's `parseDocument`). Fixed context
-fields: `kind="ddot"`, `source="input.ddot"`. `location` is 1-based source
+The newline-separated event stream normatively defined in the Parse
+Specification, [Triple Events](https://ddot.it/spec/ddot-it-parse.html#events)
+— field semantics, key order and escaping. Fixed context fields for this
+corpus: `kind="ddot"`, `source="input.ddot"`. `location` is 1-based source
 line.
 
-Refresh after changing `DdotEventExporter`:
+These files **are** the contract: they are written and reviewed deliberately,
+not regenerated from whichever implementation happens to be at hand. There is
+no regeneration script for them — a behaviour change means editing the spec,
+editing the affected `expected.events.jsonl`, and making the implementations
+follow.
+
+The reference implementation is the npm package `@calpano/ddot-parser`
+(`../../ddot.it-syntax-tools/parser/`), which is what the ddot.it vocabulary
+gate runs. Assert it against this corpus with:
 
 ```sh
-(cd ../ddot.it-intellij && mvn test -Dgolden.regen=true)
+(cd ../ddot.it-syntax-tools && npm run conformance:parser)
 ```
 
-If a future Ruby (or other-language) parser is added, it must produce the
-same JSONL for every case.
+Any other implementation — in any language — must produce byte-identical
+JSONL for every case.
 
 ## `expected.tokens.json` — canonical highlighter tokens
 
@@ -98,21 +105,23 @@ Refresh after changing the TextMate grammar:
 ruby test-data/regenerate-html.rb              # refresh expected.body.html
 ruby test-data/regenerate-html.rb --check      # CI: fail on stale
 
-# After changing DdotEventExporter:
-(cd ../ddot.it-intellij && mvn test -Dgolden.regen=true)   # refresh expected.events.jsonl
-
 # After changing the TextMate grammar (../ddot.it-syntax-tools/textmate/…):
 (cd ../ddot.it-syntax-tools && npm run regenerate:tokens)         # refresh expected.tokens.json
 (cd ../ddot.it-syntax-tools && npm run regenerate:tokens:check)   # CI: fail on stale
 
-# Normal test run (asserts HTML + JSONL):
-(cd ../ddot.it-intellij && mvn test)
+# Assert the reference parser against both streams (tokens + events):
+(cd ../ddot.it-syntax-tools && npm run conformance:parser)
+
+# Assert every highlighter implementation:
+(cd ../ddot.it-syntax-tools && npm run conformance)
 ```
 
-The regen scripts and `PreviewHtmlGoldenTest` expect `ddot.it`,
-`ddot.it-intellij`, `ddot.it-vscode`, and `ddot.it-syntax-tools` to live
-as siblings under the same parent directory. Override the path on the
-IntelliJ side with `-Dddot.test-data.dir=/abs/path/to/test-data`.
+`expected.events.jsonl` has no regen step by design — see above.
+
+The scripts expect `ddot.it`, `ddot.it-intellij`, `ddot.it-vscode`, and
+`ddot.it-syntax-tools` to live as siblings under the same parent directory.
+Override the path on the IntelliJ side with
+`-Dddot.test-data.dir=/abs/path/to/test-data`.
 
 ## Adding a case
 
@@ -122,7 +131,9 @@ IntelliJ side with `-Dddot.test-data.dir=/abs/path/to/test-data`.
    ```sh
    ruby test-data/regenerate-html.rb
    (cd ../ddot.it-syntax-tools && npm run regenerate:tokens)
-   (cd ../ddot.it-intellij && mvn test -Dgolden.regen=true)
    ```
+   Write `expected.events.jsonl` by hand from the
+   [Triple Events spec](https://ddot.it/spec/ddot-it-parse.html#events), then
+   check it with `npm run conformance:parser`.
 4. **Review the generated files carefully** — they become the contract.
 5. Commit `input.ddot` + every `expected.*` file together.
