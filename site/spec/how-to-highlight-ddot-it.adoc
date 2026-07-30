@@ -17,7 +17,7 @@ xref:ddot-it-highlight.adoc[Highlight Specification]; this is the accumulated
 
 .About this document
 - Last Modified: 2026-07-27
-- Applies to: the 30-case golden corpus in `test-data/cases/`
+- Applies to: every case in the golden corpus at `test-data/cases/`
 
 toc::[]
 

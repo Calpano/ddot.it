@@ -38,7 +38,9 @@ nav_order: 1
 - Double exclamation mark (`!!`) → [commands](#commands)
 
 NOTE: Spaces don't matter.
-Any number of spaces (or NBSPs) before and after the double dot is allowed.
+Any number of whitespace characters before and after the double dot is allowed — that means Tab
+and every Unicode space separator, so a NBSP pasted in from Word or a PDF works exactly like a
+plain space ([why](spec/ddot-it-parse.html#whitespace)).
 There must be **exactly** two dots for a typed link. An untyped link is written either as exactly
 four dots (`....`) or as two dot-pairs separated by whitespace (`.. ..`) — the same operator, two
 spellings. A run of three or five dots is ordinary text, not an operator.

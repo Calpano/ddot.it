@@ -53,6 +53,22 @@ Unreleased (as of 2026-07-29)
   ```
   states `Alice ..likes.. Tea`.
 
+- **Whitespace is Tab plus every Unicode space separator.** `WS` was space and tab; it is now
+  `[\t\p{Zs}]` — so NBSP (U+00A0), NARROW NO-BREAK SPACE (U+202F), IDEOGRAPHIC SPACE (U+3000) and
+  the rest count as whitespace wherever a space does. These characters are *visually
+  indistinguishable* from a space and are inserted routinely by word processors, wikis, PDF
+  copy-paste and macOS Option+Space; treating them as ordinary text silently produced a
+  *different* node that looked identical to the intended one:
+  ```
+  Berlin ..has type.. City      ← a plain space
+  Berlin ..has type.. City      ← a NBSP: previously the subject "Berlin<NBSP>"
+  ```
+  Zero-width characters (U+200B, U+FEFF) are category `Cf`, **not** `Zs`, and remain ordinary
+  text — except a single leading U+FEFF, which is stripped as a byte-order mark during chunk
+  preprocessing. Implementations must not rely on their language's built-in trim: JavaScript's
+  over-strips U+FEFF, and Java's `String.strip` *excludes* U+00A0 and U+202F. See the
+  [Parse Specification](spec/ddot-it-parse.html#whitespace).
+
 - **Symbol runs are operators only at their exact length.** `.`, `,`, `;` and `!`
   are grouped into maximal runs; a run is a special token only at its special
   length (two dots, four dots, two commas, two semicolons, two exclamation
@@ -156,6 +172,26 @@ Unreleased (as of 2026-07-29)
   stands, but the same string used as a subject silently misparses.
 
 ### For implementers
+
+- **The triple event format has one home and one key vocabulary.** The wire format is now
+  specified normatively in the
+  [Parse Specification](spec/ddot-it-parse.html#events) — fields, meta-pair shape, key order and
+  escaping — and the Developer Guide section is a summary that links to it. The separate
+  "collector document format", which stored the same triples under `sourceUri` plus `{s, p, o}`
+  with `{p, o}` meta pairs, is **retired**: a triple is `from` / `type` / `to` on both sides of
+  the pipe. Anything still emitting or consuming `s`/`p`/`o` needs updating.
+
+- **`ddot.it/label` has no page of its own.** `label` is an ordinary relation, so it is
+  documented with the other relations in the
+  [Vocabulary Specification](spec/ddot-it-vocabulary.html#label); `https://ddot.it/label` no
+  longer resolves.
+
+- **`ddot.it/block` fills four positions, not three.** Subject, object, meta-object **and** the
+  free meta text after `,,`. The meta-text form is redundant — the `,,` … `,,` block form already
+  expresses a multi-line meta text — but it is permitted, because meta text is a value like the
+  other three. It is still *not* an opener in a relation or a meta-relation, which hold names.
+  The TextMate grammar gained the missing `block-metatext` rules; corpus case
+  `34-block-meta-text` pins the position.
 
 - **Canonical highlighter token names changed** in `test-data/tokens.md`:
   `operator` → `doubledot`, `meta-operator` → `meta-doubledot`, `disabled` →

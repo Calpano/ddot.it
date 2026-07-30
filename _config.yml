@@ -42,10 +42,19 @@ defaults:
     values:
       nav_exclude: true
 
+# Asciidoctor Diagram writes generated diagram SVGs into _site/images during
+# the render phase, which runs before Jekyll's cleaner — without this the
+# cleaner deletes them again.
+keep_files:
+  - images
+
 # AsciiDoc rendering (site/spec/*.adoc).
 # `idprefix`/`idseparator` are deliberately left at their defaults: the specs
 # cross-reference sections by title, and changing the generated id scheme would
 # silently break those links.
+# `imagesdir`/`diagram-format` route `[plantuml]` blocks (asciidoctor-diagram)
+# to /images as SVG; the specs contain no other image macros, so `imagesdir`
+# affects only generated diagrams.
 asciidoctor:
   base_dir: :docdir
   safe: unsafe
@@ -54,3 +63,5 @@ asciidoctor:
     - icons=font
     - toc=macro
     - sectanchors
+    - imagesdir=/images
+    - diagram-format=svg

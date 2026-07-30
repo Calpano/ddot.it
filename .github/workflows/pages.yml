@@ -23,6 +23,11 @@ jobs:
         with:
           ruby-version: '3.3'
           bundler-cache: true
+      # asciidoctor-diagram renders the `[plantuml]` class diagrams in
+      # site/spec/*.adoc; PlantUML needs Graphviz `dot` for class-diagram
+      # layout (Java is preinstalled on the runner).
+      - name: Install Graphviz for PlantUML diagrams
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends graphviz
       - id: pages
         uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0 (hash-pinned for security)
       - run: bundle exec jekyll build --baseurl "${{ steps.pages.outputs.base_path }}"

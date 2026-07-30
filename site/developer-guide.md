@@ -66,25 +66,40 @@ ddot readers must
 
 
 ## Events
-Triple events are JSON-formatted and have the following structure:
+A reader reports each recognised triple as one **triple event**: a JSON object, streamed as JSON
+Lines ([JSONL](https://jsonlines.org/), one event per line).
 
-| Property   | Required | Description                                                                                                                   | Example                                |
-|------------|----------|-------------------------------------------------------------------------------------------------------------------------------|----------------------------------------|
-| `from`     | yes      | ⓢ Subject of triple (the object about which we say something)                                                                 | `ddot`                                 |
-| `type`     | &mdash;  | Ⓟ Type (property) of triple. <br/>Defaults to `links to`.                                                                     | `url`                                  |
-| `to`       | yes      | ⓞ Object of triple.                                                                                                           | `ddot.it`                              |
-| `meta`     | &mdash;  | Additional properties on a triple.<br/>Formatted as an array of objects, each with `type` and `to`, just like normal triples. | `[{"type":"year",`<br/>`"to":"2026"}]` |
-| `kind`     | yes      | Kind of source                                                                                                                | `markdown`                             |
-| `source`   | yes      | Source of text.                                                                                                               | `/README.md`                           |
-| `location` | yes      | Line number                                                                                                                   | `76`                                   |
+The **normative** definition — field semantics, the meta-pair shape, key order and the escaping
+rules a byte-exact implementation needs — is
+[Triple Events in the Parse Specification](spec/ddot-it-parse.html#events). This section is a
+summary; where the two disagree, the Parse Specification wins.
+
+| Property   | Required | Description                                                                                                     | Example                                |
+|------------|----------|-----------------------------------------------------------------------------------------------------------------|----------------------------------------|
+| `from`     | yes      | ⓢ Subject of the triple (what we are saying something about). Already inherited if the line omitted it.         | `ddot`                                 |
+| `type`     | &mdash;  | Ⓟ Relation of the triple. **Omitted** for untyped links (`....`); a consumer then defaults it to `links to`.    | `url`                                  |
+| `to`       | yes      | ⓞ Object of the triple. Never empty.                                                                            | `ddot.it`                              |
+| `meta`     | &mdash;  | Meta pairs, in source order — each with the same `type` (optional) and `to` keys as the triple. Omitted if none. | `[{"type":"year",`<br/>`"to":"2026"}]` |
+| `kind`     | yes      | Kind of source                                                                                                  | `markdown`                             |
+| `source`   | yes      | Source URI of the chunk                                                                                         | `/README.md`                           |
+| `location` | yes      | 1-based line number                                                                                             | `76`                                   |
+
+Three things catch people out, all spelled out in the specification:
+
+- An untyped link **omits** `type` rather than writing `links to` into it.
+- Free metadata text is not an untyped pair: `,, a random note` carries the built-in relation
+  `text`, so it is `{"type": "text", "to": "a random note"}`. The untyped form is `,, .... 2025`,
+  which yields `{"to": "2025"}`.
+- A line that is not a triple emits **nothing** — no event, no error.
 
 ### Command Handling
 - `ddot.it/this`: At this level, `ddot.it/this` is just a `from` value.
 Replacement happens in the [collector](#collector).
-- `ddot.it/on` and `ddot.it/off`: These commands have been processed by the reader and are not emitted as events.
+- `ddot.it/on`, `ddot.it/off` and `ddot.it/block`: processed by the reader before parsing, so they
+are never emitted as events. A field filled by a `ddot.it/block` carries the block body as its
+value, newlines included.
 
-### Triple Events
-Stored as JSON Lines ([JSONL](https://jsonlines.org/)) format (one event per line):
+### Example
 
 ```json
 { "from": "Project Eagle", "type": "started in", "to": "2024",
@@ -96,13 +111,16 @@ Stored as JSON Lines ([JSONL](https://jsonlines.org/)) format (one event per lin
 ```
 ```json
 { "from": "John Doe", "type": "leads", "to": "Project Eagle",
-    "meta": { "type": "since", "to": "2025" },
+    "meta": [{ "type": "since", "to": "2025" }],
     "kind": "markdown", "source": "/README.md", "location": 3 }
 ```
 ```json
-{ "from": "Project Eagle", "type": "links to", "to": "Moonshot",
+{ "from": "Project Eagle", "to": "Moonshot",
   "kind": "markdown", "source": "/README.md", "location": 4 }
 ```
+
+(The last one is `Project Eagle .... Moonshot` — note the absent `type`. The examples are spaced
+for readability; real JSONL output has one event per line with no insignificant whitespace.)
 
 
 ## Collector

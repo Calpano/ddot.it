@@ -4,6 +4,13 @@ GEM
     addressable (2.9.0)
       public_suffix (>= 2.0.2, < 8.0)
     asciidoctor (2.0.26)
+    asciidoctor-diagram (3.2.1)
+      asciidoctor (>= 1.5.7, < 3.x)
+      rexml
+    asciidoctor-diagram-batik (1.19)
+    asciidoctor-diagram-plantuml (1.2026.2)
+      asciidoctor-diagram (~> 3.2, >= 3.2.1)
+      asciidoctor-diagram-batik (~> 1.17)
     base64 (0.3.0)
     bigdecimal (4.0.1)
     colorator (1.1.0)
@@ -133,6 +140,8 @@ PLATFORMS
 
 DEPENDENCIES
   asciidoctor (~> 2.0)
+  asciidoctor-diagram (~> 3.0)
+  asciidoctor-diagram-plantuml
   jekyll (~> 4.4)
   jekyll-asciidoc (~> 3.0)
   jekyll-optional-front-matter
@@ -146,6 +155,9 @@ DEPENDENCIES
 CHECKSUMS
   addressable (2.9.0) sha256=7fdf6ac3660f7f4e867a0838be3f6cf722ace541dd97767fa42bc6cfa980c7af
   asciidoctor (2.0.26) sha256=16e3accf1fc206bbd6335848649d7fd65f31d2daa60d85af13d47a8ee4b071c1
+  asciidoctor-diagram (3.2.1) sha256=e432d051f2a627f7846a22b7beb1f6c8bb392f49ee07e2cb73be2611242a6684
+  asciidoctor-diagram-batik (1.19) sha256=d16df4143913fd2e167ec83e3bac4fcc4b1e57f575fe44189a7532fa6ffa59ca
+  asciidoctor-diagram-plantuml (1.2026.2) sha256=06d30ded2dfab8b1454e29e4ceed919a0de0a896c81e15dd655e4b70b5ca3c2f
   base64 (0.3.0) sha256=27337aeabad6ffae05c265c450490628ef3ebd4b67be58257393227588f5a97b
   bigdecimal (4.0.1) sha256=8b07d3d065a9f921c80ceaea7c9d4ae596697295b584c296fe599dd0ad01c4a7
   colorator (1.1.0) sha256=e2f85daf57af47d740db2a32191d1bdfb0f6503a0dfbc8327d0c9154d5ddfc38

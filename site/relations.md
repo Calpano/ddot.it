@@ -33,5 +33,10 @@ So we suggest using links, ideally relative one.
 That way, ddot.it files or files with ddot.it tripels int them can be packed together with the linked resources in a single zip archive.
 
 ## Commands as Relations
-The relation of a triple can also be a [command](user-guide.md#commands).
-See the  [label](label.md) command.
+The relation of a triple can also be a [command](user-guide.md#commands). A parser lexes it as a
+command wherever it appears, but what a command *means* is decided downstream — an unknown or
+retired name simply keeps its text as the relation value.
+
+`label` used to be such a command (`a ..!!label.. Alice`). It is now an ordinary relation
+(`a ..label.. Alice`), defined in the
+[Vocabulary Specification](spec/ddot-it-vocabulary.html#label).

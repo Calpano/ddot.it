@@ -551,7 +551,7 @@ hide circle
 
 class related <<symmetric>>
 class has_property as "has property" <<no inverse>>
-note right of property
+note right of has_property
   Value-carrying relations.
   Subtypes: see "Relation property".
 end note
@@ -950,7 +950,7 @@ If the empty relation shortcut is used as in +
 - `s.. ..o` (with spaces),
 
 +
-then there is no relation name given. {ddd} defaults to emit `links to` as relation name in these cases.
+then there is no relation name given. Emitters **omit** the relation (the event's `type` field) for such untyped links; **consumers** default a missing relation to `links to` (see xref:ddot-it-parse.adoc#event-fields[Triple Events]).
 
 
 // https://ddot.it/on
@@ -1165,8 +1165,39 @@ label ..has type.. relation
 ----
 // https://ddot.it/off
 
+.Why separate id from label
+Splitting the two makes a graph written in one file easier to change. These two graphs have the
+same structure and the same displayed names:
 
-NOTE: In previous versions of {dd}, this was modelled as a command (`!!label`).
+[source,ddot.it]
+----
+Alice ..knows.. Bob
+Bob ..knows.. Carol
+----
+
+[source,ddot.it]
+----
+a ..knows.. b
+b ..knows.. c
+a ..label.. Alice
+b ..label.. Bob
+c ..label.. Carol
+----
+
+The first is more {dd}-ish and is the right default. The second is easier to maintain while the
+naming is still in flux: a name is corrected in one place instead of at every occurrence, and the
+ids stay stable, so nothing else in the graph has to be touched.
+
+The distinction matters only in downstream tools that support labels. At
+https://graphinout.com[graphinout.com], incoming graph data — {dd} syntax included — is first
+converted to https://j-s-o-n.org[Connected JSON (CJ)], which has label support, and then to the
+requested target format.
+
+NOTE: In previous versions of {dd}, this was modelled as a command (`!!label`), documented on its
+own page at `+https://ddot.it/label+`. It is now an ordinary relation and is defined here; the
+command and its page are gone. `!!label` in a relation slot is still *lexed* as a command
+(xref:ddot-it-parse.adoc#command-syntax-vs-vocabulary[command syntax is registry-free]) and carries
+no command semantics — see corpus case `15-label`.
 
 
 
@@ -1177,8 +1208,10 @@ It carries the free text of a `,,` xref:ddot-it-parse.adoc#parsing[meta] that ho
 Used as an ordinary relation (`foo ..text.. some content`) it assigns free-form content to a
 subject — the same relation, written explicitly rather than produced by the `,,` shorthand.
 
-When parsing xref:ddot-it-parse.adoc#parsing[meta-text], as in `s..p..o,, meta-text`, this is reported on the triple event layer as (`meta: [{"p":"text","o":"meta-text"}]`).
-The key is `p`, matching the meta object in the xref:ddot-it-parse.adoc#information_model[Data Model JSON Schema] -- a meta pair uses the same `p`/`o` keys as a triple.
+When parsing xref:ddot-it-parse.adoc#parsing[meta-text], as in `s..p..o,, meta-text`, this is
+reported as the xref:ddot-it-parse.adoc#events[triple event] `meta: [{"type":"text","to":"meta-text"}]`.
+A meta pair uses the same `type`/`to` keys as the triple event itself, and the collector keeps
+those keys -- xref:ddot-it-parse.adoc#two-layers[one key vocabulary across both layers].
 
 // https://ddot.it/on
 [source,ddot.it]

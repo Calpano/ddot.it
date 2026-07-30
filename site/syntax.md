@@ -19,15 +19,23 @@ Ddot.it syntax assumes newline normalisation:
 2. Single 'LF' -> NL;
 3. Single 'CR' -> NL.
 
-| Name             |  Character  | Code Point | Usage                   |
-|------------------|:-----------:|-----------:|-------------------------|
-| Tab              |    `\t`     |          9 | Sometimes stripped      |
-| Newline          | NL (LF, CR) |     10, 13 | Line separation         |
-| Space            |     ` `     |         32 | Sometimes stripped      |
-| Exclamation mark |     `!`     |         33 | Commands (`!!`)         |
-| Comma            |     `,`     |         44 | Metadata                |
-| Dot              |     `.`     |         46 | Triples                 |
-| Semicolon        |     `;`     |         59 | Metadata pair separator |
+| Name             |    Character    |  Code Point   | Usage                   |
+|------------------|:---------------:|--------------:|-------------------------|
+| Tab              |      `\t`       |             9 | Whitespace              |
+| Newline          |   NL (LF, CR)   |        10, 13 | Line separation         |
+| Space            |       ` `       |            32 | Whitespace              |
+| Exclamation mark |       `!`       |            33 | Commands (`!!`)         |
+| Comma            |       `,`       |            44 | Metadata                |
+| Dot              |       `.`       |            46 | Triples                 |
+| Semicolon        |       `;`       |            59 | Metadata pair separator |
+| Other `Zs` space | NBSP, NNBSP, …  | 160, 8239, …  | Whitespace              |
+
+**Whitespace (`WS`) is Tab plus every Unicode _space separator_ (category `Zs`)** — space, NBSP
+(U+00A0), NARROW NO-BREAK SPACE (U+202F), IDEOGRAPHIC SPACE (U+3000) and the rest. They are
+accepted because they are visually indistinguishable from a space, so treating them as text would
+silently create a *different* node that looks identical. Zero-width characters (U+200B, U+FEFF)
+are category `Cf`, not `Zs`, and are ordinary text. See the
+[Parse Specification](spec/ddot-it-parse.html#whitespace).
 
 ## Tokens
 Symbol characters (`.`, `,`, `;`, `!`) are grouped into **maximal runs** of the same character,
@@ -75,7 +83,7 @@ Object      := TextExcept{NL,CM2}
 - `Object` is mandatory and non-empty: `a ..b..` with nothing after the closing `..` is not a triple.
 - `QuadDot` is the shorthand for an implicit relation: `a....b` and `a .. .. b` both mean
   `a ..links to.. b`. The two spellings are the same operator, not two operators.
-- Space and Tab are stripped from the start and end of every field, so
+- Whitespace is stripped from the start and end of every field, so
   `Dirk Hagemann   .. works at ..  Big Corp` yields (`Dirk Hagemann`, `works at`, `Big Corp`).
   A field **may contain spaces** — only the operators delimit it.
 

@@ -52,7 +52,8 @@ they are interpreted by a ddot collector as this single knowledge graph:
   - Link type can be left out: Use `aaa .... ccc` for a simple link.
   - Append more to same subject with `..bbb.. ccc` lines.
   - **Meta-data** can be appended behind `,,`.
-- Spaces and tabs don't matter. Incomplete triples are ignored. Two blank lines reset a ddot.it reader.
+- Spaces and tabs don't matter. Incomplete triples are ignored. An omitted subject continues the
+  previous one — across blank lines, to the end of the file.
 - Annotate a document: `ddot.it/this` refers to the doc in which ddot.it is used.
 
 See the [User Guide](https://ddot.it/user-guide.html) and [Developer Guide](https://ddot.it/developer-guide.html) on [ddot.it](https://ddot.it).

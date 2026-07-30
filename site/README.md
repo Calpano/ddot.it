@@ -71,7 +71,8 @@ This knowledge base (just a JSON array of ddot events) can be converted to many 
   - Link type can be left out: Use `aaa .... ccc` for a simple link.
   - Append more to same subject with `..bbb.. ccc` lines.
   - **Meta-data** can be appended behind `,,`.
-- Spaces and tabs don't matter. Incomplete triples are ignored. Two blank lines reset a ddot.it reader.
+- Spaces and tabs don't matter. Incomplete triples are ignored. An omitted subject continues the
+  previous one — across blank lines, to the end of the file.
 - Annotate a document: `ddot.it/this` refers to the doc in which ddot.it is used.
 
 See the [User Guide](user-guide.md) for the full syntax reference and more [commands](user-guide.md#commands) (`ddot.it/COMMAND`).

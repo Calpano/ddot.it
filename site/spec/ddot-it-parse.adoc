@@ -123,8 +123,16 @@ NOTE: In the *information model* a Triple always has all three of Subject, Relat
 The <<abstract_syntax_tree,AST>> shows `Subject` and `Relation` as `0..1` because the *syntax*
 may leave them out -- an omitted subject is <<syntax_shorthands,inherited from the previous
 line>> and an omitted relation is the implicit
-xref:ddot-it-vocabulary.adoc#links-to[`links to`]. Both are filled in by the time a triple
-reaches this model.
+xref:ddot-it-vocabulary.adoc#links-to[`links to`]. The subject is filled in by the time a triple
+reaches this model; the relation is filled in by the *consumer*, because the
+<<events,serialised form>> omits it rather than writing `links to` out.
+
+
+[[events]]
+=== Triple Events
+The information model above says what a triple *is*. This section says how a parser *reports*
+one. There is exactly one wire format, the **triple event**, and it is normative: an
+implementation conforms by emitting these bytes.
 
 .Example Snippet as {dd} Syntax
 [source,ddot.it]
@@ -132,57 +140,163 @@ reaches this model.
 Dirk ..works at.. SAP ,, ..since.. 2016
 ----
 
-.Example Snippet as Information Model JSON
-[json]
+.The same snippet as triple events
+[source,json]
 ----
-{
-  "sourceUri": "file:///Users/maxvolkel/Desktop/example.adoc",
-  "triples": [
-     {"s":"Dirk", "p":"works at", "o":"SAP", "meta": [
-        {"p": "since", "o":"2016" }
-     ]}
-  ]
-}
+{"from":"Dirk","type":"works at","to":"SAP","meta":[{"type":"since","to":"2016"}],"kind":"asciidoc","source":"file:///Users/maxvolkel/Desktop/example.adoc","location":1}
 ----
 
-.{ddd} Data Model JSON Schema
+[[event-fields]]
+.Spec: event fields
 ****
-.Schema
-[json]
+A parser emits **one JSON object per recognised triple**. An <<parsing,unrecognised line>>
+(`NotATriple`) emits **nothing** -- it is not an error and has no representation.
+
+[cols="1l,1,5"]
+|===
+| Field | Req. | Value
+
+| from | yes
+| The **subject**, as a string. When the syntax <<syntax_shorthands,omitted it>>, the inherited
+subject is already substituted here.
+
+| type | no
+| The **relation**, as a string. **Omitted entirely** when the syntax used the untyped `....` /
+`.. ..` form -- it is *not* written out as `links to`. A consumer defaults a missing `type` to
+xref:ddot-it-vocabulary.adoc#links-to[`links to`].
+
+| to | yes
+| The **object**, as a string. Never empty: an empty object is <<grammar,not a Triple>>.
+
+| meta | no
+| The triple's <<meta-pairs,meta pairs>>, in source order. **Omitted** when the triple has none
+-- never emitted as an empty array.
+
+| kind | yes
+| The **host format** the reader read, as a short lowercase name: `ddot`, `markdown`,
+`asciidoc`, `html`, `xml`, `yaml`, `java`, `pptx`, … Fixed per reader, identical on every event
+that reader emits.
+
+| source | yes
+| The <<chunk,chunk's>> **source URI**, verbatim. This is the value `!!this` stands for.
+
+| location | yes
+| The **1-based** line number of the triple's first line, relative to its chunk. A triple whose
+subject or object is a <<block-command,`!!block`>> is located at its *opening* line.
+|===
+
+[[meta-pairs]]
+**Meta pairs use the same two keys as the event itself.** Each element of `meta` is an object
+with `type` (optional) and `to` (required) -- deliberately the same names as on the triple,
+because a meta pair *is* a (relation, object) pair. Three cases arise:
+
+[cols="3,4"]
+|===
+| Syntax | Meta pair
+
+| `+,, ..since.. 2016+` -- a typed pair
+| `{"type":"since","to":"2016"}`
+
+| `+,, .... 2025+` -- the untyped form
+| `{"to":"2025"}` -- `type` omitted, meaning `links to`, exactly as on a triple
+
+| `+,, a random note+` -- free meta text
+| `{"type":"text","to":"a random note"}` -- the built-in
+xref:ddot-it-vocabulary.adoc#text[`text`] relation, **not** `links to`
+|===
+
+**Values are emitted verbatim.** No unescaping, no HTML escaping, no quote stripping: `"a sample
+document"` keeps its quotes and `+<https://example.com/x?a=1&b=2>+` keeps its angle brackets and
+`&`. A field filled by a <<block-command,`!!block`>> carries the body's real newlines, which
+become `\n` in the JSON string.
+
+**Commands are not resolved at this layer.** `!!this` is emitted as the literal `from` value
+`ddot.it/this` (or `!!this`, whichever was written); substituting `source` for it is the
+https://ddot.it/developer-guide.html#collector[collector's] job. `!!off`, `!!on` and `!!block` are
+<<pre_parse_commands,pre-parse commands>> and never appear as events at all -- they have already
+decided which text was parsed and what the block-filled field contains.
+****
+
+[[event-serialisation]]
+.Spec: serialisation
+****
+Events are serialised as **JSON Lines** (https://jsonlines.org/[JSONL]): one event per line,
+`\n`-separated, UTF-8, no enclosing array and no separators between objects.
+
+Conformance is asserted **byte for byte** against the golden corpus, so serialisation is fixed,
+not merely semantic:
+
+- **Key order** on an event is `from`, `type`, `to`, `meta`, `kind`, `source`, `location`, with
+absent optional keys simply left out. Within a meta pair it is `type`, `to`.
+- **String escaping** covers `\"`, `\\`, `\n`, `\r`, `\t`, `\b`, `\f`, and `\uXXXX` for any
+other control character. Nothing else is escaped -- in particular `/`, `<`, `>` and `&` are
+written as-is.
+- **No insignificant whitespace**: no spaces after `:` or `,`, no indentation, no trailing
+newline beyond the line separators themselves.
+
+See the golden corpus at `test-data/cases/*/expected.events.jsonl`.
+****
+
+[[event-schema]]
+.{ddd} Triple Event JSON Schema
+****
+The schema of **one** event. A JSONL stream is a sequence of documents each matching it.
+
+[source,json]
 ----
 {
-   "$schema":"http://json-schema.org/draft-07/schema#",
-   "type":"object",
-   "properties":{
-      "sourceUri":{ "type":"string" },
-      "triples":{
-         "type":"array",
-         "items":{
-            "type":"object",
-            "properties":{
-               "s":{ "type":"string", "description":"Subject" },
-               "p":{ "type":"string", "description":"Predicate" },
-               "o":{ "type":"string", "description":"Object" },
-               "meta":{
-                  "type":"array",
-                  "description":"Optional metadata for the triple.",
-                  "items":{
-                     "type":"object",
-                     "properties":{
-                        "p":{ "type":"string" },
-                        "o":{ "type":"string" }
-                     },
-                     "required":[ "p", "o" ]
-                  }
-               }
-            },
-            "required":[ "s", "p", "o" ]
-         }
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ddot.it triple event",
+  "type": "object",
+  "properties": {
+    "from":     { "type": "string", "description": "Subject" },
+    "type":     { "type": "string", "description": "Relation; omitted means 'links to'" },
+    "to":       { "type": "string", "description": "Object" },
+    "meta": {
+      "type": "array",
+      "description": "Meta pairs, in source order. Omitted when empty.",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "type": { "type": "string", "description": "Meta relation; omitted means 'links to'" },
+          "to":   { "type": "string", "description": "Meta object" }
+        },
+        "required": [ "to" ],
+        "additionalProperties": false
       }
-   },
-   "required":[ "sourceUri", "triples" ]
+    },
+    "kind":     { "type": "string", "description": "Host format of the source" },
+    "source":   { "type": "string", "description": "Source URI of the chunk" },
+    "location": { "type": "integer", "minimum": 1, "description": "1-based line number" }
+  },
+  "required": [ "from", "to", "kind", "source", "location" ],
+  "additionalProperties": false
 }
 ----
+****
+
+[[two-layers]]
+.Two layers, one key vocabulary
+****
+{ddd} splits *reading* from *collecting*
+(https://ddot.it/developer-guide.html#architecture[Developer Guide -> Architecture]):
+
+. A **reader** pulls {dd} text out of one host format and emits the triple events defined above.
+. A **collector** merges the events from many readers into one knowledge base and does the
+resolution a single reader cannot -- substituting `source` for `!!this`, defaulting an absent
+`type` to `links to`, applying xref:ddot-it-vocabulary.adoc#prefix[`prefix`], merging duplicate
+triples into one entry set.
+
+The two layers are genuinely different -- one is a stream keyed to source positions, the other a
+merged graph -- but they use **one key vocabulary**. A triple is `from` / `type` / `to` on both
+sides of the pipe, and the collector's document is the concatenation of the events it received.
+
+NOTE: Earlier drafts of this specification gave the collector document its own key names --
+`sourceUri` plus `triples` of `{s, p, o}` with `{p, o}` meta pairs -- so that the same triple had
+two spellings depending on which side of the pipe it sat on. That served no purpose beyond
+forcing every tool to translate, and it is **retired**. Any document or implementation still
+emitting `s`/`p`/`o` is stale.
 ****
 
 
@@ -309,9 +423,9 @@ as the optional <<file-selection,file-selection marker>>, which is a plain subst
 has nothing to do with command syntax.)
 - `ddot.it/` with an empty name is likewise not a command.
 
-**A command ends at the first `WS` or `NL` -- and at nothing else.** `WS` is space *or tab*, so
-a tab-terminated command is recognised exactly like a space-terminated one; do not implement
-this as "up to the next space".
+**A command ends at the first `WS` or `NL` -- and at nothing else.** <<whitespace,`WS`>> is TAB
+or any Unicode space separator, so a tab- or NBSP-terminated command is recognised exactly like a
+space-terminated one; do not implement this as "up to the next space".
 
 `?` and `#` do **not** terminate a command: they introduce its query and fragment, which are
 *part of* the command. They end only the *name*. So in `+!!block?end=END+` the whole token is
@@ -440,18 +554,21 @@ By default, a `!!block` ends with the first blank line, but a custom end marker 
 .Spec: `!!block` fills a field
 ****
 `!!block` (in any <<command,command spelling>>, with or without <<block-end-marker,`?end=`>>)
-opens a verbatim region **only when it is the entire content of one of these three fields**:
-`Subject`, `Object`, or `MetaObject`.
+opens a verbatim region **only when it is the entire content of one of these four positions**:
+`Subject`, `Object`, `MetaObject`, or the free **meta text** after `,,`.
 The block's **body** -- the lines from the line after the opener down to its terminator --
-becomes that field's **complete** value, verbatim.
+becomes that position's **complete** value, verbatim.
 
-**Only those three.** A `!!block` in a `Relation`, a `MetaRelation`, or the free meta text
-after `,,` is *not* an opener; it is ordinary <<in_text_commands,in-text>> command-shaped text.
-The three supported positions are the ones that hold **values**, which is where a multi-line
-verbatim value is actually wanted. Relation and meta-relation hold *names* -- a multi-line
-relation name has no use -- and meta text already has the multi-line `,,` … `,,` form.
-Restricting to three positions also keeps the <<block-continuation,continuation>> rule small:
-there are three interrupted positions to resume from, not six.
+**Only those four.** A `!!block` in a `Relation` or a `MetaRelation` is *not* an opener; it is
+ordinary <<in_text_commands,in-text>> command-shaped text. The four supported positions are the
+ones that hold **values**, which is where a multi-line verbatim value is actually wanted.
+Relation and meta-relation hold *names*, and a multi-line relation name has no use.
+
+The **meta text** position is *redundant but allowed*: the multi-line `,,` … `,,` block form
+already expresses a verbatim multi-line meta text, so `+… ,, !!block+` says nothing that cannot
+be said without it. It is permitted anyway because excluding it would be the odd rule -- meta
+text is a value like the other three, and an author who has just learnt `!!block` should not
+have to learn where it stops working. See <<block-in-meta-text>> for how the two forms differ.
 
 **The opener ends its physical line.** A field-filling `!!block` never has anything to its
 right: the body follows on the next lines, and whatever would have come *after* the field
@@ -473,11 +590,13 @@ requiring the opener to end its line avoids that entirely.
 further token can extend it. The line directly after the terminator is checked:
 
 - If its first token (after `WS`) is one the interrupted position accepts *after a complete
-field*, that line **continues** the logical line. With three opener positions there are three
-cases:
+field*, that line **continues** the logical line. Three of the four opener positions have such
+a token:
 ** after a block **subject** -- a `DT2` or `DT4` continues, e.g. `+..knows.. Bob+`
 ** after a block **object** -- a `CM2` continues, e.g. `+,, ..since.. 2016+`
 ** after a block **meta object** -- an `SC2` continues, e.g. `+;; ..until.. 2020+`
+** after a block **meta text** -- *nothing* continues. Meta text is the last thing a logical
+line can hold, so the line always ends at the terminator.
 - Otherwise the logical line ends at the terminator, and the next line is an ordinary fresh
 line. In particular, plain text after a block object starts a *new* line (Example 1: `Dirk …`
 is a fresh triple), and `..p.. o` after a *completed* block-object triple is the ordinary
@@ -511,8 +630,32 @@ text, and the subject is the literal string `!!block`. Only the second token ope
 
 Further rules:
 
-- In the **meta text** position (`… ,, !!block`) the form is allowed but redundant: the
-multi-line `,,` … `,,` block form already expresses a verbatim multi-line meta text.
+- [[block-in-meta-text]]In the **meta text** position (`+… ,, !!block+`) the form is allowed but
+**redundant**. The body becomes the triple's meta text -- the value of the built-in
+xref:ddot-it-vocabulary.adoc#text[`text`] relation -- exactly as the multi-line `,,` … `,,`
+form already does:
++
+--
+[source,ddot.it]
+----
+water ..formula.. H2O ,, !!block
+solid, liquid, gas
+all three occur naturally
+
+----
+states the same meta as
+[source,ddot.it]
+----
+water ..formula.. H2O ,,
+solid, liquid, gas
+all three occur naturally
+,,
+----
+The two differ only in how they end -- a blank line or `?end=` marker versus a closing `,,` --
+and in that a `!!block` body is taken verbatim, so a `,,` or `..` inside it stays literal.
+Prefer the `,,` … `,,` form; reach for `!!block` only when the text itself contains a line that
+would close that form.
+--
 - If the assembled logical line does **not** parse as a `Triple`, the line, its bodies and
 its continuations are emitted as `NotATriple` (<<unterminated-constructs>> applies at end of
 input as usual). The bodies were still consumed verbatim -- commands inside them stay inert
@@ -628,13 +771,15 @@ Dirk ..works at.. SAP
 
 `!!block` is a <<pre_parse_commands,pre-parse command>>, so none of this appears in the
 <<abstract_syntax_tree,AST>>: by the time the snippet grammar runs, the block's lines have
-already become the value of the field the opener fills (<<block-as-field,any of the six>>).
+already become the value of the position the opener fills (<<block-as-field,any of the four>>).
 That is why the grammar has no production for it, and
 why the highlighter treats the body as its own `verbatim` region rather than as field content.
 See the golden corpus: `17-block` (blank-line form) and `21-block-end-marker` (marked form).
-NOTE: The golden corpus covers all three opener positions: `17-block` and `21-block-end-marker`
-(Object, both terminator forms), `29-block-subject` (Subject, with a `DT2` continuation line) and
-`30-block-meta-object` (MetaObject).
+
+NOTE: The golden corpus pins three of the four opener positions: `17-block` and
+`21-block-end-marker` (Object, both terminator forms), `29-block-subject` (Subject, with a `DT2`
+continuation line) and `30-block-meta-object` (MetaObject). The
+<<block-in-meta-text,meta text>> position has no case yet; one should be added.
 
 See also https://ddot.it/block[].
 
@@ -790,6 +935,26 @@ For plain `.ddot` files, the {dd} parser does this itself.
 
 Each pair of **text chunk** plus **URI** is the given to the ddot.it parser.
 
+[[chunk-preprocessing]]
+.Spec: chunk preprocessing
+****
+Two normalisations are applied to a chunk **before** anything else, in this order:
+
+. **Strip a leading byte-order mark.** A single U+FEFF at the very start of the chunk is an
+encoding artefact, not content, and is removed. Only there, and only one: a U+FEFF anywhere else
+is an ordinary character (<<whitespace,it is category `Cf`, not `Zs`>>) and is part of whatever
+field contains it.
+. **Normalise newlines**, in this order -- `CR LF` -> `NL`, then `LF` -> `NL`, then `CR` -> `NL`.
++
+CAUTION: The order matters, and so does testing `CR LF` **first**. A pattern written
+`+(\r|\n|\r\n)+` matches the `CR` of a `CRLF` and leaves the `LF` behind as a *second* newline,
+silently turning every line ending into a blank line.
+
+After this the only line terminator is `NL`, and line numbers are counted over the result. Split
+in a way that **preserves trailing empty lines** (`split("\n", -1)` in Java; plain `split("\n")`
+in JavaScript), or the <<events,`location`>> of later triples drifts.
+****
+
 
 [[snippet]]
 === Splitting Chunks to Snippets
@@ -851,7 +1016,7 @@ Only the following basic tokens have a special role when parsing {dd}.
 |===
 | Token | Name | Comment | Regex
 
-|WS| Whitespace | SPACE or TAB |[ \t]
+|WS| Whitespace | TAB or any Unicode _space separator_ -- see <<whitespace>> |[\t\p{Zs}]
 // CRLF must come FIRST: alternation is ordered, so (\r\|\n\|\r\n) would match the
 // CR of a CRLF and leave the LF behind as a second NL.
 |NL| Newline | CR, LF, or CR+LF|(\r\n\|\r\|\n)
@@ -860,6 +1025,63 @@ Only the following basic tokens have a special role when parsing {dd}.
 |SC| Semicolon | A single semicolon `;` |;
 |EM| Exclamation Mark | A single exclamation mark `!` |!
 |===
+
+[[whitespace]]
+.Spec: what counts as `WS`
+****
+`WS` is **TAB (U+0009) plus every character in the Unicode general category `Zs`** (_Separator,
+space_). It is never a newline: `NL` is a separate token, and no `WS` character is a line
+terminator.
+
+Written as a Unicode property, `WS` is `+[\t\p{Zs}]+`. Not every regex flavour supports
+`\p{Zs}`, so the equivalent explicit class is **normative** and MUST be used where the property
+is unavailable:
+
+[source,regexp]
+----
+[\t\u0020\u00A0\u1680\u2000-\u200A\u202F\u205F\u3000]
+----
+
+[cols="2l,4d"]
+|===
+| Codepoint | Name
+
+| U+0009        | CHARACTER TABULATION (TAB)
+| U+0020        | SPACE
+| U+00A0        | NO-BREAK SPACE
+| U+1680        | OGHAM SPACE MARK
+| U+2000-U+200A | EN QUAD ... HAIR SPACE (11 characters)
+| U+202F        | NARROW NO-BREAK SPACE
+| U+205F        | MEDIUM MATHEMATICAL SPACE
+| U+3000        | IDEOGRAPHIC SPACE
+|===
+
+NOTE: `Zs` is defined by the Unicode standard, not by this document: an implementation using
+`+\p{Zs}+` is conforming even if a future Unicode release adds a character to the category. The
+explicit class above is the equivalent as of Unicode 15.
+
+**Why more than space and tab.** {ddd} is typed into documents that pass through word
+processors, wikis, PDFs and chat clients, and those routinely substitute a NO-BREAK SPACE
+(U+00A0) or a NARROW NO-BREAK SPACE (U+202F) for an ordinary space -- as does
+kbd:[Option+Space] on macOS. Such a character is **visually indistinguishable** from a space, so
+treating it as ordinary text would silently produce a *different* subject. `Berlin` typed with a
+trailing SPACE and `Berlin` typed with a trailing NO-BREAK SPACE would be two different nodes
+that look identical in every editor and every rendering. A
+knowledge graph that splits nodes on invisible differences is worse than useless, and the author
+has no way to see what went wrong. Accepting the whole `Zs` category draws the boundary at
+"characters Unicode says are spaces", which needs no case-by-case argument.
+
+**Zero-width characters are *not* `WS`.** U+200B ZERO WIDTH SPACE, U+FEFF ZERO WIDTH NO-BREAK
+SPACE (BOM) and the other format characters are category `Cf`, not `Zs`, and are ordinary text.
+They are invisible rather than space-like, and silently discarding them would lose data.
+
+CAUTION: Implementations that reach for their language's built-in trim must check what it
+actually strips. JavaScript's `String.prototype.trim` removes `Zs` **and** U+FEFF and line
+terminators -- close, but it over-strips U+FEFF. Java's `String.trim` strips only characters
+`+<= U+0020+`, which is far too narrow, while `String.strip` uses `Character.isWhitespace`,
+which *excludes* U+00A0 and U+202F -- exactly the two that matter most here. Prefer an explicit
+class over a built-in.
+****
 
 The syntax of {dd} is fundamentally based on **counting consecutive characters**. The main element is the double-dot (`..`) which is only valid if it is not preceded or followed by another dot.
 One or three dots are fine and can be used in text as usual, without any special interpretation.
@@ -1055,7 +1277,7 @@ it: `Meta?` is greedy, so a `Meta` that *can* be derived *is* derived, and the `
 
 Two properties keep this from over-reaching:
 
-. `MetaBlockOpen`'s second alternative is `NL WS* CM2` — `WS` is space and tab only, never a
+. `MetaBlockOpen`'s second alternative is `NL WS* CM2` — <<whitespace,`WS`>> never includes a
 newline. The `,,` must therefore sit on the line **immediately** after the triple; a blank line
 in between breaks the attachment.
 . The block form only matches if a **closing** `,,` is also found. A lone `,,` after a triple
@@ -1155,8 +1377,8 @@ Model they are a Meta like any other.
 in `!!this ..author.. John` the Subject holds one Command, whereas in `John ..text.. 42` no field
 holds a Command.
 `!!off`, `!!on`, and `!!block` are <<pre_parse_commands>> and never appear as AST nodes.
-Each in-text command may equally be written `ddot.it/label`,
-`http://ddot.it/label` or `https://ddot.it/label`.
+Each in-text command may equally be written `ddot.it/this`,
+`http://ddot.it/this` or `https://ddot.it/this`.
 - Commands may occur in every field of a Triple and of a Meta alike: `Subject`, `Relation`,
 `Object`, `MetaRelation` and `MetaObject`.
 

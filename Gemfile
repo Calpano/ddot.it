@@ -28,6 +28,16 @@ gem "asciidoctor", "~> 2.0"
 # this site picks it up.
 group :jekyll_plugins do
   gem "rouge-ddot", "~> 0.1.3"
+
+  # Renders `[plantuml]` blocks in site/spec/*.adoc to SVG. Without it,
+  # Asciidoctor treats `plantuml` as an unknown block style and emits the
+  # diagram source as plain text. Needs Java plus Graphviz `dot` on PATH
+  # (class diagrams); pages.yml installs graphviz on the runner.
+  gem "asciidoctor-diagram", "~> 3.0"
+  # Since asciidoctor-diagram 3.2 the PlantUML JAR is no longer a hard
+  # dependency; without this gem every `[plantuml]` block fails with
+  # "Could not load PlantUML".
+  gem "asciidoctor-diagram-plantuml"
 end
 
 gem "webrick" # required for Ruby >= 3

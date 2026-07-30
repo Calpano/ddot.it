@@ -11,7 +11,10 @@ For writing ddot.it, just read write.md and skip the rest.
 ### Codepoints
 
 Newline normalisation is applied before parsing: `CR LF` → NL, `LF` → NL, `CR` → NL.
-Space and Tab are stripped from the start and end of names.
+Whitespace is stripped from the start and end of names. Whitespace (`WS`) is TAB plus every
+Unicode space separator (category `Zs`) — so NBSP (U+00A0) and NARROW NO-BREAK SPACE (U+202F)
+count as whitespace, because they are visually indistinguishable from a space. Zero-width
+characters (U+200B, U+FEFF) are category `Cf` and are ordinary text.
 
 ### Tokens
 
@@ -63,7 +66,7 @@ MetaBlock         := MetaTripleInBlock (NL MetaTripleInBlock)*
                    | MetaTextBlock
 ```
 
-Fields may contain spaces; only the operators delimit them. Leading/trailing space and tab are
+Fields may contain spaces; only the operators delimit them. Leading/trailing whitespace is
 stripped. `Object` is mandatory and non-empty. Incomplete triples are silently ignored.
 
 The normative definition is the Parse Specification (`site/spec/ddot-it-parse.adoc` (rendered at /spec/ddot-it-parse.html)).
@@ -143,8 +146,8 @@ required**; `?` and `#` do not terminate a command but introduce its query and f
 - `ddot.it/on` — start processing this region (include)
 - `ddot.it/off` — stop processing this region (exclude)
 - `ddot.it/block` — the rest of the value is taken verbatim from the following lines,
-  up to a blank line or a custom `?end=MARKER`. Allowed in the subject, object and
-  metadata-object slots, and only when it ends its line.
+  up to a blank line or a custom `?end=MARKER`. Allowed in the subject, object,
+  metadata-object and metadata-text positions, and only when it ends its line.
 
 ## Output: Triple Events
 
@@ -154,7 +157,14 @@ Each recognized triple fires a JSON event:
   "kind": "markdown", "source": "/README.md", "location": 1 }
 ```
 
-Fields: `from` (subject), `type` (defaults to `links to`), `to` (value), `meta` (array of `{type, to}`), `kind`, `source`, `location` (line number).
+Fields: `from` (subject), `type` (relation; **omitted** for untyped links — a consumer defaults a
+missing `type` to `links to`), `to` (value), `meta` (array of `{type?, to}`, same keys as the
+triple), `kind`, `source`, `location` (1-based line number). Key order is fixed:
+`from`, `type`, `to`, `meta`, `kind`, `source`, `location`. A line that is not a triple emits
+nothing.
+
+The normative definition is the Parse Specification, section "Triple Events"
+(`site/spec/ddot-it-parse.adoc`, rendered at /spec/ddot-it-parse.html#events).
 
 ## Knowledge Graph Data Model
 
