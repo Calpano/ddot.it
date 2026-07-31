@@ -4,6 +4,8 @@ hide empty members
 hide stereotype
 !option handwritten true
 left to right direction
+skinparam nodesep 20
+skinparam ranksep 5
 
 skinparam backgroundColor #FEFEFE
 skinparam shadow false

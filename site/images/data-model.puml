@@ -3,7 +3,7 @@ hide circles
 hide empty members
 hide stereotype
 !option handwritten true
-left to right direction
+'left to right direction
 
 skinparam backgroundColor #FEFEFE
 skinparam shadow false

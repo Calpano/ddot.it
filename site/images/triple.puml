@@ -2,6 +2,8 @@
 hide circles
 hide empty members
 hide stereotype
+skinparam nodesep 10
+skinparam ranksep 20
 !option handwritten true
 
 skinparam backgroundColor #FEFEFE
@@ -24,11 +26,11 @@ skinparam class<<Key>> {
 }
 class legend as "ddot.it"<<Label>> {
     Datatype:
-    .................
+
     Semantic web:
-    Property graphs:
-    OOP:
-    CDS:
+    Prop. graphs:
+    Programming:
+'    CDS:
 }
 class from <<Key>> {
     String
@@ -36,7 +38,7 @@ class from <<Key>> {
     subject
     entity
     object
-    source
+'    source
 }
 
 class type <<Key>> {
@@ -45,7 +47,7 @@ class type <<Key>> {
     predicate
     property
     field
-    relation type
+'    relation type
 }
 class to <<Key>> {
     String
@@ -53,7 +55,7 @@ class to <<Key>> {
     object
     value
     value
-    target
+'    target
 }
 
 legend -[hidden] from
