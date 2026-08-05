@@ -86,10 +86,10 @@ summary; where the two disagree, the Parse Specification wins.
 
 Three things catch people out, all spelled out in the specification:
 
-- An untyped link **omits** `type` rather than writing `links to` into it.
+- An untyped link **writes** `links to` into `type` rather than omitting the field.
 - Free metadata text is not an untyped pair: `,, a random note` carries the built-in relation
   `text`, so it is `{"type": "text", "to": "a random note"}`. The untyped form is `,, .... 2025`,
-  which yields `{"to": "2025"}`.
+  which yields `{"type": "links to", "to": "2025"}`.
 - A line that is not a triple emits **nothing** — no event, no error.
 
 ### Command Handling

@@ -43,8 +43,19 @@ In fact, it has been designed specifically so that it <<host-languages,coexists 
 If ddot.it is used stand-alone, the following is defined:
 
 - File extension: `.ddot`
-- MIME type: `text/ddot.it`
+- Media type: `text/vnd.ddot.it`
+- Character encoding: **UTF-8**, always. A `charset` parameter is not required; when present it MUST
+be `utf-8`. (https://www.rfc-editor.org/rfc/rfc6838.html#section-4.2.1[RFC 6838, 4.2.1] requires a
+`text/*` type to say how its charset is determined -- there is no US-ASCII default to fall back on.)
 ****
+
+NOTE: The `vnd.` facet is not decoration. In a media subtype the characters before the first `.`
+name a *registration facet*, so a bare `text/ddot.it` would parse as the undefined facet `ddot`,
+and https://www.rfc-editor.org/rfc/rfc6838.html#section-3.1[the standards tree] forbids faceted
+names outright. `text/vnd.ddot.it` is well-formed, keeps the ddot.it name, and is registerable by
+anyone interchanging these files. `x-ddot` is not an option:
+https://www.rfc-editor.org/rfc/rfc6648.html[RFC 6648] deprecated the `x-` prefix, and RFC 6838
+no longer treats such names as belonging to any tree.
 
 - {ddd} can be used as a **guest language** inside another **host language** or even a more complex **host system**.
 For example, {dd} can be used within Markdown and AsciiDoc.
@@ -123,9 +134,9 @@ NOTE: In the *information model* a Triple always has all three of Subject, Relat
 The <<abstract_syntax_tree,AST>> shows `Subject` and `Relation` as `0..1` because the *syntax*
 may leave them out -- an omitted subject is <<syntax_shorthands,inherited from the previous
 line>> and an omitted relation is the implicit
-xref:ddot-it-vocabulary.adoc#links-to[`links to`]. The subject is filled in by the time a triple
-reaches this model; the relation is filled in by the *consumer*, because the
-<<events,serialised form>> omits it rather than writing `links to` out.
+xref:ddot-it-vocabulary.adoc#links-to[`links to`]. Both are filled in by the time a triple
+reaches this model, and the <<events,serialised form>> carries them: it writes `links to` out
+rather than leaving the consumer to default a missing field.
 
 
 [[events]]
@@ -160,10 +171,11 @@ A parser emits **one JSON object per recognised triple**. An <<parsing,unrecogni
 | The **subject**, as a string. When the syntax <<syntax_shorthands,omitted it>>, the inherited
 subject is already substituted here.
 
-| type | no
-| The **relation**, as a string. **Omitted entirely** when the syntax used the untyped `....` /
-`.. ..` form -- it is *not* written out as `links to`. A consumer defaults a missing `type` to
-xref:ddot-it-vocabulary.adoc#links-to[`links to`].
+| type | yes
+| The **relation**, as a string. **Always written**, never omitted: when the syntax used the
+untyped `....` / `.. ..` form the relation is the implicit
+xref:ddot-it-vocabulary.adoc#links-to[`links to`], and that is what the event carries. A
+consumer therefore never has to default a missing field.
 
 | to | yes
 | The **object**, as a string. Never empty: an empty object is <<grammar,not a Triple>>.
@@ -187,7 +199,7 @@ subject or object is a <<block-command,`!!block`>> is located at its *opening* l
 
 [[meta-pairs]]
 **Meta pairs use the same two keys as the event itself.** Each element of `meta` is an object
-with `type` (optional) and `to` (required) -- deliberately the same names as on the triple,
+with `type` (required) and `to` (required) -- deliberately the same names as on the triple,
 because a meta pair *is* a (relation, object) pair. Three cases arise:
 
 [cols="3,4"]
@@ -198,7 +210,8 @@ because a meta pair *is* a (relation, object) pair. Three cases arise:
 | `{"type":"since","to":"2016"}`
 
 | `+,, .... 2025+` -- the untyped form
-| `{"to":"2025"}` -- `type` omitted, meaning `links to`, exactly as on a triple
+| `{"type":"links to","to":"2025"}` -- the implicit `links to` is written out, exactly as on a
+triple
 
 | `+,, a random note+` -- free meta text
 | `{"type":"text","to":"a random note"}` -- the built-in
@@ -250,7 +263,7 @@ The schema of **one** event. A JSONL stream is a sequence of documents each matc
   "type": "object",
   "properties": {
     "from":     { "type": "string", "description": "Subject" },
-    "type":     { "type": "string", "description": "Relation; omitted means 'links to'" },
+    "type":     { "type": "string", "description": "Relation; an untyped '....' link carries 'links to'" },
     "to":       { "type": "string", "description": "Object" },
     "meta": {
       "type": "array",
@@ -259,10 +272,10 @@ The schema of **one** event. A JSONL stream is a sequence of documents each matc
       "items": {
         "type": "object",
         "properties": {
-          "type": { "type": "string", "description": "Meta relation; omitted means 'links to'" },
+          "type": { "type": "string", "description": "Meta relation; an untyped ',, ....' pair carries 'links to'" },
           "to":   { "type": "string", "description": "Meta object" }
         },
-        "required": [ "to" ],
+        "required": [ "type", "to" ],
         "additionalProperties": false
       }
     },
@@ -270,7 +283,7 @@ The schema of **one** event. A JSONL stream is a sequence of documents each matc
     "source":   { "type": "string", "description": "Source URI of the chunk" },
     "location": { "type": "integer", "minimum": 1, "description": "1-based line number" }
   },
-  "required": [ "from", "to", "kind", "source", "location" ],
+  "required": [ "from", "type", "to", "kind", "source", "location" ],
   "additionalProperties": false
 }
 ----

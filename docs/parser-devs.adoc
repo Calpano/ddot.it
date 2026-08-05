@@ -761,7 +761,7 @@ A meta part holds *either* `..relation.. value` pairs *or* free text.
 |===
 | Syntax | Meta pair emitted
 | `+,, ..since.. 2016+`      | `+{"type":"since","to":"2016"}+`
-| `+,, .... 2025+`           | `+{"to":"2025"}+` — untyped, so `links to`
+| `+,, .... 2025+`           | `+{"type":"links to","to":"2025"}+` — untyped, so `links to`
 | `+,, a random note+`       | `+{"type":"text","to":"a random note"}+`
 |===
 

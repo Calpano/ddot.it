@@ -231,7 +231,7 @@ A bare string after `,,` is valid metadata, and it carries the built-in relation
 
 ----
 aaa ..bbb.. ccc ,, see also the appendix     → {"type":"text", "to":"see also the appendix"}
-aaa ..bbb.. ccc ,, .... 2025                 → {"to":"2025"}   (untyped ⇒ links to)
+aaa ..bbb.. ccc ,, .... 2025                 → {"type":"links to", "to":"2025"}   (untyped)
 ----
 
 These are the only two built-in relations. A metadata part holds *either* pairs *or* free text,

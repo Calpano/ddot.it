@@ -154,7 +154,7 @@ each value runs to the end of its own line, so a `;;` there is ordinary text.
 
 Free text carries the built-in `text` relation::
 `+,, a random note+` is `+{"type":"text","to":"a random note"}+` — *not* an untyped pair. The
-untyped form is `+,, .... 2025+`, which yields `+{"to":"2025"}+` with no `type` at all. A meta
+untyped form is `+,, .... 2025+`, which yields `+{"type":"links to","to":"2025"}+`. A meta
 part holds *either* pairs *or* free text, never both.
 
 == `!!block`: multi-line values
