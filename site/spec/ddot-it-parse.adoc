@@ -1116,23 +1116,23 @@ xref:ddot-it-highlight.adoc[Highlight Specification] uses, and they are normativ
 
 |DT2| A sequence of 2 consecutive `DT`. +
 The whole sequence is neither preceded by another `DT` nor followed by another `DT`.
-|`+++(?<!\.)\.{2}(?!\.)+++`
+|`+++(?&lt;!\.)\.{2}(?!\.)+++`
 
 |DT4| A sequence of 4 consecutive `DT`. +
 The whole sequence is neither preceded by another `DT` nor followed by another `DT`.
-|`+++(?<!\.)\.{4}(?!\.)+++`
+|`+++(?&lt;!\.)\.{4}(?!\.)+++`
 
 |CM2| A sequence of 2 consecutive `CM`. +
 The whole sequence is neither preceded by another `CM` nor followed by another `CM`.
-|`+++(?<!,),{2}(?!,)+++`
+|`+++(?&lt;!,),{2}(?!,)+++`
 
 |SC2| A sequence of 2 consecutive `SC`. +
 The whole sequence is neither preceded by another `SC` nor followed by another `SC`.
-|`+++(?<!;);{2}(?!;)+++`
+|`+++(?&lt;!;);{2}(?!;)+++`
 
 |EM2| A sequence of 2 consecutive `EM`. +
 The whole sequence is neither preceded by another `EM` nor followed by another `EM`.
-|`+++(?<!!)!{2}(?!!)+++`
+|`+++(?&lt;!!)!{2}(?!!)+++`
 
 |TX| Any maximal sequence of characters that contains no `WS` and no `NL`,
 and in which no `DT2`, `DT4`, `CM2`, `SC2`, or `EM2` occurs. +
