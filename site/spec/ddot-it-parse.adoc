@@ -1069,7 +1069,7 @@ space_). It is never a newline: `NL` is a separate token, and no `WS` character 
 terminator.
 
 Written as a Unicode property, `WS` is `+[\t\p{Zs}]+`. Not every regex flavour supports
-`\p+{Zs}+`, so the equivalent explicit class is **normative** and MUST be used where the property
+`\p++{Zs}++`, so the equivalent explicit class is **normative** and MUST be used where the property
 is unavailable:
 
 [source,regexp]
@@ -1218,109 +1218,41 @@ or is just text.
 ** E.g.: `TextExcept{CM2,NL} = (DT2 | DT4 | SC2 | EM2 | TX) (WS* (DT2 | DT4 | SC2 | EM2 | TX))*`.
 
 
-.Full
+.EBNF Grammar for Snippet Parsing
+[source,ebnf]
 ----
-Snippet     := Line*
-
-// Ordered choice: a Line is a Triple if one can be derived, otherwise NotATriple.
-// NotATriple is therefore never reachable for text that forms a Triple.
-Line        := WS* Triple WS* NL
-              | NotATriple NL
-
-// Any run of tokens on one line. Reached only when the Triple alternative failed.
-NotATriple  := (WS | DT2 | DT4 | CM2 | SC2 | EM2 | TX)*
-
-DoubleDot   := WS* DT2 WS*
-// the untyped (empty) relation, written '....' or '.. ..'.
-// WS+, not WS*: with no WS between, the two DT2 would be four adjacent dots,
-// which lexes as DT4 — that is the first alternative, not the second.
-QuadDot     := WS* ( DT4 | DT2 WS+ DT2 ) WS*
-
-Triple      :=  Subject?
-                ( DoubleDot Relation DoubleDot | QuadDot )
-                 Object
-                 WS* Meta?
-
-Subject     :=  TextExcept{NL,DT2,DT4}
-Relation    :=  TextExcept{NL,DT2,DT4}
-Object      :=  TextExcept{NL,CM2}
-
-Meta              :=  CM2 WS* MetaInline WS*
-// the block may be empty: ',,' NL WS* ',,'
-                    | MetaBlockOpen NL (MetaBlock NL)? WS* CM2 WS*
-
-// The ',,' that opens a block may sit at the end of the triple line, or alone
-// on the line *after* it. Both attach the block to the same triple.
-MetaBlockOpen     :=  CM2
-                    | NL WS* CM2
-
-MetaRelation      := TextExcept{NL,DT2,DT4}
-
-MetaInline        := ( MetaTripleInline (SC2 MetaTripleInline)* )
-                    | MetaTextInline
-
-MetaTripleInline  :=  DoubleDot MetaRelation DoubleDot MetaObjectInline
-                    | QuadDot MetaObjectInline
-
-MetaObjectInline   :=  TextExcept{NL,SC2}
-
-MetaTextInline     :=  (CM2 | SC2 | EM2 | TX)
-                       (WS* (DT2 | DT4 | CM2 | SC2 | EM2 | TX))*
-
-MetaBlock          :=  MetaTripleInBlock (NL MetaTripleInBlock)*
-                    | MetaTextBlock
-
-MetaTripleInBlock   := DoubleDot MetaRelation DoubleDot MetaObjectInBlock
-                    | QuadDot MetaObjectInBlock
-
-MetaObjectInBlock    := TextExcept{NL}
-
-MetaTextBlock      := MetaTextBlockLine (NL MetaTextBlockLine)*
-
-MetaTextBlockLine  := WS*
-// a real line must contain anything besides just CM2 and WS
-// and may not be DT2 to avoid parsing as MetaTripleInBlock/MetaRelation
-                      (TX | EM2 | SC2 )+
-                      (WS | TX | DT2 | DT4 | EM2 | CM2 | SC2 )*
+include::ddot.it-parsing.ebnf[]
 ----
 
+.Note on the productions
+- Meta text containing `;;`? Inside a `,,` block, newlines separate the entries, so no `;;` is special anywhere in it (case `28-semicolon-in-meta-block`).
+A note or a value that must carry a literal `;;` is written there, or in a `!!block`.
 
+- Ordered choice in `MetaEntryInline` and `MetaEntryInBlock` means a malformed pair is a note, not an error: `,, ..bla` has no closing `..`, so the dotted alternatives fail and the entry is the note `..bla`.
+The text is kept rather than the line destroyed -- an unclosed `..` is a typo, and a typo in the metadata must not take its triple down with it.
 
-.Notes on the productions
-- `SC2` (`;;`) is special *only inside the `,,` meta part*, where the inline form uses it to
-separate several (relation, object) assertions about one triple (see `MetaInline`). In a
-`Subject`, `Relation`, or `Object` it is ordinary text -- a triple is recognised by its `..`/`..`
-markers, so {dd} never uses `;;` to terminate or abort a triple.
-- `Object` is mandatory and non-empty (`TextExcept` requires at least one token): `a ..b..` with
-nothing after the closing `..` is not a Triple.
+- `Object` is mandatory and non-empty (`TextExcept` requires at least one token): `a ..b..` with nothing after the closing `..` is not a Triple.
+
 - `Subject?` is optional: an omitted subject means _continue with the subject of the previous line_.
-- `Text` is a whitespace-trimmed sequence; the `WS` around and between words is not part of the Subject, Relation, or Object contents.
-- `QuadDot` is the shorthand for an implicit relation: `a....b` and `a .. .. b` both mean
-`a ..links to.. b`.The two spellings are the same operator, not two operators — see
-`10-spaced-untyped` and `02-untyped-link` in the golden corpus.
-- [[meta-block-attachment]]`MetaBlockOpen` has two spellings, and they mean the same thing. The block form's opening
-`,,` may end the triple line (`04-multiline-meta`, `14-multiline-meta-text`) or stand alone on
-the next line (`09-standalone-comma-block`). Only the *block* form allows the second spelling —
-the inline form's `,,` must stay on the triple line, since what follows it on that same line
-*is* the meta.
-+
---
-The second spelling is where the grammar would be ambiguous without
-<<grammar-disambiguation,ordered choice and greedy optionals>>: a lone `,,` after a complete
-triple could equally be that triple's block opener or a `NotATriple` line. The two rules settle
-it: `Meta?` is greedy, so a `Meta` that *can* be derived *is* derived, and the `,,` attaches.
 
+- `Text` is a whitespace-trimmed sequence; the `WS` around and between words is not part of the Subject, Relation, or Object contents.
+
+- `QuadDot` is the shorthand for an implicit relation: `a....b` and `a .. .. b` both mean `a ..links to.. b`.
+The two spellings are the same operator, not two operators — see `10-spaced-untyped` and `02-untyped-link` in the golden corpus.
+
+- `MetaBlockOpen` has two spellings, and they mean the same thing.
+The block form's opening `,,` may end the triple line (`04-multiline-meta`, `14-multiline-meta-text`) or stand alone on the next line (`09-standalone-comma-block`).
+Only the *block* form allows the second spelling — the inline form's `,,` must stay on the triple line, since what follows it on that same line *is* the meta.
+The second spelling is where the grammar would be ambiguous without
+<<grammar-disambiguation,ordered choice and greedy optionals>>: a lone `,,` after a complete triple could equally be that triple's block opener or a `NotATriple` line. The two rules settle it: `Meta?` is greedy, so a `Meta` that *can* be derived *is* derived, and the `,,` attaches.
 Two properties keep this from over-reaching:
 
-. `MetaBlockOpen`'s second alternative is `NL WS* CM2` — <<whitespace,`WS`>> never includes a
+. `MetaBlockOpen` 's second alternative is `NL WS* CM2` — <<whitespace,`WS`>> never includes a
 newline. The `,,` must therefore sit on the line **immediately** after the triple; a blank line
 in between breaks the attachment.
 . The block form only matches if a **closing** `,,` is also found. A lone `,,` after a triple
 with no closing `,,` derives no `Meta` at all, so the greedy choice falls through and that line
 is `NotATriple` — as is any `,,` that follows no triple.
---
-
-
 
 
 
@@ -1350,10 +1282,10 @@ class Subject
 class Relation
 class Object
 class Meta <<choice>>
-class MetaInline <<choice>>
+class MetaInline
 class MetaTripleInline
 class MetaTextInline
-class MetaBlock <<choice>>
+class MetaBlock
 class MetaTripleInBlock
 class MetaTextBlock
 class MetaTextBlockLine
@@ -1378,15 +1310,17 @@ Relation *-- "0..n" Command
 Object *-- "0..n" Command
 MetaRelation *-- "0..n" Command
 MetaObject *-- "0..n" Command
+Subject -[hidden] Relation
+Relation -[hidden] Object
 
 Meta *-- "0..1" MetaInline
 Meta *-- "0..1" MetaBlock
 
 MetaInline *-- "0..n" MetaTripleInline
-MetaInline *--- "0..1" MetaTextInline
+MetaInline *--- "0..n" MetaTextInline
 
 MetaBlock *-- "0..n" MetaTripleInBlock
-MetaBlock *-- "0..1" MetaTextBlock
+MetaBlock *-- "0..n" MetaTextBlock
 
 MetaTripleInline *-- "0..1" MetaRelation
 MetaTripleInline *-- "1" MetaObject
@@ -1398,19 +1332,22 @@ MetaTextBlock *-- "1..n" MetaTextBlockLine
 ....
 
 .Notes on the tree
-- `Line` is either a `Triple` or a `NotATriple`. `NotATriple` is the second alternative of the
-`Line` production: text that is passed through unparsed. It has no children.
+- `Line` is either a `Triple` or a `NotATriple`.
+`NotATriple` is the second alternative of the `Line` production: text that is passed through unparsed.
+It has no children.
 - `Subject` is absent when it is continued from the previous Line.
 - `Relation` is absent for the `QuadDot` shortcut; it then means `links to`.
-- `Meta` is either inline or block, never both. Likewise `MetaInline` and `MetaBlock` each hold
-either triples or text, never both.
+- `Meta` is either inline or block, never both.
+Within one of them, triples and text are *not* exclusive: both may occur, repeatedly and in any order.
+Their order is the written one, which is why the event stream is a list and not a map.
+- One `MetaTextBlock` is one note however many lines it spans; a triple line between two text
+lines ends the first note and the line after it starts a second.
 - `MetaObject` unifies `MetaObjectInline` and `MetaObjectInBlock`: the two differ only in which
 characters may occur, not in what they mean once parsed.
 - `MetaTextInline` and `MetaTextBlock` carry the built-in relation `text`, so in the Information
 Model they are a Meta like any other.
 - A `Command` is a part of the text of the field holding it, not a replacement for it:
-in `!!this ..author.. John` the Subject holds one Command, whereas in `John ..text.. 42` no field
-holds a Command.
+in `!!this ..author.. John` the Subject holds one Command, whereas in `John ..text.. 42` no field holds a Command.
 `!!off`, `!!on`, and `!!block` are <<pre_parse_commands>> and never appear as AST nodes.
 Each in-text command may equally be written `ddot.it/this`,
 `http://ddot.it/this` or `https://ddot.it/this`.
@@ -1441,7 +1378,7 @@ Red arrows indicate the 'happy path': a simple Triple without any Meta.
 hide empty description
 
 state "Meta\n(see part 2)" as MetaStart #ffe0b2
-state "Meta block\n(see part 3)" as BlockFirstLine #ffe0b2
+state "Meta block\n(see part 3)" as BlockLine #ffe0b2
 
 [*] --> StartOfLine
 
@@ -1455,7 +1392,7 @@ StartOfLine --> ObjectStart : DT4 // Subject omitted +\nimplicit Relation
 
 ' --- a line-initial ',,' may open a block for the *previous* triple --
 MaybeBlockOpen --> MaybeBlockOpen : WS
-MaybeBlockOpen --> BlockFirstLine : NL // ',,' alone on the line:\nattach block to previous Triple
+MaybeBlockOpen --> BlockLine : NL // ',,' alone on the line:\nattach block to previous Triple
 ' the ',,' turned out to be Subject text; DT2/DT4 end it, they are not part of it
 MaybeBlockOpen --> RelationStart : DT2 // Subject was ',,'
 MaybeBlockOpen --> ObjectStart : DT4 // Subject was ',,',\nimplicit Relation
@@ -1502,19 +1439,17 @@ hide empty description
 state "TripleObject\n(see part 1)" as TripleObject #ffe0b2
 state "StartOfLine\n(see part 1)" as StartOfLine #ffe0b2
 state "NotATriple\n(see part 1)" as NotATriple #ffe0b2
-state "Meta block\n(see part 3)" as BlockFirstLine #ffe0b2
+state "Meta block\n(see part 3)" as BlockLine #ffe0b2
 
 TripleObject --> MetaStart : CM2
 
 MetaStart --> MetaStart : WS
-MetaStart --> MetaRelationInline : DT2
+MetaStart --> MetaRelationInline : DT2 [a MetaTripleInline derives]
 MetaStart --> MetaObjectInline : DT4 // implicit MetaRelation
-MetaStart --> MetaTextInline : CM2 | SC2 | EM2 | TX
-MetaStart --> BlockFirstLine : NL // switch to block form
+MetaStart --> MetaTextInline : CM2 | SC2 | EM2 | TX\nDT2 [otherwise]
+MetaStart --> BlockLine : NL // switch to block form
 
 MetaRelationInline --> MetaRelationInline : WS | CM2 | SC2 | EM2 | TX
-MetaRelationInline --> StartOfLine : NL // emit Line as NotATriple
-MetaRelationInline --> NotATriple : DT4
 MetaRelationInline --> MetaObjectInline : DT2
 
 MetaObjectInline --> MetaObjectInline : WS | DT2 | DT4 | CM2 | EM2 | TX
@@ -1522,12 +1457,14 @@ MetaObjectInline --> MetaNextInline : SC2
 MetaObjectInline --> StartOfLine : NL // emit Triple + Metas
 
 MetaNextInline --> MetaNextInline : WS
-MetaNextInline --> MetaRelationInline : DT2
+MetaNextInline --> MetaRelationInline : DT2 [a MetaTripleInline derives]
 MetaNextInline --> MetaObjectInline : DT4
+MetaNextInline --> MetaTextInline : CM2 | SC2 | EM2 | TX\nDT2 [otherwise]
 MetaNextInline --> StartOfLine : NL // emit Line as NotATriple
-MetaNextInline --> NotATriple : CM2 | SC2 | EM2 | TX
 
-MetaTextInline --> MetaTextInline : WS | DT2 | DT4 | CM2 | SC2 | EM2 | TX
+' --- a note ends where the next entry begins: at ';;', like any entry --
+MetaTextInline --> MetaNextInline : SC2
+MetaTextInline --> MetaTextInline : WS | DT2 | DT4 | CM2 | EM2 | TX
 MetaTextInline --> StartOfLine : NL // emit Triple +\nMeta 'text'
 ....
 
@@ -1542,42 +1479,25 @@ state "NotATriple\n(see part 1)" as NotATriple #ffe0b2
 state "MaybeBlockOpen\n(see part 1)" as MaybeBlockOpen #ffe0b2
 
 ' --- two ways in: ',,' ending the triple line, or ',,' alone on the next line --
-MetaStart --> BlockFirstLine : NL
-MaybeBlockOpen --> BlockFirstLine : NL
+MetaStart --> BlockLine : NL
+MaybeBlockOpen --> BlockLine : NL
 
-' --- the first line decides triples XOR text -----------------------
-BlockFirstLine --> BlockFirstLine : WS
-BlockFirstLine --> MetaRelationInBlock : DT2 // commit to triples
-BlockFirstLine --> MetaObjectInBlock : DT4 // commit to triples,\nimplicit MetaRelation
-BlockFirstLine --> MetaTextBlockLine : TX | EM2 | SC2 // commit to text
-BlockFirstLine --> BlockEnd : CM2 // empty block
-BlockFirstLine --> StartOfLine : NL // blank line: abort block,\nemit Lines as NotATriple
-
-' --- triples only ------------------------------------------------
-BlockTripleLine --> BlockTripleLine : WS
-BlockTripleLine --> MetaRelationInBlock : DT2
-BlockTripleLine --> MetaObjectInBlock : DT4 // implicit MetaRelation
-BlockTripleLine --> BlockEnd : CM2
-BlockTripleLine --> StartOfLine : NL // abort block,\nemit Lines as NotATriple
-BlockTripleLine --> NotATriple : TX | EM2 | SC2 // no text in a triple block
+' --- every line of the block, first or not, decides for ITSELF ------
+BlockLine --> BlockLine : WS
+BlockLine --> MetaRelationInBlock : DT2 [a MetaTripleInBlock derives]
+BlockLine --> MetaObjectInBlock : DT4 // implicit MetaRelation
+BlockLine --> MetaTextBlockLine : TX | EM2 | SC2\nDT2 [otherwise]
+BlockLine --> BlockEnd : CM2 // closing ',,' (or an empty block)
+BlockLine --> StartOfLine : NL // blank line: abort block,\nemit Lines as NotATriple
 
 MetaRelationInBlock --> MetaRelationInBlock : WS | CM2 | SC2 | EM2 | TX
-MetaRelationInBlock --> StartOfLine : NL // emit Lines as NotATriple
-MetaRelationInBlock --> NotATriple : DT4
 MetaRelationInBlock --> MetaObjectInBlock : DT2
 
 MetaObjectInBlock --> MetaObjectInBlock : WS | DT2 | DT4 | CM2 | SC2 | EM2 | TX
-MetaObjectInBlock --> BlockTripleLine : NL
-
-' --- text only ---------------------------------------------------
-BlockTextLine --> BlockTextLine : WS
-BlockTextLine --> MetaTextBlockLine : TX | EM2 | SC2
-BlockTextLine --> BlockEnd : CM2
-BlockTextLine --> StartOfLine : NL // abort block,\nemit Lines as NotATriple
-BlockTextLine --> NotATriple : DT2 | DT4 // no triples in a text block
+MetaObjectInBlock --> BlockLine : NL // ends the current note run
 
 MetaTextBlockLine --> MetaTextBlockLine : WS | DT2 | DT4 | CM2 | SC2 | EM2 | TX
-MetaTextBlockLine --> BlockTextLine : NL
+MetaTextBlockLine --> BlockLine : NL // a following text line CONTINUES this note
 
 ' --- closing CM2 -------------------------------------------------
 BlockEnd --> BlockEnd : WS
@@ -1601,39 +1521,60 @@ abandoned and every line it spans is emitted as `NotATriple` -- see
 <<unterminated-constructs>> for what "abandoned" means operationally.
 - The `DT4` shortcut skips the `Relation` state entirely, since `QuadDot` carries the
 implicit relation `links to`.
+
 - The same holds in the **meta** part: `MetaTripleInline := QuadDot MetaObjectInline` and
 `MetaTripleInBlock := QuadDot MetaObjectInBlock` emit the *same* implicit
 xref:ddot-it-vocabulary.adoc#links-to[`links to`] as the meta relation -- "implicit
 MetaRelation" in parts 2 and 3 of the automaton means exactly that, and there is no separate
 meta-only default. See corpus case `24-untyped-inline-meta`.
+
 - `MetaStart` is the only place where the inline and the block form are told apart: an `NL`
 right after the `CM2` selects the block form, anything else the inline form.
+
 - A block can also be opened from `StartOfLine`, one line *later* than the triple it belongs to
 (`MetaBlockOpen`'s second spelling). `MaybeBlockOpen` is the one-token lookahead this needs: a
 line-initial `CM2` is a block opener only if an `NL` follows it, otherwise it is just the start
 of a `Subject` that happens to begin with `,,`. Compare `09-standalone-comma-block` (opener)
 with `09`'s own first line (an ordinary triple).
-- `MetaTextInline` and `MetaTextBlockLine` are entered only on a token other than `DT2` / `DT4`.
-This mirrors the grammar: once meta text has started, a later `DT2` is text, not a separator
-(see Example 2).
-- Inside a `,,`-block, triples and text cannot be mixed. `BlockFirstLine` commits the whole
-block: a leading `DT2` / `DT4` selects `BlockTripleLine` (where `TX` / `EM2` / `SC2` at line
-start is an error), plain text selects `BlockTextLine` (where `DT2` / `DT4` at line start is
-an error). This matches `MetaBlock`, which is either all `MetaTripleInBlock` or all
-`MetaTextBlockLine`.
+
+- Once meta text has started, a later `DT2` is text, not a separator: `MetaTextInline`'s self-loop
+carries `DT2` / `DT4`. Only `SC2` leaves the state, and it does so unconditionally --
+`MetaTextInline` and `MetaObjectInline` have the *same* transitions and differ only in the role
+they emit.
+- `[a MetaTripleInline derives]` / `[a MetaTripleInBlock derives]` is the ordered choice of
+`MetaEntryInline` / `MetaEntryInBlock`: a leading `DT2` selects the pair states only if the whole
+pair is there (a closing `DT2` and a non-empty object). Otherwise the same `DT2` starts a note --
+`,, ..bla` is the note `..bla`, not a dead line. `DT4` needs no guard: `QuadDot MetaObject` cannot
+fail once the object is non-empty, and an empty one falls through to text like any other.
++
+This is the automaton's only lookahead, and it is bounded: an entry ends at the next `SC2`
+or `NL`, so the guard never has to look past one entry.
+
+- Inside a `,,`-block, triples and text mix freely, so every line decides for itself and the three
+old line states (`BlockFirstLine`, `BlockTripleLine`, `BlockTextLine`) are one `BlockLine`. What
+distinguishes a *note* from the note above it is only what lies between them: adjacent
+`MetaTextBlockLine` s are one `MetaTextBlock`, and a triple line ends the run.
+
+- Two adjacent notes are therefore not writable in a block -- the lines fold into one.
+This is the price of keeping a pasted paragraph intact, and the inline form writes them apart when that is
+what is meant: `+++,, one ;;+++ two` is two notes.
+
 - The closing `CM2` is recognised only at the start of a line, after optional `WS`, from
-`BlockFirstLine`, `BlockTripleLine` or `BlockTextLine`. A `CM2` anywhere else in a block
-line is content.
-- A block may be empty: reaching the closing `CM2` straight from `BlockFirstLine` gives
+`BlockLine`. A `CM2` anywhere else in a block line is content.
+
+- A block may be empty: reaching the closing `CM2` straight from the first `BlockLine` gives
 `,,` NL `WS*` `,,` with no Meta at all.
+
 - The object must hold at least one token. `ObjectStart` skips leading `WS`; an `NL` or `CM2`
 before any object token makes the line a `NotATriple`, matching the mandatory `Object` in the
 grammar.
+
 - `SC2` (`;;`) is plain text everywhere in the triple line (`Subject`, `RelationStart`,
 `Relation`, `ObjectStart`, `TripleObject`, `NotATriple`). It becomes a separator only in the
-inline `,,` meta form (part 2), where `MetaObjectInline --> MetaNextInline` on `SC2` divides
-several (relation, object) assertions about one triple; in the block meta form (part 3) newlines
-do that job and `;;` is content.
+inline `,,` meta form (part 2), where it divides the entries about one triple -- after an object
+and inside a note alike, with no condition on what follows it. In the block meta form (part 3)
+newlines do that job and `;;` is content everywhere, which is what makes the block the escape
+hatch for a note or value that has to carry one (`28-semicolon-in-meta-block`).
 
 
 [[unterminated-constructs]]

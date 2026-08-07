@@ -1,0 +1,190 @@
+/* ==========================================================================
+   ddot.it — the grammar for parsing one Snippet.
+
+   Notation: the EBNF of the XML 1.0 specification, section 6 "Notation":
+       https://www.w3.org/TR/xml/#sec-notation
+
+   Operators used here, all from that notation:
+       A ::= B     production            A?          optional
+       "lit"       literal string        A*          zero or more
+       #xN         character by number   A+          one or more
+       [#xN-#xM]   character range       A B         sequence
+       (A)         grouping              A | B       alternative
+       /* ... */   comment               A - B       matches A but not B
+
+   TWO SEMANTIC EXTENSIONS. The notation above fixes the *syntax* of this file;
+   two of its operators are read with stronger semantics than XML gives them,
+   because the grammar is otherwise ambiguous. Both are specified in the parse
+   spec under "Disambiguation":
+
+     1. `|` is an ORDERED choice, as in a PEG: alternatives are tried left to
+        right and the first that matches wins.
+     2. `?`, `*` and `+` are GREEDY: they consume as much as they can while
+        still allowing the rest of the production to match.
+
+   Symbol names follow the parse spec's own convention -- terminals UPPERCASE,
+   non-terminals TitleCase -- rather than XML's initial-capital-for-regular-
+   expressions rule, so that every name here matches the name used in the
+   prose, in the AST diagram and in the parse automaton.
+   ========================================================================== */
+
+
+/* ==========================================================================
+   1. TERMINALS
+
+   Restated here so this file stands on its own. The normative definitions,
+   including the "maximal run" counting rule, are in the parse spec's
+   Lexical Layer; where the two differ, that section wins.
+   ========================================================================== */
+
+/* Any Unicode code point. A ddot.it chunk is always UTF-8. */
+Char        ::= [#x0-#x10FFFF]
+
+/* TAB plus every character in Unicode general category Zs. Never a newline.
+   Zero-width characters (U+200B, U+FEFF) are category Cf and are ordinary text. */
+WS          ::= #x9 | #x20 | #xA0 | #x1680 | [#x2000-#x200A]
+              | #x202F | #x205F | #x3000
+
+/* Chunk preprocessing has already normalised CR and CR LF to LF. */
+NL          ::= #xA
+
+/* A symbol run is one of these tokens only at its special length: the run must
+   be neither preceded nor followed by another of the same character. A run of
+   any other length -- one dot, three dots, a lone comma -- is TX. That rule is
+   contextual and cannot be written in this notation; see the parse spec's
+   Tokenization rule. */
+DT2         ::= ".."
+DT4         ::= "...."
+CM2         ::= ",,"
+SC2         ::= ";;"
+EM2         ::= "!!"
+
+/* Everything else: a run of characters holding no WS, no NL, and none of the
+   symbol tokens above. This is where `Node.js`, `U.S.A.` and `...` land. */
+TxChar      ::= Char - (WS | NL)
+TX          ::= TxChar+ - (TxChar* (DT2 | DT4 | CM2 | SC2 | EM2) TxChar*)
+
+
+/* ==========================================================================
+   2. FIELD TEXT
+
+   Every field of a triple holds the same shape of text: a run of tokens that
+   may contain WS between its parts but is not bounded by WS. The fields differ
+   only in which token they may not contain, which is written with `-`.
+   ========================================================================== */
+
+/* Every token a field is built from, except the WS that may separate them. */
+Word        ::= DT2 | DT4 | CM2 | SC2 | EM2 | TX
+
+/* Whitespace-trimmed, at least one token. No field may contain a NL: a triple
+   is confined to one logical line. */
+Text        ::= Word (WS* Word)*
+
+/* A name stops at the '..' markers that delimit it. */
+NameWord    ::= Word - (DT2 | DT4)
+Name        ::= NameWord (WS* NameWord)*
+
+/* An object stops at the ',,' that opens the meta part. */
+ObjectWord  ::= Word - CM2
+ObjectText  ::= ObjectWord (WS* ObjectWord)*
+
+/* An inline meta entry stops at the ';;' that starts the next entry -- the
+   object of a pair and a free-text note alike. */
+EntryWord   ::= Word - SC2
+EntryText   ::= EntryWord (WS* EntryWord)*
+
+
+/* ==========================================================================
+   3. GRAMMAR
+   ========================================================================== */
+
+Snippet     ::= Line*
+
+/* Ordered choice: a Line is a Triple if one can be derived, otherwise
+   NotATriple. NotATriple is therefore never reachable for text that forms
+   a Triple. */
+Line        ::= WS* Triple WS* NL
+              | NotATriple NL
+
+/* Any run of tokens on one line. Reached only when the Triple alternative
+   failed. */
+NotATriple  ::= (WS | Word)*
+
+DoubleDot   ::= WS* DT2 WS*
+
+/* The untyped (empty) relation, written '....' or '.. ..'.
+   WS+, not WS*: with no WS between, the two DT2 would be four adjacent dots,
+   which lexes as DT4 -- that is the first alternative, not the second. */
+QuadDot     ::= WS* (DT4 | DT2 WS+ DT2) WS*
+
+Triple      ::= Subject?
+                (DoubleDot Relation DoubleDot | QuadDot)
+                Object
+                WS* Meta?
+
+/* Subject, Relation and MetaRelation are the same production. They keep
+   separate names because the AST does. */
+Subject     ::= Name
+Relation    ::= Name
+Object      ::= ObjectText
+
+
+/* --- meta ---------------------------------------------------------------- */
+
+Meta                ::= CM2 WS* MetaInline WS*
+/* the block may be empty: ',,' NL WS* ',,' */
+                      | MetaBlockOpen NL (MetaBlock NL)? WS* CM2 WS*
+
+/* The ',,' that opens a block may sit at the end of the triple line, or alone
+   on the line *after* it. Both attach the block to the same triple. */
+MetaBlockOpen       ::= CM2
+                      | NL WS* CM2
+
+MetaRelation        ::= Name
+
+
+/* --- meta, inline form: entries separated by ';;' ------------------------- */
+
+/* One chain of entries, in any mix: `,, ..k.. v ;; a note ;; .... o` is a
+   typed pair, a note, and an untyped pair, in that order. */
+MetaInline          ::= MetaEntryInline (SC2 MetaEntryInline)*
+
+/* Ordered choice: the two dotted forms are tried first, and text is what is
+   left. So a '..' that never closes is a note, not an error -- `,, ..bla` is
+   the note '..bla'. */
+MetaEntryInline     ::= MetaTripleInline
+                      | MetaTextInline
+
+MetaTripleInline    ::= DoubleDot MetaRelation DoubleDot MetaObjectInline
+                      | QuadDot MetaObjectInline
+
+/* Both end at the next ';;' or at the newline. The two productions are the
+   same shape and differ only in the role they carry. */
+MetaObjectInline    ::= EntryText
+MetaTextInline      ::= EntryText
+
+
+/* --- meta, block form: entries separated by NL ---------------------------- */
+
+/* Pairs and text lines may be mixed freely, in any order. No ';;' is special
+   in a block: NL separates the entries, so ';;' is content everywhere. */
+MetaBlock           ::= MetaEntryInBlock (NL MetaEntryInBlock)*
+
+MetaEntryInBlock    ::= MetaTripleInBlock
+                      | MetaTextBlock
+
+MetaTripleInBlock   ::= DoubleDot MetaRelation DoubleDot MetaObjectInBlock
+                      | QuadDot MetaObjectInBlock
+
+MetaObjectInBlock   ::= Text
+
+/* Greedy: ADJACENT text lines are one note, joined by newlines, so a pasted
+   paragraph stays one note. A pair line ends the run; the next text line after
+   it starts a new note. */
+MetaTextBlock       ::= MetaTextBlockLine (NL MetaTextBlockLine)*
+
+/* Any text at all -- MetaEntryInBlock already tried the pair forms, so a
+   leading DT2/DT4 that did not form a pair is this line's text, exactly as
+   inline. The subtraction is the one restriction: the line may not BEGIN with
+   CM2, because a line-initial ',,' closes the block. */
+MetaTextBlockLine   ::= Text - (CM2 (WS | Word)*)
