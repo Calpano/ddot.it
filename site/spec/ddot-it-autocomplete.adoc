@@ -246,15 +246,14 @@ the caret. No lookahead, no whole-line analysis.
 | `TripleObject`        | `o`  |
 | `MetaStart`           | `mr` | Right after `,,`
 | `MetaRelationInline`  | `mr` |
-| `MetaNextInline`      | `mr` | Right after `;;`, i.e. the next pair
+| `MetaNextInline`      | `mr` | Right after `;;`, i.e. the start of the next entry
 | `MetaObjectInline`    | `mo` |
-| `BlockFirstLine`      | `mr` | First line of a `,,` block, before it commits
-| `BlockTripleLine`     | `mr` |
+| `BlockLine`           | `mr` | Start of a line inside a `,,` block
 | `MetaRelationInBlock` | `mr` |
 | `MetaObjectInBlock`   | `mo` |
 | `MaybeBlockOpen`      | `s`  | A line-initial `,,` that may still be subject text
 | `MetaTextInline`      | --   | Free-form text, see <<where-completion-fires>>
-| `BlockTextLine`, `MetaTextBlockLine` | -- | Likewise
+| `MetaTextBlockLine`   | --   | Likewise
 | `BlockEnd`            | --   | Only a closing `,,` is expected here
 | `NotATriple`          | --   | The line cannot become a triple
 | *excluded*, *verbatim* | --  | Inert regions
@@ -266,6 +265,12 @@ Two properties make this the right formalism rather than a second one:
 half-written line lands in a sensible state on its own. Typing `Dir` reaches `Subject` — the
 <<where-completion-fires,permissive behaviour>> autocompletion needs is not a special rule, it
 is what the automaton already does.
++
+NOTE: The parse automaton's one guard, `[a MetaTripleInline derives]`, has no prefix to look at:
+when the caret sits right after `,, ..` the closing `..` has not been typed yet. Autocompletion
+resolves it **optimistically** -- a `DT2` opening a meta entry is taken as the start of a pair,
+so `,, ..` queries `mr`. The parser's fallback to a note applies to finished text and is not a
+completion state.
 . **It is defined over real tokens.** Slot detection inherits the `DT2`/`DT4` definitions, so
 `+...+` and `+......+` cannot be miscounted as separators. Implementations that count raw `..`
 occurrences instead need a special case for every stray run of dots.

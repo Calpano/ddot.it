@@ -49,14 +49,13 @@ WS* subject WS* ( DT4 | DT2 WS+ DT2 ) WS* object WS* Meta? NEWLINE
 
 Either form may omit the subject (a <<dd-progressive,continuation line>>), and `Meta?` is one of:
 
-.Meta, inline triple form -- any number of pairs, separated by `SC2`
+.Meta, inline form -- any number of *entries*, separated by `SC2`
 ----
-CM2 WS* DT2 WS* meta-relation WS* DT2 WS* meta-object ( WS* SC2 WS* … )*
-----
+CM2 WS* entry ( WS* SC2 WS* entry )*
 
-.Meta, inline text form -- no `DT2` after the `CM2`
-----
-CM2 WS* meta-text
+entry := DT2 WS* meta-relation WS* DT2 WS* meta-object   // a typed pair
+       | ( DT4 | DT2 WS+ DT2 ) WS* meta-object           // an untyped pair
+       | meta-text                                       // a free-text note
 ----
 
 .Meta, block form -- opened by `CM2` at end of line or alone on the next line
@@ -64,7 +63,12 @@ CM2 WS* meta-text
 CM2 NEWLINE ( meta-triple-line | meta-text-line )* WS* CM2
 ----
 
-The meta-relation slot is likewise absent in the untyped (`DT4`) meta form.
+The meta-relation slot is likewise absent in the untyped (`DT4`) meta form. Pairs and notes
+**mix freely and in any order** -- inline they are separated by `SC2`, in a block by newlines.
+Inline, an entry always ends at the next `SC2` or at the end of line,
+whether it is a pair's object or a note (`;;` separates unconditionally);
+this is what lets `triple-line` stay a single-line `match` with no lookahead.
+In a block `SC2` is content everywhere.
 
 And in layer 3 we refine each of _subject_, _relation_, _object_, _meta-relation_, _meta-object_
 and _meta-text_ into:
@@ -101,10 +105,10 @@ Highlighting happens, as far as _TextMate_ grammars are used, in two layers.
 | object                        | Entity           |
 | meta-relation                 | Entity           |
 | meta-object                   | Entity           |
-| meta-text                     | Entity           | Free text after a `,,` that holds no triple
+| meta-text                     | Entity           | A meta entry that is a free-text note rather than a pair
 | DT2 / DT4 / `.. ..`           | Marker           | Signature syntax of {dd}, important to highlight
 | CM2 (`,,`)                    | Marker           | Opens and closes the meta part
-| SC2 (`;;`)                    | Marker           | Only inside the inline meta part
+| SC2 (`;;`)                    | Marker           | Only inside the inline meta part, where it always separates entries
 | EM2 + URI-path                | In-Text-Command  | keyword-style, including the `EM2` (`!!`)
 |===
 
@@ -296,12 +300,12 @@ Top-level `patterns`, in order (**order matters** -- first match wins, so most s
 . **`#block-verbatim`** -- a gated triple line whose object is a plain `!!block`. `end` = `+++^[ \t]*$+++` (first blank line). Otherwise as above. Placed after the marked variant.
 . **`#meta-block-after-triple`** -- a gated triple line that ends in `,,`. `begin` styles the triple + opening `,,`; `end` = `+++^[ \t]*,,[ \t]*$+++` (closing `,,`); the content holds nested `#meta-block-triple-line` / `#meta-block-text-line` patterns (the block form, part 3 of the Parse automaton).
 . **`#meta-block-standalone`** -- a line consisting solely of `,,` also opens a meta block, after an already-complete triple line. Required by golden-corpus case `09-standalone-comma-block`, which the `Triple := … Object WS* Meta?` production does not by itself allow; the corpus has the last word.
-. **`#triple-line`** -- the common case: one physical line carrying a triple and any **inline** meta (`,, ..mr.. mo ;; ..mr2.. mo2` or `,, text`). A single-line `match` with captures; each field capture carries a nested `patterns` list of `#command`. Progressive (D8): relation, closing marker, object and meta are all optional.
+. **`#triple-line`** -- the common case: one physical line carrying a triple and any **inline** meta (`,, ..mr.. mo ;; a note ;; .... mo2` -- pairs and notes in any mix). A single-line `match` with captures; each field capture carries a nested `patterns` list of `#command`. Progressive (D8): relation, closing marker, object and meta are all optional. Every inline meta entry is bounded by `;;` or end of line, so the meta group is a plain repetition and needs no lookahead.
 
 Anything matching none of these is a `NotATriple` line and stays plain.
 
 .Field capture pattern (inside D5's gated match)
-Each of subject / relation / object / meta-* is captured as the text between its bounding markers (lazily, respecting its `TextExcept{…}` set from the grammar), assigned its <<Scope Name Mapping,entity scope>>, and given a nested `patterns` list containing `#command` so an in-text command inside the field is highlighted on top of the entity colour.
+Each of subject / relation / object / meta-* is captured as the text between its bounding markers (lazily, respecting the xref:ddot-it-parse.adoc#field-text[`Word` class] the grammar gives that field), assigned its <<Scope Name Mapping,entity scope>>, and given a nested `patterns` list containing `#command` so an in-text command inside the field is highlighted on top of the entity colour.
 
 .Two regex details worth keeping
 - **Operator alternation, not rule ordering.** `QuadDot` and `DoubleDot` are alternatives *within one regex* (`QUAD` listed first), not two rules in priority order. Leftmost-first then does the right thing in both directions: `Alpha .. .. Beta` yields one `doubledot` spanning `.. ..`, while `a ..b.. c .. .. d` still parses as a typed triple, because its first marker sits further left.

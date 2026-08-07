@@ -22,11 +22,11 @@ decides.
 | `command`        | `ddot.it`, `ddot.it/<word>`, `!!`, `!!<word>`          | `keyword.control.command.ddot`            |
 | `command-param`  | A command's query or fragment (`?end=`, `#frag`)       | `variable.parameter.command.ddot`         |
 | `meta-delim`     | `,,` opening or closing metadata                       | `punctuation.section.meta.ddot`           |
-| `meta-separator` | `;;` between inline (relation, object) pairs           | `punctuation.separator.meta.ddot`         |
+| `meta-separator` | `;;` between inline meta entries (pairs and notes alike) | `punctuation.separator.meta.ddot`       |
 | `meta-doubledot` | `..` / `....` inside metadata                          | `keyword.operator.doubledot.meta.ddot`    |
 | `meta-relation`  | Predicate inside metadata                              | `entity.name.relation.meta.ddot`          |
 | `meta-object`    | Object inside metadata                                 | `entity.name.object.meta.ddot`            |
-| `meta-text`      | Free-form text inside a `,,` block (no triple match)   | `entity.name.object.meta.text.ddot`       |
+| `meta-text`      | A meta entry that is a free-text note, not a pair       | `entity.name.object.meta.text.ddot`       |
 | `excluded`       | Body of an `off`–`on` span (markers stay `command`)    | `comment.block.excluded.ddot`             |
 | `verbatim`       | Body of a `!!block` span (opener stays `command`)      | `string.unquoted.block.ddot`              |
 | `block-end`      | The `!!block?end=` marker — **both** occurrences        | `variable.parameter.block-end.ddot`       |
@@ -75,3 +75,9 @@ so a theme *can* single metadata out later.
   text after a `,,` starts at its first non-whitespace character: the grammar
   writes `Meta := CM2 WS* MetaInline WS*`, so the space between `,,` and the
   text belongs to neither token.
+- **Meta entries mix freely.** A `,,` part carries pairs and free-text notes in
+  any order — inline separated by `;;`, in a block one per line (cases `36`–`39`).
+  Inline, `;;` ends an entry **unconditionally**, a note exactly like a pair's
+  object, so no `;;` is ever part of a `meta-text` or `meta-object` span. Inside
+  a `,,` block newlines separate the entries and `;;` is content everywhere
+  (case `28`).
