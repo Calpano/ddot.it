@@ -6,112 +6,393 @@ ddot.it lets you embed typed links (triples) directly in any text — source cod
 
 For writing ddot.it, just read write.md and skip the rest.
 
-## Syntax - for Parsing
+## Syntax by Example
 
-### Codepoints
+Every example below is a case from the golden corpus (`test-data/cases/`), named at the end of
+its section. Input and output there are verified against the reference implementation, so these
+are contracts, not illustrations.
 
-Newline normalisation is applied before parsing: `CR LF` → NL, `LF` → NL, `CR` → NL.
-Whitespace is stripped from the start and end of names. Whitespace (`WS`) is TAB plus every
-Unicode space separator (category `Zs`) — so NBSP (U+00A0) and NARROW NO-BREAK SPACE (U+202F)
-count as whitespace, because they are visually indistinguishable from a space. Zero-width
-characters (U+200B, U+FEFF) are category `Cf` and are ordinary text.
+**Reading the events.** Each recognised triple emits one JSON object. Every event also carries
+`kind`, `source` and `location`, which are omitted below to keep the examples readable — see
+"Output: Triple Events".
 
-### Tokens
-
-Symbol characters (`.`, `,`, `;`, `!`) form **maximal runs**; a run is a special token only at its
-special length. Everything else is text (`TX`), so `Node.js` and `U.S.A.` contain no operator.
-
-| Token | Meaning                       | Regex                |
-|-------|-------------------------------|----------------------|
-| `DT2` | exactly two dots              | `(?<!\.)\.{2}(?!\.)` |
-| `DT4` | exactly four dots             | `(?<!\.)\.{4}(?!\.)` |
-| `CM2` | exactly two commas            | `(?<!,),{2}(?!,)`    |
-| `SC2` | exactly two semicolons        | `(?<!;);{2}(?!;)`    |
-| `EM2` | exactly two exclamation marks | `(?<!!)!{2}(?!!)`    |
-
-### Formal Grammar (EBNF)
-
-A document is a sequence of lines. There is no chunking construct: an omitted subject continues
-the subject of the previous line.
+### A triple
 
 ```
-Snippet     := Line*
-
-// Ordered choice: a Line is a Triple if one can be derived, otherwise NotATriple.
-Line        := WS* Triple WS* NL
-              | NotATriple NL
-
-NotATriple  := (WS | DT2 | DT4 | CM2 | SC2 | EM2 | TX)*
-
-DoubleDot   := WS* DT2 WS*
-QuadDot     := WS* ( DT4 | DT2 WS+ DT2 ) WS*
-
-Triple      := Subject?
-               ( DoubleDot Relation DoubleDot | QuadDot )
-               Object
-               WS* Meta?
-
-Subject     := TextExcept{NL,DT2,DT4}
-Relation    := TextExcept{NL,DT2,DT4}
-Object      := TextExcept{NL,CM2}
-
-Meta              := CM2 WS* MetaInline WS*
-                   | MetaBlockOpen NL (MetaBlock NL)? WS* CM2 WS*
-MetaBlockOpen     := CM2 | NL WS* CM2
-MetaInline        := ( MetaTripleInline (SC2 MetaTripleInline)* )
-                   | MetaTextInline
-MetaTripleInline  := DoubleDot MetaRelation DoubleDot MetaObjectInline
-                   | QuadDot MetaObjectInline
-MetaBlock         := MetaTripleInBlock (NL MetaTripleInBlock)*
-                   | MetaTextBlock
+Project Eagle ..started in.. 2024
+```
+```json
+{"from":"Project Eagle","type":"started in","to":"2024"}
 ```
 
-Fields may contain spaces; only the operators delimit them. Leading/trailing whitespace is
-stripped. `Object` is mandatory and non-empty. Incomplete triples are silently ignored.
+Fields may contain spaces; only the operators delimit them. Leading and trailing whitespace is
+stripped, so `Dirk   .. works at ..  SAP` gives the same three values as `Dirk ..works at.. SAP`.
+`(01-simple-triple)`
 
-The normative definition is the Parse Specification (`site/spec/ddot-it-parse.adoc` (rendered at /spec/ddot-it-parse.html)).
+### Untyped link — `....`
 
-### Typed Link
+Use `....` (or `.. ..`) when the relation is just "see this". Both spellings are the same
+operator and both mean the relation `links to`, which is **written out** in the event.
 
-- Syntax: `aaa .. bbb .. ccc`
-- Effect: "aaa" links to "ccc" with link type "bbb"
-- With metadata: `aaa .. bbb .. ccc ,, ddd`
-
-### Untyped Link
-
-- Syntax: `aaa .... ccc` (or `aaa .. .. ccc`)
-- Effect: "aaa" links to "ccc" with default link type `links to`
-
-### Additional Properties
-
-Omit the subject to add more properties to the last subject:
 ```
-Dirk Hagemann .. works at .. SAP
-.. knows .. Claudia Stern
-.. phone .. 123-456-789
+Project Eagle .... Moonshot
+Alpha .. .. Beta
+```
+```json
+{"from":"Project Eagle","type":"links to","to":"Moonshot"}
+{"from":"Alpha","type":"links to","to":"Beta"}
+```
+`(02-untyped-link, 10-spaced-untyped)`
+
+### More facts about the same subject
+
+Omit the subject and the previous line's subject continues. This works for the untyped form too.
+
+```
+Project Eagle ..started in.. 2024
+..doc site.. example.com/docbase/8dcjsid
+.... Moonshot
+```
+```json
+{"from":"Project Eagle","type":"started in","to":"2024"}
+{"from":"Project Eagle","type":"doc site","to":"example.com/docbase/8dcjsid"}
+{"from":"Project Eagle","type":"links to","to":"Moonshot"}
 ```
 
-### Metadata
+There is no shorthand for several objects of the same subject+relation — repeat the line.
+`(07-leading-separator-continuation, 26-untyped-continuation)`
 
-Short form (single triple): `aaa .. bbb .. ccc ,, ..since.. 2010`
+### Metadata: one pair
 
-Long form (multiple metadata triples):
+`,,` attaches metadata to the triple on its left.
+
 ```
-aaa .. bbb .. ccc ,,
-..since.. 2010
+John Doe ..leads.. Project Eagle ,, ..since.. 2025
+```
+```json
+{"from":"John Doe","type":"leads","to":"Project Eagle","meta":[{"type":"since","to":"2025"}]}
+```
+`(03-inline-meta)`
+
+### Metadata: a free-text note
+
+Metadata does not have to be a pair. Plain text after `,,` is a **note**, and it carries the
+built-in relation `text` — **not** `links to`.
+
+```
+John Doe ..leads.. Project Eagle ,, a random note
+```
+```json
+{"from":"John Doe","type":"leads","to":"Project Eagle","meta":[{"type":"text","to":"a random note"}]}
+```
+
+The untyped `,, .... 2025` form is the one that means `links to`:
+
+```
+John Doe ..leads.. Project Eagle ,, .... 2025
+```
+```json
+{"from":"John Doe","type":"leads","to":"Project Eagle","meta":[{"type":"links to","to":"2025"}]}
+```
+`(13-inline-meta-text, 24-untyped-inline-meta)`
+
+### Metadata: several entries on one line, separated by `;;`
+
+`;;` separates metadata **entries**. Pairs and notes mix freely, in any order, and the event
+keeps the written order.
+
+```
+John Doe ..leads.. Project Eagle ,, ..since.. 2025 ;; ..until.. 2027
+```
+```json
+{"from":"John Doe","type":"leads","to":"Project Eagle","meta":[{"type":"since","to":"2025"},{"type":"until","to":"2027"}]}
+```
+
+```
+Dirk ..works at.. SAP ,, ..since.. 2016 ;; a random note ;; .... Walldorf ;; ..until.. 2020
+```
+```json
+{"from":"Dirk","type":"works at","to":"SAP","meta":[{"type":"since","to":"2016"},{"type":"text","to":"a random note"},{"type":"links to","to":"Walldorf"},{"type":"until","to":"2020"}]}
+```
+
+`;;` separates **unconditionally** — it ends a note exactly as it ends a pair's object:
+
+```
+Dirk ..works at.. SAP ,, first note ;; second note ;; third note
+```
+```json
+{"from":"Dirk","type":"works at","to":"SAP","meta":[{"type":"text","to":"first note"},{"type":"text","to":"second note"},{"type":"text","to":"third note"}]}
+```
+
+So a note containing a literal `;;` cannot be written inline — use the block form below.
+`(22-inline-meta-separator, 37-inline-meta-mixed, 36-inline-meta-notes)`
+
+### Metadata: block form
+
+End the triple line with `,,`, put one entry per line, and close with `,,` on its own line.
+Newlines separate the entries here, so `;;` is ordinary text inside a block.
+
+```
+Dirk Hagemann ..works at.. SAP ,,
+..year.. 2010
 ..fictive.. yes
 ,,
 ```
+```json
+{"from":"Dirk Hagemann","type":"works at","to":"SAP","meta":[{"type":"year","to":"2010"},{"type":"fictive","to":"yes"}]}
+```
 
-Several inline pairs are separated by `;;`: `,, ..since.. 2025 ;; ..until.. 2027`.
-Inside a multi-line `,,` block a `;;` is ordinary text.
+Pairs and notes mix in a block too, in written order:
 
-Metadata can also be a plain string: `aaa .. bbb .. ccc ,, see also the appendix`.
-Free metadata text carries the built-in relation `text`, so that is
-`{"type": "text", "to": "see also the appendix"}` — NOT `links to`. The untyped form
-`,, .... 2025` is the one that means `links to`, and it is emitted with no `type` at all.
+```
+Dirk ..works at.. SAP ,,
+..since.. 2016
+a note between pairs
+.... Walldorf
+..until.. 2020
+,,
+```
+```json
+{"from":"Dirk","type":"works at","to":"SAP","meta":[{"type":"since","to":"2016"},{"type":"text","to":"a note between pairs"},{"type":"links to","to":"Walldorf"},{"type":"until","to":"2020"}]}
+```
+`(04-multiline-meta, 39-block-meta-mixed)`
 
-### Standard Relation Types
+### Metadata: notes in a block fold together
+
+**Adjacent** text lines are ONE note joined by newlines — which is what keeps a pasted paragraph
+intact. A pair line ends the run; the next text line starts a new note.
+
+```
+Dirk ..works at.. SAP ,,
+first note
+still the first note
+..since.. 2016
+second note
+,,
+```
+```json
+{"from":"Dirk","type":"works at","to":"SAP","meta":[{"type":"text","to":"first note\nstill the first note"},{"type":"since","to":"2016"},{"type":"text","to":"second note"}]}
+```
+
+Two *adjacent* notes are therefore not writable in a block. Use the inline `;;` form for that.
+`(27-multiline-meta-text-lines, 38-block-meta-notes)`
+
+### Metadata: less common block forms
+
+The opening `,,` may stand alone on the line after the triple:
+
+```
+Project Eagle ..started in.. 2024
+,,
+free-form note line
+,,
+```
+```json
+{"from":"Project Eagle","type":"started in","to":"2024","meta":[{"type":"text","to":"free-form note line"}]}
+```
+
+A block may be empty — the triple is still emitted, with no `meta` key at all:
+
+```
+Project Eagle ..started in.. 2024 ,,
+,,
+```
+```json
+{"from":"Project Eagle","type":"started in","to":"2024"}
+```
+
+`;;` inside a block is content, not a separator:
+
+```
+Dirk Hagemann ..works at.. SAP ,,
+..note.. first ;; second
+,,
+```
+```json
+{"from":"Dirk Hagemann","type":"works at","to":"SAP","meta":[{"type":"note","to":"first ;; second"}]}
+```
+`(09-standalone-comma-block, 25-empty-meta-block, 28-semicolon-in-meta-block)`
+
+### `!!this` — annotate the document itself
+
+```
+ddot.it/this ..project.. Code Red
+!!this ..author.. Alice
+```
+```json
+{"from":"ddot.it/this","type":"project","to":"Code Red"}
+{"from":"!!this","type":"author","to":"Alice"}
+```
+
+The parser emits the command verbatim; the collector substitutes the document's source URI.
+`(16-this, 05-command, 11-shorthand-command)`
+
+### `!!off` / `!!on` — exclude a region
+
+Recognised **anywhere on a line**, including inside a host language's own comment syntax.
+Nothing between them is parsed.
+
+```
+Active ..likes.. Coffee
+<!-- ddot.it/off -->
+Draft ..maybe.. ship it
+# !!on
+Back ..works.. now
+```
+```json
+{"from":"Active","type":"likes","to":"Coffee"}
+{"from":"Back","type":"works","to":"now"}
+```
+
+Caution: this also fires in prose *about* the commands — writing "use `!!off`" really does turn
+parsing off.
+`(06-off-on-toggle, 31-off-in-comment)`
+
+### `!!block` — a multi-line, verbatim value
+
+The value becomes the lines from the next line down to the terminator: the first **blank line**,
+or a custom `?end=MARKER`. Nothing inside is interpreted, so `..`, `,,` and commands stay literal.
+
+```
+john ..address.. ddot.it/block
+Broadway 1
+Berlin
+Germany
+
+john ..age.. 11
+```
+```json
+{"from":"john","type":"address","to":"Broadway 1\nBerlin\nGermany"}
+{"from":"john","type":"age","to":"11"}
+```
+
+With `?end=`, blank lines no longer terminate — which is the reason to use it:
+
+```
+john ..address.. !!block?end=END
+1 Broad Way
+Lower Manhatten
+
+U.S.A.
+END
+Dirk ..works at.. SAP
+```
+```json
+{"from":"john","type":"address","to":"1 Broad Way\nLower Manhatten\n\nU.S.A."}
+{"from":"Dirk","type":"works at","to":"SAP"}
+```
+`(17-block, 21-block-end-marker)`
+
+### `!!block` in the other three positions
+
+`!!block` opens only when it **fills a whole field and ends its line**, and only in four
+positions: subject, object, meta-object, and meta text. After the terminator the logical line
+resumes, so one triple can carry several blocks.
+
+Subject (the only way to write a subject containing `..`):
+
+```
+!!block
+Alice
+Anderson
+
+..knows.. Bob
+```
+```json
+{"from":"Alice\nAnderson","type":"knows","to":"Bob"}
+```
+
+Meta object, then a `;;` continuation after the terminator:
+
+```
+Dirk ..works at.. SAP ,, ..note.. !!block
+line one
+
+;; ..until.. 2020
+```
+```json
+{"from":"Dirk","type":"works at","to":"SAP","meta":[{"type":"note","to":"line one"},{"type":"until","to":"2020"}]}
+```
+
+Meta text (allowed but redundant — the `,,` … `,,` block says the same thing):
+
+```
+water ..formula.. H2O ,, !!block
+solid, liquid, gas -- all three
+phases occur naturally
+
+Dirk ..works at.. SAP
+```
+```json
+{"from":"water","type":"formula","to":"H2O","meta":[{"type":"text","to":"solid, liquid, gas -- all three\nphases occur naturally"}]}
+{"from":"Dirk","type":"works at","to":"SAP"}
+```
+
+A `!!block` in a relation or meta-relation, or in the middle of running text, is inert.
+`(29-block-subject, 33-meta-block-continuation, 34-block-meta-text, 32-chained-blocks)`
+
+### What is NOT a triple
+
+Symbol characters (`.`, `,`, `;`, `!`) form **maximal runs**, and a run is an operator only at
+its exact length. One dot, three dots, five dots, a lone comma — all ordinary text. A line that
+is not a triple emits **nothing**; it is not an error.
+
+```
+Just some ordinary prose here.
+Wait... what did you say?
+A lone .. in prose, only one marker.
+Mr. Smith went to U.S.A. today.
+Node.js and j-s-o-n.org are fine.
+See https://example.com/a?b=1 for details.
+```
+
+Six lines in, zero events out.
+
+By the same rule an **object** may contain `..`, because it is bounded by `,,` and not by dots:
+
+```
+a ..spec.. http://h/x..y
+a ..links to.. ../../b.adoc
+j-s-o-n.org ..has type.. project
+```
+```json
+{"from":"a","type":"spec","to":"http://h/x..y"}
+{"from":"a","type":"links to","to":"../../b.adoc"}
+{"from":"j-s-o-n.org","type":"has type","to":"project"}
+```
+
+Values are emitted **verbatim** — no unescaping, no HTML escaping, no quote stripping:
+
+```
+Repo ..hosts.. <https://example.com/x?a=1&b=2>
+ddot.it/this ..is.. "a sample document"
+```
+```json
+{"from":"Repo","type":"hosts","to":"<https://example.com/x?a=1&b=2>"}
+{"from":"ddot.it/this","type":"is","to":"\"a sample document\""}
+```
+`(23-not-a-triple, 20-object-dotdot, 12-dotted-subject, 08-html-escaping, 05-command)`
+
+### Whitespace and line endings
+
+Newline normalisation happens before parsing: `CR LF` → NL, `LF` → NL, `CR` → NL. Whitespace
+(`WS`) is TAB plus every Unicode space separator (category `Zs`) — so NBSP (U+00A0) and NARROW
+NO-BREAK SPACE (U+202F) count as whitespace, because they are visually indistinguishable from a
+space and would otherwise create a different node that looks identical. Zero-width characters
+(U+200B, U+FEFF) are category `Cf` and are ordinary text. `(35-unicode-whitespace)`
+
+### Formal grammar
+
+The grammar is **not** repeated here. It lives in
+`site/spec/ddot.it-parsing.ebnf` — EBNF in the notation of
+[XML 1.0, section 6](https://www.w3.org/TR/xml/#sec-notation), with `|` read as ordered choice
+and `?`/`*`/`+` as greedy. It is included verbatim in the Parse Specification
+(`site/spec/ddot-it-parse.adoc`, rendered at /spec/ddot-it-parse.html#grammar), which is the
+normative definition and also carries the token alphabet, the parse state automaton, and the AST.
+
+In case of doubt the golden corpus at `test-data/cases/` has the last word.
+
+## Standard Relation Types
 
 | Name          | Aliases                | Semantics                                                                 |
 |---------------|------------------------|---------------------------------------------------------------------------|
@@ -122,22 +403,15 @@ Free metadata text carries the built-in relation `text`, so that is
 | `has tag`     | `tag`                  | A has tag B; not transitive                                               |
 | `has type`    | `type`, `is a`         | A has type B (like rdf:type); inherited via `has subtype`                 |
 | `has subtype` | `subtype`              | Transitive specialisation; cycles imply `same as`                         |
-
-### Example
-
-```
-Project Eagle .. started in .. 2024
-.. doc site .. example.com/docbase/8dcjsid
-
-John Doe .. leads .. Project Eagle ,, .. since .. 2025
-Project Eagle .... Moonshot
-```
+| `text`        |                        | A free-text note attached as metadata (see the examples above)            |
 
 ## Commands
 
 Commands are URLs starting with `ddot.it/` (or abbreviated with `!!`). The **slash and a name are
 required**; `?` and `#` do not terminate a command but introduce its query and fragment, so
 `!!block?end=EOS` is a single command. A command is part of the text of the field holding it.
+All four spellings are interpreted identically: `https://ddot.it/NAME`, `http://ddot.it/NAME`,
+`ddot.it/NAME`, `!!NAME`.
 
 - `ddot.it` — a document *marker*, not a command. It hints that the file contains ddot.it syntax.
   Readers scan **every** file by default, so the marker only selects files in the optional
@@ -149,19 +423,32 @@ required**; `?` and `#` do not terminate a command but introduce its query and f
   up to a blank line or a custom `?end=MARKER`. Allowed in the subject, object,
   metadata-object and metadata-text positions, and only when it ends its line.
 
+The parser recognises command **syntax** without any registry of names, so an unknown or retired
+name is still a command token; deciding what it *means* is the interpreting layer's job.
+
 ## Output: Triple Events
 
-Each recognized triple fires a JSON event:
+Each recognized triple fires one JSON event:
 ```json
 { "from": "Project Eagle", "type": "started in", "to": "2024",
   "kind": "markdown", "source": "/README.md", "location": 1 }
 ```
 
-Fields: `from` (subject), `type` (relation; **omitted** for untyped links — a consumer defaults a
-missing `type` to `links to`), `to` (value), `meta` (array of `{type?, to}`, same keys as the
-triple), `kind`, `source`, `location` (1-based line number). Key order is fixed:
-`from`, `type`, `to`, `meta`, `kind`, `source`, `location`. A line that is not a triple emits
-nothing.
+Fields, in this fixed key order:
+
+- `from` — the subject. An omitted subject is already substituted here.
+- `type` — the relation. **Always present, never omitted**: an untyped `....` link carries the
+  literal string `links to`, and a free-text note carries `text`. A consumer never has to default
+  a missing field.
+- `to` — the object. Never empty.
+- `meta` — array of `{type, to}`, the same two keys as the triple, in source order. **Omitted**
+  when the triple has none — never an empty array.
+- `kind` — the host format the reader read (`ddot`, `markdown`, `asciidoc`, `java`, …).
+- `source` — the chunk's source URI. This is what `!!this` stands for.
+- `location` — 1-based line number of the triple's first line.
+
+Values are emitted verbatim. Serialisation is JSON Lines: one event per line, UTF-8, no enclosing
+array. A line that is not a triple emits nothing.
 
 The normative definition is the Parse Specification, section "Triple Events"
 (`site/spec/ddot-it-parse.adoc`, rendered at /spec/ddot-it-parse.html#events).
