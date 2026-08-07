@@ -7,7 +7,7 @@ has_children: true
 
 Contents:
 [Architecture](#architecture)
-| [Syntax Specification](#syntax-specification)
+| [Syntax](#syntax)
 | [Reader](#reader)
 | [Events](#events)
 | [Collector](#collector)
@@ -24,9 +24,10 @@ Contents:
 </p>
 
 
-## Syntax Specification
+## Syntax
 
-See [Syntax Specification](syntax.md).
+[Syntax Overview](syntax.md) sketches the shape of the syntax.
+The normative definition is the [Parse Specification](spec/ddot-it-parse.html).
 
 
 ## Reader

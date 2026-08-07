@@ -1,137 +1,90 @@
 ---
-title: Syntax Specification
+title: Syntax Overview
 parent: Developer Guide
 nav_order: 1
 ---
-# ⚇ ddot.it &ndash; Syntax Specification
+# ⚇ ddot.it &ndash; Syntax Overview
 
-This page summarises the syntax. The **normative** definition is the
-[Parse Specification](spec/ddot-it-parse.html) — where the two disagree, the Parse Specification
-wins. Related normative documents: the
+This page conveys the **rough structure** of ddot.it — the shape of the syntax, not its details.
+For the exact rules, read the normative
+[Parse Specification](spec/ddot-it-parse.html): it carries the token alphabet, the formal grammar
+(EBNF, in `site/spec/ddot.it-parsing.ebnf`), the parse state automaton, the AST and the triple
+event format.
+
+Related normative documents: the
 [Vocabulary](spec/ddot-it-vocabulary.html),
 [Highlight](spec/ddot-it-highlight.html) and
-[Autocomplete](spec/ddot-it-autocomplete.html) specifications.
+[Autocomplete](spec/ddot-it-autocomplete.html) specifications. In case of doubt, the golden
+corpus at `test-data/cases/` has the last word.
 
-## Codepoints
-Ddot.it syntax assumes newline normalisation:
+## The whole syntax in five operators
 
-1. 'CR LF' -> NL;
-2. Single 'LF' -> NL;
-3. Single 'CR' -> NL.
+ddot.it is line-oriented. A document is a sequence of lines, and a line is either a triple or
+ordinary text that is passed over. There is no document structure, no nesting, no escaping.
 
-| Name             |    Character    |  Code Point   | Usage                   |
-|------------------|:---------------:|--------------:|-------------------------|
-| Tab              |      `\t`       |             9 | Whitespace              |
-| Newline          |   NL (LF, CR)   |        10, 13 | Line separation         |
-| Space            |       ` `       |            32 | Whitespace              |
-| Exclamation mark |       `!`       |            33 | Commands (`!!`)         |
-| Comma            |       `,`       |            44 | Metadata                |
-| Dot              |       `.`       |            46 | Triples                 |
-| Semicolon        |       `;`       |            59 | Metadata pair separator |
-| Other `Zs` space | NBSP, NNBSP, …  | 160, 8239, …  | Whitespace              |
+| Operator | Name | Role |
+|----------|------|------|
+| `..`     | double dot     | delimits the relation: `subject ..relation.. object` |
+| `....`   | quad dot       | an untyped link — the relation is `links to` |
+| `,,`     | double comma   | attaches metadata to the triple on its left |
+| `;;`     | double semicolon | separates metadata entries on one line |
+| `!!`     | double bang    | introduces a command |
 
-**Whitespace (`WS`) is Tab plus every Unicode _space separator_ (category `Zs`)** — space, NBSP
-(U+00A0), NARROW NO-BREAK SPACE (U+202F), IDEOGRAPHIC SPACE (U+3000) and the rest. They are
-accepted because they are visually indistinguishable from a space, so treating them as text would
-silently create a *different* node that looks identical. Zero-width characters (U+200B, U+FEFF)
-are category `Cf`, not `Zs`, and are ordinary text. See the
-[Parse Specification](spec/ddot-it-parse.html#whitespace).
+Each is a run of **exactly** that many characters. One dot, three dots, a lone comma — ordinary
+text. That is why `Node.js`, `Mr. Smith` and `U.S.A.` carry no operator and prose is safe.
 
-## Tokens
-Symbol characters (`.`, `,`, `;`, `!`) are grouped into **maximal runs** of the same character,
-and a run is a special token only at its special length:
-
-| Token | Meaning                       | Regex                |
-|-------|-------------------------------|----------------------|
-| `DT2` | exactly two dots              | `(?<!\.)\.{2}(?!\.)` |
-| `DT4` | exactly four dots             | `(?<!\.)\.{4}(?!\.)` |
-| `CM2` | exactly two commas            | `(?<!,),{2}(?!,)`    |
-| `SC2` | exactly two semicolons        | `(?<!;);{2}(?!;)`    |
-| `EM2` | exactly two exclamation marks | `(?<!!)!{2}(?!!)`    |
-| `TX`  | everything else               | —                    |
-
-Every other run — a single `.`, three or five dots, a lone `,` — is ordinary text (`TX`).
-So `Node.js`, `Mr. Smith` and `U.S.A.` are plain values containing no operator.
-
-## Grammar
-A document is simply a sequence of lines. There is **no** chunking construct: an omitted subject
-continues the subject of the previous line.
+## Triples
 
 ```
-Snippet     := Line*
-
-// Ordered choice: a Line is a Triple if one can be derived, otherwise NotATriple.
-Line        := WS* Triple WS* NL
-              | NotATriple NL
-
-NotATriple  := (WS | DT2 | DT4 | CM2 | SC2 | EM2 | TX)*
-
-DoubleDot   := WS* DT2 WS*
-QuadDot     := WS* ( DT4 | DT2 WS+ DT2 ) WS*
-
-Triple      := Subject?
-               ( DoubleDot Relation DoubleDot | QuadDot )
-               Object
-               WS* Meta?
-
-Subject     := TextExcept{NL,DT2,DT4}
-Relation    := TextExcept{NL,DT2,DT4}
-Object      := TextExcept{NL,CM2}
+Project Eagle ..started in.. 2024
+Project Eagle .... Moonshot
 ```
 
-- `Subject?` is optional: an omitted subject means _continue with the subject of the previous line_.
-- `Object` is mandatory and non-empty: `a ..b..` with nothing after the closing `..` is not a triple.
-- `QuadDot` is the shorthand for an implicit relation: `a....b` and `a .. .. b` both mean
-  `a ..links to.. b`. The two spellings are the same operator, not two operators.
-- Whitespace is stripped from the start and end of every field, so
-  `Dirk Hagemann   .. works at ..  Big Corp` yields (`Dirk Hagemann`, `works at`, `Big Corp`).
-  A field **may contain spaces** — only the operators delimit it.
-
-### Metadata
+The object is mandatory. Fields may contain spaces; only the operators delimit them, and
+surrounding whitespace is stripped. Omit the subject and the previous line's subject continues:
 
 ```
-Meta              := CM2 WS* MetaInline WS*
-                   | MetaBlockOpen NL (MetaBlock NL)? WS* CM2 WS*
-
-MetaBlockOpen     := CM2 | NL WS* CM2
-
-MetaInline        := ( MetaTripleInline (SC2 MetaTripleInline)* )
-                   | MetaTextInline
-
-MetaTripleInline  := DoubleDot MetaRelation DoubleDot MetaObjectInline
-                   | QuadDot MetaObjectInline
-
-MetaBlock         := MetaTripleInBlock (NL MetaTripleInBlock)*
-                   | MetaTextBlock
+Project Eagle ..started in.. 2024
+..doc site.. example.com/docbase/8dcjsid
 ```
 
-- `;;` separates **inline** metadata pairs: `,, ..since.. 2025 ;; ..until.. 2027` is two pairs.
-  Inside a `,,` block a `;;` is ordinary text, because a block's metadata object runs to the end
-  of its line.
-- A metadata part holds **either** triples **or** free text, never both. Free text carries the
-  built-in relation `text`; the untyped `,, .... value` form carries `links to`. See the
-  [Vocabulary Specification](spec/ddot-it-vocabulary.html).
+## Metadata
 
-### Commands
-A command has four interchangeable spellings, and the **slash is required** — bare `ddot.it` is a
-document marker, not a command:
+`,,` attaches **entries** to a triple. An entry is either a (relation, object) pair or a
+free-text note, and the two mix freely in any order. Inline, entries are separated by `;;`:
 
 ```
-command-begin := ( 'https://ddot.it/' | 'http://ddot.it/' | 'ddot.it/' | '!!' )
-command       := command-begin command-name uri-query? uri-fragment?
-command-name  := one or more characters that are not WS, NL, '?' or '#'
-uri-query     := '?' then any characters up to WS, NL or '#'
-uri-fragment  := '#' then any characters up to WS or NL
+John Doe ..leads.. Project Eagle ,, ..since.. 2025 ;; a note ;; ..until.. 2027
 ```
 
-`?` and `#` do **not** terminate a command — they introduce its query and fragment, so
-`!!block?end=EOS` is one command. A command is part of the text of the field holding it, not a
-replacement for it.
+In block form the triple line ends with `,,`, entries go one per line, and a `,,` on its own line
+closes it. Newlines separate the entries there, so `;;` is ordinary text inside a block — which
+is how you write a note that has to contain one:
 
-See [`ddot.it/on`](on.md), [`ddot.it/off`](off.md), [`ddot.it/this`](this.md) and
-[`ddot.it/block`](block.md).
+```
+Dirk Hagemann ..works at.. SAP ,,
+..year.. 2010
+a free-text note
+,,
+```
 
-## Syntax Example
+A note carries the built-in relation `text`; the untyped `,, .... value` form carries `links to`.
+See the [Vocabulary Specification](spec/ddot-it-vocabulary.html).
+
+## Commands
+
+A command is a URL under `ddot.it/`, with four interchangeable spellings — `!!name`,
+`ddot.it/name`, `http://ddot.it/name`, `https://ddot.it/name`. The **slash and a name are
+required**; bare `ddot.it` is a document marker, not a command.
+
+- [`ddot.it/this`](this.md) — the current document, as a triple subject
+- [`ddot.it/off`](off.md) and [`ddot.it/on`](on.md) — exclude a region from parsing
+- [`ddot.it/block`](block.md) — take the following lines verbatim as one field's value
+
+`!!off`, `!!on` and `!!block` act before parsing; every other command is just part of the text of
+the field holding it.
+
+## Syntax example
 
 ```
 Project Eagle..started in.. 2024
@@ -144,3 +97,14 @@ This text is interpreted as this knowledge graph:
 <p style="text-align: center;">
   <img src="images/triple-structure.svg" alt="Example" style="width: 65%" />
 </p>
+
+## Where the details are
+
+| Topic | Document |
+|-------|----------|
+| Token alphabet, whitespace, counting rule | [Parse Spec — Lexical Layer](spec/ddot-it-parse.html#lexical_layer) |
+| Formal grammar (EBNF) | `site/spec/ddot.it-parsing.ebnf`, included in [Parse Spec — Grammar](spec/ddot-it-parse.html#grammar) |
+| Parse state automaton, AST | [Parse Spec](spec/ddot-it-parse.html#state-automaton) |
+| Triple event JSON | [Parse Spec — Triple Events](spec/ddot-it-parse.html#events) |
+| Relation names and their meaning | [Vocabulary Specification](spec/ddot-it-vocabulary.html) |
+| Worked examples, input → events | `llms.txt` and `test-data/cases/` |
