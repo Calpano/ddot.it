@@ -1209,8 +1209,7 @@ allowing the rest of the production to match. In particular `Meta?` is preferred
 *present* whenever a `Meta` can be derived.
 
 Together these resolve the one genuine overlap in the grammar -- whether a `,,`
-on the line after a triple opens that triple's <<meta-block-attachment,meta block>>
-or is just text.
+on the line after a triple opens that triple's meta block or is just text.
 ****
 - `TextExcept{...}` is a shorthand for:
 ** We have text, that does not start or end with whitespace (`WS`).
