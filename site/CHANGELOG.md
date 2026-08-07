@@ -105,8 +105,37 @@ Unreleased (as of 2026-07-29)
   aaa ..bbb.. ccc ,, ..since.. 2010 ..until.. 2020
   ```
   is a single pair whose value is the literal text `2010 ..until.. 2020`.
-  (Inside a multi-line `,,` block there is no separator at all: each value there
-  runs to the end of its own line, so a `;;` is ordinary text.)
+
+- **A `,,` part holds *entries*, and pairs and free-text notes mix freely.**
+  An entry is either a (relation, object) pair or a note; both may occur, any
+  number of times, in any order, and the event keeps the **written order**.
+  Previously a metadata part was one or the other, never both.
+  ```
+  aaa ..bbb.. ccc ,, ..since.. 2016 ;; a note ;; .... Walldorf ;; ..until.. 2020
+  ```
+  is four entries: a typed pair, a note, an untyped pair, a typed pair. The same
+  mix works in the block form, one entry per line. Corpus cases
+  `36-inline-meta-notes`, `37-inline-meta-mixed`, `38-block-meta-notes`,
+  `39-block-meta-mixed`.
+
+- **`;;` separates inline entries unconditionally.** It ends a free-text note
+  exactly as it ends a pair's object — there is no rule about what follows it and
+  no lookahead:
+  ```
+  aaa ..bbb.. ccc ,, first note ;; second note
+  ```
+  is **two** notes. An earlier draft let a note carry a `;;` unless `..` or
+  `....` followed; that made two notes impossible to write apart, gave the
+  separator two meanings, and required an unbounded lookahead a single-line
+  highlighter cannot express. The consequence: a note containing a literal `;;`
+  cannot be written inline — use the `,,` … `,,` block form, where newlines
+  separate the entries and `;;` is ordinary text everywhere
+  (`28-semicolon-in-meta-block`).
+
+- **Adjacent note lines in a `,,` block are one note**, joined by newlines, so a
+  pasted paragraph survives intact. A pair line ends the run; the next text line
+  after it starts a new note. Two *adjacent* notes are therefore not writable in
+  a block — the inline `;;` form is how you write them apart.
 
 - **Free metadata text carries the built-in relation `text`.** Prose after `,,`
   that holds no triple — inline or as a multi-line block — is a metadata entry
@@ -115,8 +144,9 @@ Unreleased (as of 2026-07-29)
   aaa ..bbb.. ccc ,, see also the appendix
   ```
   yields `{"type": "text", "to": "see also the appendix"}`. The untyped form
-  `,, .... 2025` is the one meaning `links to`, and is emitted with no `type` at
-  all. There are exactly two built-in relations: `text` and `links to`.
+  `,, .... 2025` is the one meaning `links to`, and is emitted as
+  `{"type": "links to", "to": "2025"}` — **written out**, not as a missing field.
+  There are exactly two built-in relations: `text` and `links to`.
 
 - **The logical line resumes after a `ddot.it/block`.** When a block fills a
   field, the line after the block's terminator continues that same triple if it
@@ -181,6 +211,21 @@ Unreleased (as of 2026-07-29)
   with `{p, o}` meta pairs, is **retired**: a triple is `from` / `type` / `to` on both sides of
   the pipe. Anything still emitting or consuming `s`/`p`/`o` needs updating.
 
+- **`meta` is the only optional field on an event.** `type` is now **always written**: an
+  untyped `....` link carries `links to` and a free-text note carries `text`, so a consumer never
+  defaults a missing relation and a collector no longer has that resolution step. Emitters that
+  omitted `type` for untyped links must change — with the field absent, `,, a note` and
+  `,, .... a note` both collapsed to `{"to": "a note"}` and became indistinguishable. `meta`
+  itself is omitted when empty, never emitted as `[]`, and each meta pair requires both `type`
+  and `to`.
+
+- **The grammar is written in the EBNF of [XML 1.0, section 6](https://www.w3.org/TR/xml/#sec-notation).**
+  It lives in `site/spec/ddot.it-parsing.ebnf` and is included into the Parse Specification.
+  `:=` became `::=`, `//` comments became `/* … */`, and the ad-hoc `TextExcept{…}` shorthand is
+  gone — field bounds are now written with the notation's own subtraction operator (an `Object`
+  is `Word - CM2`). `|` is still read as an ordered choice and `?`/`*`/`+` as greedy, which the
+  file states explicitly.
+
 - **`ddot.it/label` has no page of its own.** `label` is an ordinary relation, so it is
   documented with the other relations in the
   [Vocabulary Specification](spec/ddot-it-vocabulary.html#label); `https://ddot.it/label` no
@@ -197,7 +242,7 @@ Unreleased (as of 2026-07-29)
   `operator` → `doubledot`, `meta-operator` → `meta-doubledot`, `disabled` →
   `excluded`, plus new `meta-separator`, `command-param`, `block-end` and
   `verbatim` tokens. Highlighters and themes keyed on the old names need
-  updating. The golden corpus grew to 33 cases and is the conformance contract
+  updating. The golden corpus grew to 39 cases and is the conformance contract
   for all implementations.
 
 ## Version 1.2

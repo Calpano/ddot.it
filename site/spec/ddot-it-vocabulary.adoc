@@ -950,7 +950,10 @@ If the empty relation shortcut is used as in +
 - `s.. ..o` (with spaces),
 
 +
-then there is no relation name given. Emitters **omit** the relation (the event's `type` field) for such untyped links; **consumers** default a missing relation to `links to` (see xref:ddot-it-parse.adoc#event-fields[Triple Events]).
+then there is no relation name given *in the syntax*. The event is not short of one: emitters
+**write** `links to` into the `type` field for such untyped links, so a consumer never has to
+default a missing relation (see xref:ddot-it-parse.adoc#event-fields[Triple Events]). `type` is
+always present; `meta` is the only field an event may omit.
 
 
 // https://ddot.it/on

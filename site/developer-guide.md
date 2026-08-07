@@ -78,9 +78,9 @@ summary; where the two disagree, the Parse Specification wins.
 | Property   | Required | Description                                                                                                     | Example                                |
 |------------|----------|-----------------------------------------------------------------------------------------------------------------|----------------------------------------|
 | `from`     | yes      | ⓢ Subject of the triple (what we are saying something about). Already inherited if the line omitted it.         | `ddot`                                 |
-| `type`     | &mdash;  | Ⓟ Relation of the triple. **Omitted** for untyped links (`....`); a consumer then defaults it to `links to`.    | `url`                                  |
+| `type`     | yes      | Ⓟ Relation of the triple. **Always written**: an untyped link (`....`) carries `links to`, a note carries `text`. | `url`                                |
 | `to`       | yes      | ⓞ Object of the triple. Never empty.                                                                            | `ddot.it`                              |
-| `meta`     | &mdash;  | Meta pairs, in source order — each with the same `type` (optional) and `to` keys as the triple. Omitted if none. | `[{"type":"year",`<br/>`"to":"2026"}]` |
+| `meta`     | no       | Meta pairs, in source order — each with the same `type` and `to` keys as the triple, both required. **The only optional field**: omitted if none, never `[]`. | `[{"type":"year",`<br/>`"to":"2026"}]` |
 | `kind`     | yes      | Kind of source                                                                                                  | `markdown`                             |
 | `source`   | yes      | Source URI of the chunk                                                                                         | `/README.md`                           |
 | `location` | yes      | 1-based line number                                                                                             | `76`                                   |
@@ -116,12 +116,13 @@ value, newlines included.
     "kind": "markdown", "source": "/README.md", "location": 3 }
 ```
 ```json
-{ "from": "Project Eagle", "to": "Moonshot",
+{ "from": "Project Eagle", "type": "links to", "to": "Moonshot",
   "kind": "markdown", "source": "/README.md", "location": 4 }
 ```
 
-(The last one is `Project Eagle .... Moonshot` — note the absent `type`. The examples are spaced
-for readability; real JSONL output has one event per line with no insignificant whitespace.)
+(The last one is `Project Eagle .... Moonshot` — note that the untyped `....` is emitted as the
+relation `links to`, not as a missing field. The examples are spaced for readability; real JSONL
+output has one event per line with no insignificant whitespace.)
 
 
 ## Collector

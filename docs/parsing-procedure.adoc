@@ -102,7 +102,7 @@ function readTriple(line, inheritedSubject):
         subj = trim(body[.. op1.start])
         rel  = trim(body[op1.end .. op2.start])
         obj  = trim(body[op2.end ..])          # REST of line, verbatim → '../../x' survives
-        if rel == "": rel = null               # '.. ..' is the other spelling of '....'
+        if rel == "": rel = "links to"         # '.. ..' is the other spelling of '....'
 
     if obj == "": return null                  # empty object → not a Triple
     from = (subj != "") ? subj : inheritedSubject
@@ -135,27 +135,32 @@ Everything after the first `,,` on the line annotates *the whole triple*.
 [source,text]
 ----
 function addMeta(event, text):
-    if text holds one or more '..rel.. value' pairs:
-         for each pair: event.meta.append({type: rel, to: value})
-    else:
-         event.meta.append({type: "text", to: trim(text)})   # free text → built-in 'text'
+    for entry in splitOn(text, SC2):            # inline; in a block, split on NL instead
+        if entry has the shape '..rel.. value':
+             event.meta.append({type: rel,        to: trim(value)})
+        else if entry has the shape '.... value':
+             event.meta.append({type: "links to", to: trim(value)})
+        else:                                   # free-text note → built-in 'text'
+             event.meta.append({type: "text",     to: trim(entry)})
 ----
 
 Three rules decide how the payload splits:
 
-`;;` separates **inline** pairs::
-`+,, ..since.. 2025 ;; ..until.. 2027+` is two pairs. The separator is *required*: a meta value
-runs to the end of the line or to the next `;;` and may itself contain `..`, so
+`;;` separates **inline** entries::
+`+,, ..since.. 2025 ;; ..until.. 2027+` is two pairs. The separator is *required*: an entry runs
+to the end of the line or to the next `;;` and may itself contain `..`, so
 `+,, ..since.. 2010 ..until.. 2020+` is *one* pair whose value is the literal text
-`2010 ..until.. 2020`.
+`2010 ..until.. 2020`. `;;` ends an entry **unconditionally** — a free-text note exactly like a
+pair's object — so `+,, one ;; two+` is two notes, and a note containing a literal `;;` has to
+be written in the block form.
 
 Inside a `,,` block, the **newline** separates::
 each value runs to the end of its own line, so a `;;` there is ordinary text.
 
 Free text carries the built-in `text` relation::
 `+,, a random note+` is `+{"type":"text","to":"a random note"}+` — *not* an untyped pair. The
-untyped form is `+,, .... 2025+`, which yields `+{"type":"links to","to":"2025"}+`. A meta
-part holds *either* pairs *or* free text, never both.
+untyped form is `+,, .... 2025+`, which yields `+{"type":"links to","to":"2025"}+`. A meta part
+holds pairs *and* notes, mixed freely and in any order; the event keeps the written order.
 
 == `!!block`: multi-line values
 

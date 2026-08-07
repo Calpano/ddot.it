@@ -317,9 +317,10 @@ The schema of **one** event. A JSONL stream is a sequence of documents each matc
 
 . A **reader** pulls {dd} text out of one host format and emits the triple events defined above.
 . A **collector** merges the events from many readers into one knowledge base and does the
-resolution a single reader cannot -- substituting `source` for `!!this`, defaulting an absent
-`type` to `links to`, applying xref:ddot-it-vocabulary.adoc#prefix[`prefix`], merging duplicate
-triples into one entry set.
+resolution a single reader cannot -- substituting `source` for `!!this`, applying
+xref:ddot-it-vocabulary.adoc#prefix[`prefix`], merging duplicate triples into one entry set.
+Defaulting a relation is *not* on that list: `type` is <<event-fields,always written>>, so an
+untyped link arrives as `links to` and a note as `text`.
 
 The two layers are genuinely different -- one is a stream keyed to source positions, the other a
 merged graph -- but they use **one key vocabulary**. A triple is `from` / `type` / `to` on both

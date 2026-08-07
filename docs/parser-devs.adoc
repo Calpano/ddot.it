@@ -371,14 +371,14 @@ function readTripleLine(line, inheritedSubject) -> Triple | null:
     if op1 == null: return null                  # no operator at all → not a triple
 
     if op1.dots == 4:                            #  SUBJECT .... OBJECT   (untyped)
-        subj = trim(body[0 .. op1.start]);  type = null;  obj = trim(body[op1.end ..])
+        subj = trim(body[0 .. op1.start]);  type = "links to";  obj = trim(body[op1.end ..])
     else:                                        #  SUBJECT .. RELATION .. OBJECT
         op2 = nextOperator(body, from=op1.end)
         if op2 == null: return null              # only one '..' → not a triple
         subj = trim(body[0 .. op1.start])
         type = trim(body[op1.end .. op2.start])
         obj  = trim(body[op2.end ..])            # REST of line, verbatim → '../../foo.txt' intact
-        if type == "": type = null               # '.. ..' (empty relation) == untyped
+        if type == "": type = "links to"         # '.. ..' (empty relation) == untyped
 
     if obj == "": return null                    # empty object → not a triple
     from = (subj != "") ? subj : inheritedSubject
@@ -405,7 +405,7 @@ function readMetaPairs(s) -> list<(type, value)>:
     for segment in splitOn(s, SC2):
         a = nextOperator(segment, 0);      if a == null: return []   # not the pair shape
         if a.dots == 4:
-            append(pairs, (null, trim(segment[a.end ..])))           # untyped ⇒ 'links to'
+            append(pairs, ("links to", trim(segment[a.end ..])))     # untyped ⇒ 'links to'
         else:
             b = nextOperator(segment, a.end);  if b == null: return []
             append(pairs, (trim(segment[a.end .. b.start]), trim(segment[b.end ..])))
@@ -431,8 +431,9 @@ ddot.it separates *reading* from *collecting*
 . A *reader* (the parser you are writing) knows how to pull ddot.it text out of one *host
   language* (Markdown, YAML, Java, HTML, plain text, …) and emits *triple events*.
 . A *collector* combines all events into one knowledge graph and does the resolution a single
-  reader cannot — substituting `source` for `ddot.it/this`, defaulting an absent `type` to
-  `links to`, applying `prefix`, merging duplicates.
+  reader cannot — substituting `source` for `ddot.it/this`, applying `prefix`, merging
+  duplicates. Defaulting a relation is *not* among them: `type` is always written, so an untyped
+  link reaches the collector as `links to`.
 
 [IMPORTANT]
 ====
@@ -639,10 +640,10 @@ aaa .... ccc             untyped
 aaa .. .. ccc            untyped — the same operator, spelled with a space
 ....
 
-An untyped link has *no relation*, and the event **omits** `type` entirely rather than writing
-`links to` into it; a consumer defaults a missing `type` to
-link:../site/spec/ddot-it-vocabulary.adoc#links-to[`links to`]. Cases `01-simple-triple`,
-`02-untyped-link`, `10-spaced-untyped`.
+An untyped link has no relation *in the syntax*, but the event always has one: write
+link:../site/spec/ddot-it-vocabulary.adoc#links-to[`links to`] into `type` rather than omitting
+the field, so a consumer never has to default it. Cases `01-simple-triple`, `02-untyped-link`,
+`10-spaced-untyped`.
 
 NOTE: The highlighter emits the whole literal `.. ..` — inner whitespace included — as *one*
 `doubledot` token (`10-spaced-untyped`). Parser and lexer agree that it is one operator.
@@ -845,9 +846,10 @@ working summary.
 |===
 | Field | Req. | Meaning
 | from     | yes | Subject; already substituted if the line omitted it
-| type     | no  | Relation. *Omit* for untyped links — do not write `links to`
+| type     | yes | Relation. *Always written* — an untyped link carries `links to`, a note `text`
 | to       | yes | Object; never empty
-| meta     | no  | Array of `{type?, to}`, in source order. Omit when empty — never `[]`
+| meta     | no  | Array of `{type, to}` (both required), in source order. **The only optional
+field**: omit when empty — never `[]`
 | kind     | yes | Host format (`ddot`, `markdown`, …); fixed per reader
 | source   | yes | The chunk's source URI
 | location | yes | *1-based* line number of the triple's first line
@@ -941,7 +943,7 @@ Exactly *two* relations are built into parsing, and only because they are what a
 expands to:
 
 * link:../site/spec/ddot-it-vocabulary.adoc#links-to[`links to`] — the untyped `....` link;
-  emitted as an *absent* `type`.
+  emitted as `type: "links to"`.
 * link:../site/spec/ddot-it-vocabulary.adoc#text[`text`] — free metadata text; emitted as
   `type: "text"`.
 
