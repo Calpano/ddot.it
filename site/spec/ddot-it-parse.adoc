@@ -71,7 +71,7 @@ For example, `## Foo` defines a headline in Markdown, so only `Foo` should be gi
 {ddd} has a simple, triple-based information model.
 
 - *Subject* (*S*, about what are we stating facts),
-- *Relation* (*P*, named after RDF property/predicate), and
+- *Relation* (abbreviated *P* after RDF property/predicate), and
 - *Object* (*O*, another objects name or a data value).
 
 Additionally, a triple can have any number of attached
@@ -79,6 +79,8 @@ Additionally, a triple can have any number of attached
 **Meta Object** (*MO*)
 pairs.
 This resembles RDF 1.2 / RDF-Star and provides a way to state facts about the triple.
+
+A **source** provides 1 to n **<<snippet,snippets>>**. Each snippet is parsed. Unlike a programming language parser or Markdown parser, a {dd} parser is not transforming its input, but __extracting__ data from the input.
 
 .Data Model
 ****
@@ -130,31 +132,46 @@ Meta *-- "1" MetaRelation
 Meta *-- "1" MetaObject
 ....
 
-NOTE: In the *information model* a Triple always has all three of Subject, Relation and Object.
-The <<abstract_syntax_tree,AST>> shows `Subject` and `Relation` as `0..1` because the *syntax*
-may leave them out -- an omitted subject is <<syntax_shorthands,inherited from the previous
-line>> and an omitted relation is the implicit
-xref:ddot-it-vocabulary.adoc#links-to[`links to`]. Both are filled in by the time a triple
-reaches this model, and the <<events,serialised form>> carries them: it writes `links to` out
-rather than leaving the consumer to default a missing field.
+.Syntax vs. Information Model
+[NOTE]
+--
+In the *information model* a Triple always has all three of Subject, Relation and Object.
+E.g. the <<abstract_syntax_tree,AST>> shows `Subject` and `Relation` as `0..1` because the *syntax* may leave them out.
+Omitted parts are filled in by the time a triple
+reaches this model, and the <<events,serialised form>> carries them.
 
+- An omitted subject is <<syntax_shorthands,inherited from the previous
+line>>.
+- An omitted relation (but using the `..` `..` markers) is the implicit
+xref:ddot-it-vocabulary.adoc#links-to[`links to`] relation.
+- A __meta__ may just contain text, without and `..` markers, which is interpreted as xref:ddot-it-vocabulary.adoc#text[`text`] relation.
+--
 
 [[events]]
 === Triple Events
-The information model above says what a triple *is*. This section says how a parser *reports*
-one. There is exactly one wire format, the **triple event**, and it is normative: an
-implementation conforms by emitting these bytes.
+The information model above says what a triple *is*. This section says how a parser *reports* one.
+There is exactly one wire format, the **triple event**, and it is normative: an
+implementation conforms by emitting this JSON. Whitespace is optional.
 
 .Example Snippet as {dd} Syntax
 [source,ddot.it]
 ----
 Dirk ..works at.. SAP ,, ..since.. 2016
+Claudia ..owns.. cat
 ----
 
 .The same snippet as triple events
-[source,json]
+[source,jsonlines]
 ----
-{"from":"Dirk","type":"works at","to":"SAP","meta":[{"type":"since","to":"2016"}],"kind":"asciidoc","source":"file:///Users/maxvolkel/Desktop/example.adoc","location":1}
+{
+  "from": "Dirk", "type": "works at", "to": "SAP",
+  "meta": [ {"type":"since", "to":"2016"} ],
+  "kind":"asciidoc", "source":"file:///~/Desktop/example.adoc", "location": 1
+}
+{
+  "from": "Claudia", "type": "owns", "to": "cat",
+  "kind":"asciidoc", "source":"file:///~/Desktop/example.adoc", "location": 2
+}
 ----
 
 [[event-fields]]
@@ -190,7 +207,9 @@ consumer therefore never has to default a missing field.
 that reader emits.
 
 | source | yes
-| The <<chunk,chunk's>> **source URI**, verbatim. This is the value `!!this` stands for.
+| The <<chunk,chunk's>> **source URI**, verbatim.
+This is the value `!!this` stands for.
+If a source provides multiple chunks, the URI should use different URIs per chunk, usually using URI fragment identifiers (`...sourceURI...,#foo`).
 
 | location | yes
 | The **1-based** line number of the triple's first line, relative to its chunk. A triple whose
@@ -198,22 +217,23 @@ subject or object is a <<block-command,`!!block`>> is located at its *opening* l
 |===
 
 [[meta-pairs]]
-**Meta pairs use the same two keys as the event itself.** Each element of `meta` is an object
-with `type` (required) and `to` (required) -- deliberately the same names as on the triple,
-because a meta pair *is* a (relation, object) pair. Three cases arise:
+**Meta pairs use the same two keys as the event itself.**
+Each element of `meta` is an object with `type` (required) and `to` (required) -- deliberately the same names as on the triple,
+because a meta pair *is* a (relation, object) pair.
+Three cases arise:
 
 [cols="3,4"]
 |===
 | Syntax | Meta pair
 
-| `+,, ..since.. 2016+` -- a typed pair
+| `,, ..since.. 2016` -- a typed pair
 | `{"type":"since","to":"2016"}`
 
-| `+,, .... 2025+` -- the untyped form
+| `,, .... 2025` -- the untyped form
 | `{"type":"links to","to":"2025"}` -- the implicit `links to` is written out, exactly as on a
 triple
 
-| `+,, a random note+` -- free meta text
+| `,, a random note` -- free meta text
 | `{"type":"text","to":"a random note"}` -- the built-in
 xref:ddot-it-vocabulary.adoc#text[`text`] relation, **not** `links to`
 |===
@@ -267,7 +287,7 @@ The schema of **one** event. A JSONL stream is a sequence of documents each matc
     "to":       { "type": "string", "description": "Object" },
     "meta": {
       "type": "array",
-      "description": "Meta pairs, in source order. Omitted when empty.",
+      "description": "Meta entries, in source order. Meta is omitted when empty.",
       "minItems": 1,
       "items": {
         "type": "object",
@@ -340,6 +360,10 @@ For appending *meta* data to a triple.
 Claudia ..owns.. cat ,, ..since.. X-mas 2026
 ----
 
+Inline Form::: _Meta entries_ and the `,,` are on the same line.
+Block form::: _Meta entries_ follow on lines after `,,` _NEWLINE_ and are terminated by another `,,` on its own line.
+Meta blocks can freely mix text notes, `..rel..` object, and `+++....+++` object lines. Consecutive text lines are considered to be _the same_ text note. A subject can hold any number of text notes, represented as (_subject_, `text`, _text of note possibly including newlines_).
+
 Double exclamation mark (`!!`)::
 For <<command, commands>>.
 
@@ -350,11 +374,14 @@ triple across a newline. The one place a newline is otherwise required -- statin
 (relation, object) pairs about one triple -- has an inline substitute, the **double semicolon**.
 
 Double semicolon (`;;`)::
-Used only inside a triple's *meta part* (introduced by `,,`), where it separates several
-(relation, object) assertions about that triple on a single line -- the inline form of writing one
-per line in a `,,` block.
-In a subject, relation, or object, `;;` is ordinary text with no special meaning.
+Used only inside a triple's *meta part* (introduced by `,,`),
+in the __inline form__, that is on the same line as the `,,`.
 
+Design Rationale:::
+- To make __"simple things simple and complex things possible"__, {dd} needs a way to add multiple meta-entries to a triple even when newlines are not allowed (e.g. in HTML `data-ddot` attributes) or not desired. -
+- Also, a simple triple like `aaa ..bbb.. ccc ,, my note` should be easily extended into a triple with even more metadata pairs without having to change the triple meta into block form. So we want to allow `aaa ..bbb.. ccc ,, my note ;; ..foo.. bar ;; ..ppp.. qqq`.
+- To make (mental and technical) parsing simple, the double-semicolon separates _meta-entries_, which may be free-text, `..rel..` object pairs, or `+++....+++` object pairs.
+- Notes containing `;;` can be written in meta-block form.
 
 [#syntax_shorthands]
 === Syntax Shorthands
@@ -883,7 +910,6 @@ NOTE: As all goals are interwoven, we explain them together. The purpose of this
 This needs to carefully process both <<block-command,!!block>> (verbatim) and <<off-command,!!off/!!on>> (exclude) commands.
 
 
-[[chunk]]
 === Chunks: Getting Text for Parsing
 - {ddd} can appear in any text box, in any system or file.
 Getting the text out of a system in general requires help from the host system (e.g. _Atlassian Confluence_) to deliver a documents’ text (and its **sourceUri**) to the {dd} parser.
@@ -907,33 +933,30 @@ manner of a https://en.wikipedia.org/wiki/File_format#Magic_number[magic byte si
 has an effect **only** when a tool is explicitly run in a mode that skips unmarked files (e.g.
 an `--only-marked` option over a large corpus, where scanning everything is too expensive).
 
-**What counts as a marker.** A file is marked if *either* holds:
+**What counts as a marker.** A file is marked if the character sequence `ddot.it` appears anywhere in it. Merely using `!!someCommand` should not be enough to trigger {dd}-processing.
 
-. the character sequence `ddot.it` appears anywhere in it, or
-. any <<command,command>> appears, in any of its four spellings.
+Bare `ddot.it` -- in a URL, or as a word in prose -- satisfies the marker and is *not* a command, because a command requires the slash and a non-empty name.
+So a file may be marked without containing a single command, and a tool that only needs to answer "is this file marked?" can do so with a substring scan.
 
-The second clause is not implied by the first: `!!this` is a command containing no `ddot.it`
-substring at all, and it marks the file.
-
-**Every command is a marker; a marker is not a command.** The implication runs one way only.
-Bare `ddot.it` -- in a URL, or as a word in prose -- satisfies the marker and is *not* a
-command, because a command requires the slash and a non-empty name. So a file may be marked
-without containing a single command, and a tool that only needs to answer "is this file
-marked?" can do so with a substring scan plus the `!!` form, without a command parser.
-
-Such a mode is an opt-in optimisation. Enabling it can only ever *lose* triples that the
-default would have found; it never changes how a file that *is* parsed is interpreted.
+Such a mode is an opt-in optimisation.
+Enabling it can only ever *lose* triples that the default would have found;
+it never changes how a file that *is* parsed is interpreted.
 ****
 
 NOTE: This is the same principle the xref:ddot-it-highlight.adoc#dd-injection[Highlight
-Specification] applies at D9, where the injection grammar deliberately ships with **no** marker
+Specification] applies, where the injection grammar deliberately ships with **no** marker
 precondition and lets the line-shape gate decide. Parsing and highlighting agree: look at
 everything, and let the syntax speak for itself.
 
+[[chunk]]
 .Chunk
+A chunk is the __unit of provenance__ which a host parser provides to the {dd} parser. The text in a chunk can use the `!!this` command to annotate the chunk itself, e.g., to state is author or other metadata.
+
 - Usually, one file is one **chunk**.
-Some files, like YAML files, can encode multiple documents in a single file.
-In a wiki, each page could be one chunk.
+** Some files, like YAML files, can encode multiple documents in a single file.
+** In a wiki, each page could be one chunk.
+** In PowerPoint, each slide may be two chunks, one for the slide text and one for the slide notes.
+
 - The host parser must deliver one **chunk** for each such part.
 - Each chunk must be given its own *sourceURI*, which is often derived from file URI plus an appended hash fragment.
 This fragment can be a chunk index or start line number.
@@ -1001,8 +1024,7 @@ Excluded --> Plain : !!on
 Each **chunk** is pre-processed by a ddot.it parser into **snippets**.
 All snippets of a chunk share the chunk's **source URI**;
 they are located by line numbers relative to the chunk.
-<<syntax_shorthands, Leaving out the subject>> only works within a snippet,
-not across snippet boundaries.
+<<syntax_shorthands, Leaving out the subject>> SHOULD only work within a snippet, not across snippet boundaries.
 ****
 
 
