@@ -1047,7 +1047,7 @@ space_). It is never a newline: `NL` is a separate token, and no `WS` character 
 terminator.
 
 Written as a Unicode property, `WS` is `+[\t\p{Zs}]+`. Not every regex flavour supports
-`\p{Zs}`, so the equivalent explicit class is **normative** and MUST be used where the property
+`\p+{Zs}+`, so the equivalent explicit class is **normative** and MUST be used where the property
 is unavailable:
 
 [source,regexp]
@@ -1104,7 +1104,7 @@ Five dots are fine and mean nothing.
 And here we define the counted token sequences.
 
 NOTE: The lookarounds are what express "neither preceded nor followed by another one of the
-same character" -- the counting rule cannot be written with a quantifier alone. `\.{2}` on its
+same character" -- the counting rule cannot be written with a quantifier alone. `\.+{2}+` on its
 own would happily match the first two dots of `...`, which is exactly what
 <<tokenization-rule>> forbids. These are the same forms the
 xref:ddot-it-highlight.adoc[Highlight Specification] uses, and they are normative.
