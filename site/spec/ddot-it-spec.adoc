@@ -1,4 +1,4 @@
-= The ddot.it Specification 1.1.0
+= The ddot.it Specification 1.3.0
 :toc: macro
 :ddd: Ddot.it
 :dd: ddot.it
@@ -26,6 +26,10 @@ The {dd} specification describes:
 
 - Open questions remain?
 ** See xref:ddot-it-faq.adoc[FAQ]
+
+.About this document
+- Last Modified: 2026-08-07
+- Version: 1.3.0
 
 
 

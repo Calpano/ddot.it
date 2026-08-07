@@ -11,7 +11,7 @@ metadata (`,,` and `;;`), and triples (`..`) with continuation lines.
 NOTE: This is an *implementation note*, not a specification. The normative document is the
 link:../site/spec/ddot-it-parse.adoc[Parse Specification]; where the two disagree, it wins. This
 note exists to answer one question — "how little machinery do I actually need?" — and is written
-against spec version 1.2.0 / language version 1.3.
+against spec version 1.3.0 / language version 1.3.
 
 toc::[]
 

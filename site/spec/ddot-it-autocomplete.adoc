@@ -1,4 +1,4 @@
-= The ddot.it Autocomplete Specification 1.2.0
+= The ddot.it Autocomplete Specification 1.3.0
 :toc: macro
 :ddd: Ddot.it
 :dd: ddot.it
@@ -12,8 +12,8 @@ xref:ddot-it-parse.adoc[{ddd} Parse Specification] and
 xref:ddot-it-highlight.adoc[{ddd} Highlight Specification].
 
 .About this document
-- Last Modified: 2026-07-28
-- Version: 1.2.0
+- Last Modified: 2026-08-07
+- Version: 1.3.0
 
 .Contents
 toc::[]

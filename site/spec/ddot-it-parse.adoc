@@ -1,4 +1,4 @@
-= The ddot.it Parse Specification 1.2.0
+= The ddot.it Parse Specification 1.3.0
 :toc: macro
 :ddd: Ddot.it
 :dd: ddot.it
@@ -14,8 +14,8 @@ Ddot.it has a generic triple model and a simple syntax.
 A gentle introduction can be found at https://ddot.it[ddot.it].
 
 .About this document
-- Last Modified: 2026-07-28
-- Version: 1.2.0
+- Last Modified: 2026-08-07
+- Version: 1.3.0
 
 .Contents
 toc::[]

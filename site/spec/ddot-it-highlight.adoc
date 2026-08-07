@@ -1,4 +1,4 @@
-= The ddot.it Syntax Highlight Specification 1.1.0
+= The ddot.it Syntax Highlight Specification 1.3.0
 :toc: macro
 :ddd: Ddot.it
 :dd: ddot.it
@@ -9,6 +9,10 @@
 :page-parent: Specifications
 
 Builds upon the xref:ddot-it-parse.adoc[{ddd} Parse Specification].
+
+.About this document
+- Last Modified: 2026-08-07
+- Version: 1.3.0
 
 
 

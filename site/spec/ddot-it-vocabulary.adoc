@@ -1,4 +1,4 @@
-= The ddot.it Vocabulary 1.1.0
+= The ddot.it Vocabulary 1.3.0
 :toc: macro
 :ddd: Ddot.it
 :dd: ddot.it
@@ -11,6 +11,10 @@
 // Parsing is OFF for the whole document; only the built-in blocks below
 // switch it back ON. See "Declaration Conventions".
 // https://ddot.it/off
+
+.About this document
+- Last Modified: 2026-08-07
+- Version: 1.3.0
 
 
 == Introduction
@@ -1629,14 +1633,21 @@ Each also carries `..has type.. property`.
 
 
 == Versioning
-This vocabulary is versioned independently of the {dd} syntax specification.
+This vocabulary carries the version number of the {dd} specification suite -- all documents under
+`/spec/` are released together, and the link:../CHANGELOG.md[{ddd} changelog] covers them as one.
+Earlier releases numbered this document independently.
 
 .Version number
-The title carries a semantic version (currently *1.1.0*):
+The title carries a semantic version (currently *1.3.0*). Read against *this* document, the
+components mean:
 
 - *Major* — a built-in was removed or its meaning narrowed, so previously valid data may now be wrong.
 - *Minor* — built-ins were added, or aliases and supertypes were added without invalidating existing data.
 - *Patch* — wording, examples and typo fixes only; no triple changed.
+
+Because the number is shared, a release may bump it for a reason that lies in another document.
+The guarantee runs one way and is the one that matters to a consumer: within a major version, no
+built-in is ever removed or narrowed here.
 
 .Namespace date
 Every built-in URI lives in a dated namespace, currently

@@ -1,4 +1,4 @@
-= CDS & Standards Alignment 1.1.0
+= CDS & Standards Alignment 1.3.0
 :toc: macro
 :ddd: Ddot.it
 :dd: ddot.it
@@ -8,6 +8,10 @@
 :page-parent: Specifications
 
 toc::[]
+
+.About this document
+- Last Modified: 2026-08-07
+- Version: 1.3.0
 
 This document delivers background information about design decisions.
 

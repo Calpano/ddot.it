@@ -2,7 +2,7 @@
 
 
 ## Version 1.3
-Unreleased (as of 2026-07-29)
+Released on 2026-08-07
 
 ### Reading and commands
 
