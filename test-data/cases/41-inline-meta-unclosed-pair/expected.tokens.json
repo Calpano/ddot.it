@@ -1,0 +1,135 @@
+[
+  {
+    "line": 0,
+    "start": 0,
+    "end": 4,
+    "token": "subject",
+    "text": "Dirk"
+  },
+  {
+    "line": 0,
+    "start": 5,
+    "end": 7,
+    "token": "doubledot",
+    "text": ".."
+  },
+  {
+    "line": 0,
+    "start": 7,
+    "end": 15,
+    "token": "relation",
+    "text": "works at"
+  },
+  {
+    "line": 0,
+    "start": 15,
+    "end": 17,
+    "token": "doubledot",
+    "text": ".."
+  },
+  {
+    "line": 0,
+    "start": 18,
+    "end": 21,
+    "token": "object",
+    "text": "SAP"
+  },
+  {
+    "line": 0,
+    "start": 22,
+    "end": 24,
+    "token": "meta-delim",
+    "text": ",,"
+  },
+  {
+    "line": 0,
+    "start": 25,
+    "end": 30,
+    "token": "meta-text",
+    "text": "..bla"
+  },
+  {
+    "line": 1,
+    "start": 0,
+    "end": 4,
+    "token": "subject",
+    "text": "Dirk"
+  },
+  {
+    "line": 1,
+    "start": 5,
+    "end": 7,
+    "token": "doubledot",
+    "text": ".."
+  },
+  {
+    "line": 1,
+    "start": 7,
+    "end": 15,
+    "token": "relation",
+    "text": "lives in"
+  },
+  {
+    "line": 1,
+    "start": 15,
+    "end": 17,
+    "token": "doubledot",
+    "text": ".."
+  },
+  {
+    "line": 1,
+    "start": 18,
+    "end": 26,
+    "token": "object",
+    "text": "Walldorf"
+  },
+  {
+    "line": 1,
+    "start": 27,
+    "end": 29,
+    "token": "meta-delim",
+    "text": ",,"
+  },
+  {
+    "line": 1,
+    "start": 30,
+    "end": 35,
+    "token": "meta-text",
+    "text": "..bla"
+  },
+  {
+    "line": 1,
+    "start": 36,
+    "end": 38,
+    "token": "meta-separator",
+    "text": ";;"
+  },
+  {
+    "line": 1,
+    "start": 39,
+    "end": 41,
+    "token": "meta-doubledot",
+    "text": ".."
+  },
+  {
+    "line": 1,
+    "start": 41,
+    "end": 46,
+    "token": "meta-relation",
+    "text": "since"
+  },
+  {
+    "line": 1,
+    "start": 46,
+    "end": 48,
+    "token": "meta-doubledot",
+    "text": ".."
+  },
+  {
+    "line": 1,
+    "start": 49,
+    "end": 53,
+    "token": "meta-object",
+    "text": "2016"
+  }
+]
