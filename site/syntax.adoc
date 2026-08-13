@@ -1,0 +1,109 @@
+= ⚇ ddot.it &ndash; Syntax Overview
+:page-title: Syntax Overview
+:page-parent: Developer Guide
+:page-nav_order: 1
+
+This page conveys the *rough structure* of ddot.it — the shape of the syntax, not its details.
+For the exact rules, read the normative
+link:spec/ddot-it-parse.html[Parse Specification]: it carries the token alphabet, the formal grammar
+(EBNF, in `site/spec/ddot.it-parsing.ebnf`), the parse state automaton, the AST and the triple
+event format.
+
+Related normative documents: the
+link:spec/ddot-it-vocabulary.html[Vocabulary],
+link:spec/ddot-it-highlight.html[Highlight] and
+link:spec/ddot-it-autocomplete.html[Autocomplete] specifications. In case of doubt, the golden
+corpus at `test-data/cases/` has the last word.
+
+== The whole syntax in five operators
+
+ddot.it is line-oriented. A document is a sequence of lines, and a line is either a triple or
+ordinary text that is passed over. There is no document structure, no nesting, no escaping.
+
+|===
+|Operator |Name |Role
+
+|`..` |double dot |delimits the relation: `subject ..relation.. object`
+|`....` |quad dot |an untyped link — the relation is `links to`
+|`,,` |double comma |attaches metadata to the triple on its left
+|`;;` |double semicolon |separates metadata entries on one line
+|`!!` |double bang |introduces a command
+|===
+
+Each is a run of *exactly* that many characters. One dot, three dots, a lone comma — ordinary
+text. That is why `Node.js`, `Mr. Smith` and `U.S.A.` carry no operator and prose is safe.
+
+== Triples
+
+----
+Project Eagle ..started in.. 2024
+Project Eagle .... Moonshot
+----
+
+The object is mandatory. Fields may contain spaces; only the operators delimit them, and
+surrounding whitespace is stripped. Omit the subject and the previous line's subject continues:
+
+----
+Project Eagle ..started in.. 2024
+..doc site.. example.com/docbase/8dcjsid
+----
+
+== Metadata
+
+`,,` attaches *entries* to a triple. An entry is either a (relation, object) pair or a
+free-text note, and the two mix freely in any order. Inline, entries are separated by `;;`:
+
+----
+John Doe ..leads.. Project Eagle ,, ..since.. 2025 ;; a note ;; ..until.. 2027
+----
+
+In block form the triple line ends with `,,`, entries go one per line, and a `,,` on its own line
+closes it. Newlines separate the entries there, so `;;` is ordinary text inside a block — which
+is how you write a note that has to contain one:
+
+----
+Dirk Hagemann ..works at.. SAP ,,
+..year.. 2010
+a free-text note
+,,
+----
+
+A note carries the built-in relation `text`; the untyped `,, .... value` form carries `links to`.
+See the link:spec/ddot-it-vocabulary.html[Vocabulary Specification].
+
+== Commands
+
+A command is a URL under `ddot.it/`, with four interchangeable spellings — `!!name`,
+`ddot.it/name`, `http://ddot.it/name`, `https://ddot.it/name`. The *slash and a name are
+required*; bare `ddot.it` is a document marker, not a command.
+
+* link:this.html[`ddot.it/this`] — the current document, as a triple subject
+* link:off.html[`ddot.it/off`] and link:on.html[`ddot.it/on`] — exclude a region from parsing
+* link:block.html[`ddot.it/block`] — take the following lines verbatim as one field's value
+
+`!!off`, `!!on` and `!!block` act before parsing; every other command is just part of the text of
+the field holding it.
+
+== Syntax example
+
+----
+Project Eagle..started in.. 2024
+..doc site .. example.com/docbase/8dcjsid
+John Doe..leads.. Project Eagle ,, ..since.. 2025
+Project Eagle....Moonshot
+----
+
+This text is interpreted as this knowledge graph:
+
+== Where the details are
+
+|===
+|Topic |Document
+
+|Token alphabet, whitespace, counting rule |link:spec/ddot-it-parse.html#lexical_layer[Parse Spec — Lexical Layer]
+|Formal grammar (EBNF) |`site/spec/ddot.it-parsing.ebnf`, included in link:spec/ddot-it-parse.html#grammar[Parse Spec — Grammar]
+|Parse state automaton, AST |link:spec/ddot-it-parse.html#state-automaton[Parse Spec]
+|Triple event JSON |link:spec/ddot-it-parse.html#events[Parse Spec — Triple Events]
+|Relation names and their meaning |link:spec/ddot-it-vocabulary.html[Vocabulary Specification]
+|Worked examples, input → events |`llms.txt` and `test-data/cases/`
+|===

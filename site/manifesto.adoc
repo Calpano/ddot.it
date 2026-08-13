@@ -1,0 +1,95 @@
+= The ddot.it Manifesto
+:toc:
+
+== Reading over Writing
+
+Knowledge and code should be read more often than written. Otherwise, the cost of writing it down is in most cases not justified.
+
+* *Human Readers First*
+* *Easy for Agents, too* +
+ Agents can *read* the syntax of ddot.it without any skills, plugins or instruction.
+
+== Easy to Write
+
+The basic syntax of ddot.it can be taught in 20 seconds:
+
+* All knowledge is triples
+* Example: `ddot.it  ..has type.. language`
+* Structure: `subject .. relation .. object ,, here is optionally metadata about the triple`
+
+Programs can emit ddot.it trivially. Just ensure no double-dot appears in subjects or relations. In objects, either ensure no double-comma appears or always use the https://ddot.it/block command.
+
+== Less is More
+Less syntax is better.
+
+The fewer syntax elements ddot.it has, the easier it is to learn. And use.
+That's why ddot.it has no syntax for lists.
+The only syntax sugar is an _omitted subject_.
+
+== More is Better
+More triples is usually better.
+
+In some rare cases, text which was not meant to be a triple is interpreted as a triple. Usually, there is no downside to it. Yes, a search would find some noise.
+
+On the other hand, data meant to be triples should not be hard to type.
+If knowledge is hard to type, it will not get typed.
+
+== Be a Nice Guest
+Don't ask what you can embed in ddot.it, ask where you can embed ddot.it into.
+Ddot.it is a _guest language_ in a _host language_.
+
+.Example
+Instead of putting HTML values in a ddot.it `!!block`, write an HTML file and annotate it with ddot.it tags. Use the HTML-specific ways, like custom component syntax or data attributes syntax.
+See link:reader/reader-html.html[HTML reader].
+
+== Connect the Dots
+By re-using the same subjects, relation and/or objects in multiple places, a web of knowledge is created.
+
+== Make Simple Things Simple and Advanced Things Possible
+The headline says it all.
+
+.Example
+You can go from a simple triple gradually by inserting more characters to more and more complex knowledge graphs.
+
+.Dirk has something to do with SAP
+[source,ddot.it]
+----
+Dirk .... SAP
+----
+
+Interpretation: ("Dirk", "links to", "SAP")
+
+You want to formalize _how_ the two entities are related?
+
+.He works there
+[source,ddot.it]
+----
+Dirk ..works at.. SAP
+----
+
+Interpretation: ("Dirk", "works at", "SAP")
+
+
+Want to add a textual note on the triple?
+
+.Ah, as a developer
+[source,ddot.it]
+----
+Dirk ..works at.. SAP ,, as developer
+----
+
+Interpretation: ("Dirk", "works at", "SAP")["text", "as developer"]
+
+
+Attach formal meta-data on the triple?
+
+.But only after the pandemic
+[source,ddot.it]
+----
+Dirk ..works at.. SAP ,, as developer;; ..since.. 2024
+----
+
+Interpretation: ("Dirk", "works at", "SAP")["text", "as developer"]["since", "2024"]
+
+
+We only ever added characters, having all complex stuff completely optional.

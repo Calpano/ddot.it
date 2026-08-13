@@ -1,42 +1,49 @@
----
-title: XML Reader
-parent: Developer Guide
-nav_order: 8
----
-# ⚇ ddot.it XML Reader
+= ⚇ ddot.it XML Reader
+:page-title: XML Reader
+:page-parent: Developer Guide
+:page-nav_order: 8
 
-A ddot.it [reader](developer-guide.md#reader) for XML files, including `pom.xml` (Maven) and other XML-based formats.
-It recognizes triples in [comments](#comments) and [string values](#string-values).
+A ddot.it link:../developer-guide.html#reader[reader] for XML files, including `pom.xml` (Maven) and other XML-based formats.
+It recognizes triples in <<comments,comments>> and <<string-values,string values>>.
 
-NOTE: Some examples use the [ddot.it/this](user-guide.md#this-command) command.
+NOTE: Some examples use the link:../user-guide.html#this-command[ddot.it/this] command.
 
-## Standard Syntax
+== Standard Syntax
 
-### Comments
-```xml
+=== Comments
+
+[source,xml]
+----
 <!-- ddot.it/this ..project.. Code Red -->
-```
+----
 
 Multi-line comment:
-```xml
+
+[source,xml]
+----
 <!--
 ddot.it/this ..project.. Code Red
 ..team.. Platform
 -->
-```
+----
 
-### String Values
+=== String Values
+
 Ddot.it triples inside element text content:
-```xml
+
+[source,xml]
+----
 <description>ddot.it/this ..project.. Code Red</description>
-```
+----
 
-## Extra Syntax
+== Extra Syntax
 
-### Maven pom.xml
+=== Maven pom.xml
+
 In `pom.xml` files, the `<description>` element and XML comments are the natural places for ddot.it triples.
 
-```xml
+[source,xml]
+----
 <project>
   <description>
     ddot.it/this ..type.. library
@@ -45,5 +52,6 @@ In `pom.xml` files, the `<description>` element and XML comments are the natural
 
   <!-- ddot.it/this ..status.. active -->
 </project>
-```
+----
+
 NOTE: The description is even published to places like Sonatype, where other tools can discover it and extract triples from there. Ddot.it works everywhere.

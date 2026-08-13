@@ -10,7 +10,7 @@
        #xN         character by number   A+          one or more
        [#xN-#xM]   character range       A B         sequence
        (A)         grouping              A | B       alternative
-       /* ... */   comment               A - B       matches A but not B
+       /* ... star slash  comment        A - B       matches A but not B
 
    TWO SEMANTIC EXTENSIONS. The notation above fixes the *syntax* of this file;
    two of its operators are read with stronger semantics than XML gives them,
@@ -146,8 +146,19 @@ MetaRelation        ::= Name
 /* --- meta, inline form: entries separated by ';;' ------------------------- */
 
 /* One chain of entries, in any mix: `,, ..k.. v ;; a note ;; .... o` is a
-   typed pair, a note, and an untyped pair, in that order. */
-MetaInline          ::= MetaEntryInline (SC2 MetaEntryInline)*
+   typed pair, a note, and an untyped pair, in that order.
+
+   An entry may be EMPTY -- `;;` parts entries and demands nothing of them, so
+   `,, ;; x` and a line ending in `;;` both derive. An empty entry carries no
+   metadata and is dropped: it is not an error, and a separator is not a
+   promise that something follows.
+
+   MetaInline itself is never empty, though, which is what keeps a trailing
+   `,,` unambiguous: with no SC2 the single entry must be there, so `,,' NL is
+   only ever a MetaBlockOpen. Hence the two alternatives rather than a plain
+   `MetaEntryInline? (SC2 MetaEntryInline?)*`. */
+MetaInline          ::= MetaEntryInline? (SC2 MetaEntryInline?)+
+                      | MetaEntryInline
 
 /* Ordered choice: the two dotted forms are tried first, and text is what is
    left. So a '..' that never closes is a note, not an error -- `,, ..bla` is

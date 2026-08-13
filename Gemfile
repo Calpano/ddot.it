@@ -41,3 +41,14 @@ group :jekyll_plugins do
 end
 
 gem "webrick" # required for Ruby >= 3
+
+# Checks the built site for references that resolve to nothing; run via
+# ./check-links.sh, which pages.yml calls after the build.
+#
+# Replaces the hand-written tools/check-site-links.py, which it strictly
+# supersedes: that script checked .html targets and their #anchors only,
+# returning None for every other extension, so images, stylesheets, downloads
+# and extensionless permalinks went unchecked — the live `/relations` and
+# missing-diagram cases it could not see. Not a Jekyll plugin, so it stays out
+# of :jekyll_plugins.
+gem "html-proofer", "~> 5.0"

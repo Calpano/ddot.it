@@ -309,7 +309,7 @@ Top-level `patterns`, in order (**order matters** -- first match wins, so most s
 Anything matching none of these is a `NotATriple` line and stays plain.
 
 .Field capture pattern (inside D5's gated match)
-Each of subject / relation / object / meta-* is captured as the text between its bounding markers (lazily, respecting the xref:ddot-it-parse.adoc#field-text[`Word` class] the grammar gives that field), assigned its <<Scope Name Mapping,entity scope>>, and given a nested `patterns` list containing `#command` so an in-text command inside the field is highlighted on top of the entity colour.
+Each of subject / relation / object / meta-* is captured as the text between its bounding markers (lazily, respecting the xref:ddot-it-parse.adoc#grammar[`Word` class] the grammar gives that field), assigned its <<Scope Name Mapping,entity scope>>, and given a nested `patterns` list containing `#command` so an in-text command inside the field is highlighted on top of the entity colour.
 
 .Two regex details worth keeping
 - **Operator alternation, not rule ordering.** `QuadDot` and `DoubleDot` are alternatives *within one regex* (`QUAD` listed first), not two rules in priority order. Leftmost-first then does the right thing in both directions: `Alpha .. .. Beta` yields one `doubledot` spanning `.. ..`, while `a ..b.. c .. .. d` still parses as a typed triple, because its first marker sits further left.

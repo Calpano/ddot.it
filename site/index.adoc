@@ -1,0 +1,59 @@
+= ⚇ ddot.it &ndash; Connect anything with everything
+:page-nav_exclude: true
+:imagesdir: images
+
+== ⚇ ddot.it &ndash; Connect anything with everything
+ddot.it is a *simple syntax* for mixing documents and knowledge graphs.
+
+.Simple Syntax
+* ddot.it uses only double-dot (`..`) and double-comma (`,,`).
+* *Ergonomic*: ⌨️ Easy to type, even on mobile keyboards.
+* *AI ready*: 🤖Token-efficient and Markdown-compatible.
+* ddot.it can be used *wherever you can enter text*.
+
+* Add links, annotations and structured data directly into your existing *decentralized documents*: +
+ link:reader/reader-markdown.html[Markdown] files, link:reader/reader-java.html[Java]Doc comments, Google Context notes field, link:reader/reader-powerpoint.html[PowerPoint] slide notes, Confluence pages, Maven pom.link:reader/reader-xml.html[xml] files, Word documents, email text, Docker compose link:reader/reader-yaml.html[yaml] files, link:reader/reader-html.html[web pages], …
+* By using the same concepts, a single web of knowledge is formed – *across tool boundaries*.
+* You get an enterprise (or personal) *knowledge graph*, giving humans and agents a shared understanding of core concepts.
+
+*How does it work?*
+
+A uniform 'triple' structure for *typed links*, *simple links*, and *properties*.
+
+[.diagram.diagram-sm]
+image::triple-structure.svg[]
+
+. Each *ddot reader* knows how to read one kind of source and extracts the triples from the ddot.it text.
+. A *ddot collector* uses a number of readers to read all sources, periodically.
+** Your sources remain the single source of truth. Triples are just cached.
+. All triples are *combined into a single knowledge base*. +
+This knowledge base (just a JSON array of ddot events) can be converted to many other graph formats at https://graphinout.com[graphinout.com].
+
+== Quick Ref
+
+* Universal *typed link* and *property* syntax is `aaa .. bbb.. ccc`.
+* Link type can be left out: Use `aaa .... ccc` for a simple link.
+* Append more to same subject with `..bbb.. ccc` lines.
+* *Meta-data* can be appended behind `,,`.
+* Spaces and tabs don't matter. Incomplete triples are ignored. An omitted subject continues the
+ previous one — across blank lines, to the end of the file.
+* Annotate a document: `ddot.it/this` refers to the doc in which ddot.it is used.
+
+See the link:user-guide.html[User Guide] for the full syntax reference and more link:user-guide.html#commands[commands] (`ddot.it/COMMAND`).
+
+See the link:developer-guide.html[Developer Guide] on how to implement your own readers and collectors.
+
+== Editor Support
+
+* Free VSCode extension on +++<a href="https://marketplace.visualstudio.com/items?itemName=calpano.ddot" data-umami-event="outbound-vscode-marketplace">VSCode Marketplace</a>+++ and on +++<a href="https://open-vsx.org/extension/calpano/ddot" data-umami-event="outbound-open-vsx">Open VSX Registry</a>+++
+* Free plugin for IntelliJ IDEA, IntelliJ IDEA Community, MPS, PhpStorm, JetBrains Gateway, GoLand, PyCharm, WebStorm, Code With Me Guest, Rider, PyCharm Community, CLion, DataSpell, RustRover, Android Studio, JetBrains Client, DataGrip, and RubyMine from +++<a href="https://plugins.jetbrains.com/plugin/31651-ddot-it" data-umami-event="outbound-jetbrains-marketplace">Jetbrains Marketplace</a>+++.
+* ddot *textmate grammar* on
+ +++<a href="https://www.npmjs.com/package/@calpano/ddot-textmate-grammar" data-umami-event="outbound-npm-textmate-grammar">npmjs</a>+++
+* ddot *shiki language registration* on
+ +++<a href="https://www.npmjs.com/package/@calpano/ddot-shiki" data-umami-event="outbound-npm-shiki">npmjs</a>+++
+* highlight.js language definition on +++<a href="https://www.npmjs.com/package/@calpano/ddot-highlightjs" data-umami-event="outbound-npm-highlightjs">npmjs</a>+++
+* Prism.js language definition for ddot.it on +++<a href="https://www.npmjs.com/package/@calpano/ddot-prismjs" data-umami-event="outbound-npm-prismjs">npmjs</a>+++
+* Rouge syntax highlighter on +++<a href="https://rubygems.org/gems/rouge-ddot" data-umami-event="outbound-rubygems-rouge">rubygems</a>+++ for Asciidoctor, Jekyll, GitLab
+* Pygments lexer for ddot.it on +++<a href="https://pypi.org/project/pygments-ddot/" data-umami-event="outbound-pypi-pygments">PyPI</a>+++
+
+*Coding agent? See https://ddot.it/llms.txt*

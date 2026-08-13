@@ -1,0 +1,35 @@
+= ddot.it/on
+:page-permalink: /on
+:page-nav_exclude: true
+
+`ddot.it/on` is a link:user-guide.html#include-command[command] that marks the start of a region to *include* in ddot.it processing.
+
+----
+ddot.it/on
+Project Eagle .. status .. active
+.. started in .. 2024
+ddot.it/off
+----
+
+The command is recognised *anywhere on a line*, so it can be written inside a host
+language's comment — the usual way to place it in a Markdown, YAML, Java or HTML file:
+
+----
+<!-- ddot.it/on -->
+# ddot.it/on
+// !!on
+----
+
+A document may contain multiple `on`/`off` pairs to selectively process only certain regions.
+Without any `on`/`off` commands, the whole document is processed by default.
+
+See the link:user-guide.html#include-and-exclude[User Guide] for the full reference.
+
+== Highlighting
+
+Only the command itself is highlighted; the surrounding comment markers are ignored. The
+line carrying the command yields no triple, and the region starts on the *next* line.
+
+NOTE: Because any line containing the command counts, a sentence _about_ `!!on` also
+triggers it. Inside a link:block.html[`ddot.it/block`] commands are inert, which is the way to
+write about them.

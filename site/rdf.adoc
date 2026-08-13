@@ -1,15 +1,16 @@
----
-title: Resource Description Framework (RDF)
-parent: Developer Guide
-nav_order: 10
----
-# ⚇ ddot.it and RDF
+= ⚇ ddot.it and RDF
+:page-page-title: Resource Description Framework (RDF)
+:page-parent: Developer Guide
+:page-nav_order: 10
+:toc:
 
-RDF is also using triples, but RDF has more features – and is more complex.
-RDF is not even a syntax, but a datamodel with several syntaxes. 
-ddot.it compares probably best to [Turtle](https://en.wikipedia.org/wiki/Turtle_(syntax)).
+Resource Description Framework (RDF) is also using triples, but RDF has more features – and is more complex
+ then ddot.it.
+RDF is not even a syntax, but a datamodel with several syntaxes.
+ddot.it compares probably best to https://en.wikipedia.org/wiki/Turtle_(syntax)[Turtle].
 
-```turtle
+[source,turtle]
+----
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix dc: <http://purl.org/dc/elements/1.1/> .
 @prefix ex: <http://example.org/stuff/1.0/> .
@@ -20,46 +21,51 @@ ddot.it compares probably best to [Turtle](https://en.wikipedia.org/wiki/Turtle_
     ex:fullname "Dave Beckett";
     ex:homePage <http://purl.org/net/dajobe/>
   ] .
-```
+----
 
 which translates directly to basic ddot.it as
 
-```
+----
 http://www.w3.org/TR/rdf-syntax-grammar ..dc:title.. RDF/XML Syntax Specification (Revised)
 ..ex:editor.. _:b1
 _:b1 ..ex:fullname.. Dave Beckett
 ..ex:homePage.. http://purl.org/net/dajobe/
-```
+----
 
 But more realistically, in ddot.it one would write
 
-```
+----
 RDF/XML Syntax Specification (Revised) ..url.. http://www.w3.org/TR/rdf-syntax-grammar
 ..editor.. Dave Beckett
 Dave Beckett ..url.. http://purl.org/net/dajobe/
-```
-- `url` is shorter to type than `homePage`.
-- there is usually no need to use namespace prefixes at all. If ddot.it is used at a large company, that whole large company can define in upstream processing to map `title` to `dc:title`. But such formalities are out of scope for the simple ddot.it syntax.
-- Instead of giving a URL a title, ddot.it gives the title a url. Human labels are the leading identifiers.
-To deal with arising id ambiguity, one can simply state
-- The term `Dave Beckett` was repeated. That is not so nice to type, but keeps the syntax readable and memorable.
+----
 
-## Namespaces
+* `url` is shorter to type than `homePage`.
+* there is usually no need to use namespace prefixes at all. If ddot.it is used at a large company, that whole large company can define in upstream processing to map `title` to `dc:title`. But such formalities are out of scope for the simple ddot.it syntax.
+* Instead of giving a URL a title, ddot.it gives the title a url. Human labels are the leading identifiers.
+To deal with arising id ambiguity, one can simply state
+* The term `Dave Beckett` was repeated. That is not so nice to type, but keeps the syntax readable and memorable.
+
+== Namespaces
+
 To really represent the RDF from the example, we would also need to encode the namespace mapping.
 A 'natural' option in ddot.it would be
 
-```
+----
 rdf ..prefix.. http://www.w3.org/1999/02/22-rdf-syntax-ns#
 dc ..prefix.. http://purl.org/dc/elements/1.1/
 ex ..prefix.. http://example.org/stuff/1.0/
-```
+----
+
 which, if you look at it, doesn't look to bad.
 
-## Interpreting ddot.it as RDF
+== Interpreting ddot.it as RDF
+
 When mapped back into the GGG (giant global graph) of triples, each ddot.it subject is probably best interpreted as a blank node with a bunch of properties. Hopefull some of them are inverse functional properties (such as `..url..`) so that different nomenclature for the same concept can be merged.
 Ideally, the ddot.it is mapped to RDF by the ddot.it collector.
 
-## Summary
-ddot.it does not replace RDF. It is a simpler syntax, with fewer features, that is easier to type.
-ddot.it works well in contexts where string labels are precise enough, e.g. in a company or in personal use. 
+== Summary
+ddot.it does not replace RDF.
+It is a simpler syntax, with fewer features, that is easier to type.
+ddot.it works well in contexts where string labels are precise enough, e.g., in a company or in personal use.
 Use RDF and JSON for data exchange and ddot.it for handwritten triples.

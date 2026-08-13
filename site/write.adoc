@@ -1,0 +1,52 @@
+= Author Guide: How to write correct and pretty ddot.it
+:page-title: "Author Guide"
+:page-permalink: /write
+:page-nav_exclude: false
+:toc:
+
+== Spacing Suggestion
+For a full triple, make the spacing like this:
+
+[source,ddot.it]
+----
+aaa ..bbb.. ccc
+----
+
+This is not required, but it looks good and a common convention makes it even easier to read ddot.it.
+
+
+For additional triples, let it look like this:
+
+[source,ddot.it]
+----
+myObject ..myRel.. myValue
+..myNextRel.. myNextValue
+----
+
+== Shorthands
+
+Remember, there are no shorthands.
+To say a, b, and c have the type service, the only possible way to write that is
+
+[source,ddot.it]
+----
+a ..type.. service
+b ..type.. service
+c ..type.. service
+----
+
+You could write
+[source,ddot.it]
+----
+service ..has instance.. a
+..has instance.. b
+..has instance.. c
+----
+but that is considered uglier.
+
+== More Tipps & Tricks
+
+* Unsure which relations to use?
+Inspire yourself with the link:/rel[relation guide].
+* Need more control, which lines of a text are d-dotted and which are excluded? Use link:off.html[ddot.it/off] and link:on.html[ddot.it/on].
+* Wanting to express RDF-like data? See link:/rdf[ddot.it and RDF].

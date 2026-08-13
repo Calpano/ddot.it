@@ -35,9 +35,11 @@ jobs:
           JEKYLL_ENV: production
       # Broken cross-references do not fail the Jekyll build, and AsciiDoc has no
       # source-level validation for them at all — an unresolved <<ref>> renders as
-      # an ordinary-looking link. Check the built output instead.
-      - name: Check internal links
-        run: python3 tools/check-site-links.py _site
+      # an ordinary-looking link. Check the built output instead. Internal only:
+      # external URLs are checked on demand with ./check-links.sh --external,
+      # never here, where somebody else's outage would block a deploy.
+      - name: Check internal links, anchors, images and assets
+        run: ./check-links.sh
       # Rouge emits `<span class="err">` for input it could not lex. That is the
       # only signal it gives, and it covers two distinct faults: a malformed code
       # sample, or a genuine lexer bug on valid input — the latter is how the

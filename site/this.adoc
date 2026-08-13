@@ -1,0 +1,18 @@
+= ddot.it/this
+:page-permalink: /this
+:page-nav_exclude: true
+
+`ddot.it/this` is a link:user-guide.html#commands[command] that refers to the *current document* as the subject of a triple.
+
+Use it to annotate the file itself, rather than naming a subject explicitly:
+
+----
+ddot.it/this .. project .. Code Red
+ddot.it/this .. author .. Alice
+ddot.it/this .. status .. active
+----
+
+This is equivalent to writing the document's own URL or path as the subject.
+The link:developer-guide.html#collector[collector] replaces `ddot.it/this` with the actual source URL when building the knowledge graph.
+
+See the link:user-guide.html#this-command[User Guide] for the full reference.

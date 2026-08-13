@@ -37,6 +37,119 @@ $below-md: "(max-width: #{map-get($media-queries, md) - 0.02rem})";
   background-attachment: local, local, scroll, scroll;
 }
 
+// AsciiDoc block titles
+//
+// A `.Foo` line above a block becomes `<div class="title">` (paragraphs,
+// listings, lists, figures), `<caption class="title">` (tables) or
+// `<div id="toctitle" class="title">` (the `toc::[]` macro). Asciidoctor's own
+// stylesheet sets these in italic with a muted accent colour, but Jekyll
+// renders embedded HTML into this theme, which ships no rule for `.title` at
+// all — so they arrive as plain body text and read as a stray sentence rather
+// than a caption.
+//
+// Scoped to `.main-content` so it cannot reach the sidebar's `.site-title`.
+// For captions that follow the site palette instead of Asciidoctor's, set
+// `$asciidoc-title-color` to a theme variable such as `$body-heading-color`.
+
+$asciidoc-title-color: #7a2518 !default;
+
+.main-content {
+  .title {
+    color: $asciidoc-title-color;
+    font-style: italic;
+  }
+
+  // Browsers centre `<caption>`; Asciidoctor aligns table titles with the
+  // table's content, like every other block title.
+  caption.title {
+    text-align: left;
+  }
+}
+
+// AsciiDoc admonitions
+//
+// `icons=font` (_config.yml) makes Asciidoctor emit `<i class="fa icon-note">`
+// — a Font Awesome glyph. Nothing here loads Font Awesome, so the icon cell
+// renders empty and a NOTE is indistinguishable from a CAUTION. The glyphs are
+// drawn from Unicode in `::before` instead: five characters do not justify a
+// webfont, and the site otherwise makes no external requests.
+//
+// The theme's `_layouts/table_wrappers.html` rewrites every `<table` on the
+// page into `.table-wrapper > table`, so an admonition also arrives dressed as
+// a data table — drop shadow, rounded frame, 7.5rem minimum cell width. That
+// framing is undone here and replaced with a coloured left rule.
+//
+// Keys match Asciidoctor's block class (`.admonitionblock.note`) and icon
+// class (`.icon-note`); the five below are the complete set it emits.
+
+$admonition-icon: (
+  note: "ℹ️",
+  tip: "💡",
+  important: "❗",
+  warning: "⚠️",
+  caution: "🔥",
+);
+
+$admonition-accent: (
+  note: $blue-000,
+  tip: $green-000,
+  important: $purple-000,
+  warning: $yellow-300,
+  caution: $red-200,
+);
+
+.main-content .admonitionblock {
+  margin: $sp-4 0;
+  border-radius: $border-radius;
+
+  // Undo the data-table dressing applied by table_wrappers.html.
+  .table-wrapper {
+    margin-bottom: 0;
+    overflow-x: auto;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  table,
+  tr {
+    border: 0;
+    background: none;
+  }
+
+  td {
+    min-width: 0;
+    padding: $sp-2 $sp-3;
+    border: 0;
+    background: none;
+    vertical-align: top;
+  }
+
+  // Shrink-wrap the icon cell so the text starts next to the glyph rather
+  // than a column-width away.
+  td.icon {
+    width: 1px;
+    padding-right: 0;
+    white-space: nowrap;
+  }
+
+  // `<i>` would slant a text glyph such as ❗; emoji are unaffected, but the
+  // rule keeps the two kinds consistent.
+  i.fa {
+    font-style: normal;
+  }
+
+  @each $name, $accent in $admonition-accent {
+    &.#{$name} {
+      background-color: rgba($accent, 0.08);
+      border-left: 3px solid $accent;
+
+      .icon-#{$name}::before {
+        content: map-get($admonition-icon, $name);
+      }
+    }
+  }
+}
+
 // Diagrams
 //
 // Replaces per-image inline widths. The percentages keep the SVGs from

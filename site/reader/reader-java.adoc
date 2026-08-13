@@ -1,32 +1,36 @@
----
-title: Java Reader
-parent: Developer Guide
-nav_order: 5
----
-# ⚇ ddot.it Java Reader
+= ⚇ ddot.it Java Reader
+:page-title: Java Reader
+:page-parent: Developer Guide
+:page-nav_order: 5
 
-A ddot.it [reader](developer-guide.md#reader) for Java source files.
-It recognizes triples in [line comments](#line-comments), [block comments](#block-comments), and [Javadoc comments](#javadoc-comments).
+A ddot.it link:../developer-guide.html#reader[reader] for Java source files.
+It recognizes triples in <<line-comments,line comments>>, <<block-comments,block comments>>, and <<javadoc-comments,Javadoc comments>>.
 
-NOTE: Some examples use the [ddot.it/this](user-guide.md#this-command) command.
+NOTE: Some examples use the link:../user-guide.html#this-command[ddot.it/this] command.
 
-## Standard Syntax
+== Standard Syntax
 
-### Line Comments
-```java
+=== Line Comments
+
+[source,java]
+----
 // ddot.it/this ..project.. Code Red
-```
+----
 
-### Block Comments
-```java
+=== Block Comments
+
+[source,java]
+----
 /*
  * ddot.it/this ..project.. Code Red
  * ..team.. Platform
  */
-```
+----
 
-### Javadoc Comments
-```java
+=== Javadoc Comments
+
+[source,java]
+----
 /**
  * Processes the incoming request.
  *
@@ -34,25 +38,29 @@ NOTE: Some examples use the [ddot.it/this](user-guide.md#this-command) command.
  * ..depends on.. UserRepository
  */
 public class RequestProcessor {
-```
+----
 
-## Extra Syntax
+== Extra Syntax
 
-### Annotations
+=== Annotations
+
 Ddot.it triples can be embedded in string-valued annotation attributes.
 This requires creating a custom annotation.
 The Java reader ignores the annotation package. Any annotation named `DdotIt` works. It may take one or multiple string values.
 Multiple string values are considered newline-separated.
 
-```java
+[source,java]
+----
 @DdotIt("ddot.it/this ..status.. deprecated ..replacement.. NewProcessor")
 public class MyFactory {
-    
-}
-```
-#### Annotation Code
 
-```java
+}
+----
+
+==== Annotation Code
+
+[source,java]
+----
 package it.ddot;
 
 import java.lang.annotation.ElementType;
@@ -68,4 +76,4 @@ import java.lang.annotation.Target;
 public @interface DdotIt {
     String[] value();
 }
-```
+----

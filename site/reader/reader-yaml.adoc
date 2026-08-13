@@ -1,0 +1,55 @@
+= ⚇ ddot.it YAML Reader
+:page-title: YAML Reader
+:page-parent: Developer Guide
+:page-nav_order: 9
+
+A ddot.it link:../developer-guide.html#reader[reader] for YAML files, including `docker-compose.yml` and other YAML-based formats.
+It recognizes triples in <<comments,comments>> and <<string-values,string values>>.
+
+NOTE: Some examples use the link:../user-guide.html#this-command[ddot.it/this] command.
+
+== Standard Syntax
+
+=== Comments
+
+[source,yaml]
+----
+# ddot.it/this ..project.. Code Red
+----
+
+Multi-line comment block:
+
+[source,yaml]
+----
+# ddot.it/this ..project.. Code Red
+# ..team.. Platform
+# ..status.. active
+----
+
+=== String Values
+
+Ddot.it triples inside scalar string values:
+
+[source,yaml]
+----
+description: "ddot.it/this ..project.. Code Red"
+----
+
+Each string value is considered its own snippet and resets the parse context.
+
+== Extra Syntax
+
+=== Docker Compose
+
+In `docker-compose.yml`, labels are the natural place for ddot.it triples.
+
+[source,yaml]
+----
+services:
+  web:
+    # ddot.it/this ..type.. service
+    # ..depends on.. database
+    image: nginx
+    labels:
+      - "ddot.it/this ..owner.. platform-team"
+----

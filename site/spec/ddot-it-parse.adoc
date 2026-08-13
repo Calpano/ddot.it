@@ -1446,7 +1446,8 @@ TripleObject --> MetaStart : CM2
 MetaStart --> MetaStart : WS
 MetaStart --> MetaRelationInline : DT2 [a MetaTripleInline derives]
 MetaStart --> MetaObjectInline : DT4 // implicit MetaRelation
-MetaStart --> MetaTextInline : CM2 | SC2 | EM2 | TX\nDT2 [otherwise]
+MetaStart --> MetaTextInline : CM2 | EM2 | TX\nDT2 [otherwise]
+MetaStart --> MetaNextInline : SC2 // empty entry: nothing to emit
 MetaStart --> BlockLine : NL // switch to block form
 
 MetaRelationInline --> MetaRelationInline : WS | CM2 | SC2 | EM2 | TX
@@ -1456,11 +1457,11 @@ MetaObjectInline --> MetaObjectInline : WS | DT2 | DT4 | CM2 | EM2 | TX
 MetaObjectInline --> MetaNextInline : SC2
 MetaObjectInline --> StartOfLine : NL // emit Triple + Metas
 
-MetaNextInline --> MetaNextInline : WS
+MetaNextInline --> MetaNextInline : WS | SC2 // empty entry: nothing to emit
 MetaNextInline --> MetaRelationInline : DT2 [a MetaTripleInline derives]
 MetaNextInline --> MetaObjectInline : DT4
-MetaNextInline --> MetaTextInline : CM2 | SC2 | EM2 | TX\nDT2 [otherwise]
-MetaNextInline --> StartOfLine : NL // emit Line as NotATriple
+MetaNextInline --> MetaTextInline : CM2 | EM2 | TX\nDT2 [otherwise]
+MetaNextInline --> StartOfLine : NL // emit Triple + Metas
 
 ' --- a note ends where the next entry begins: at ';;', like any entry --
 MetaTextInline --> MetaNextInline : SC2
@@ -1549,6 +1550,13 @@ fail once the object is non-empty, and an empty one falls through to text like a
 +
 This is the automaton's only lookahead, and it is bounded: an entry ends at the next `SC2`
 or `NL`, so the guard never has to look past one entry.
+
+- An entry may be **empty**. `SC2` parts entries and demands nothing of them, so `+,, ;; x+` is an
+empty entry followed by the note `x`, and a line ending in `;;` is its entries followed by a final
+empty one. An empty entry carries no metadata and is simply dropped: it is not an error, and a
+separator is not a promise that something follows it. That is why `MetaStart --> MetaNextInline`
+and `MetaNextInline --> StartOfLine : NL` are ordinary transitions here and not failures -- the
+triple and every entry around the empty one stand.
 
 - Inside a `,,`-block, triples and text mix freely, so every line decides for itself and the three
 old line states (`BlockFirstLine`, `BlockTripleLine`, `BlockTextLine`) are one `BlockLine`. What

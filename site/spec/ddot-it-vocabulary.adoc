@@ -1,9 +1,8 @@
 = The ddot.it Vocabulary 1.3.0
-:toc: macro
 :ddd: Ddot.it
 :dd: ddot.it
 :toclevels: 4
-:toc:
+:toc: macro
 :page-title: Vocabulary
 :page-nav_order: 5
 :page-parent: Specifications
@@ -12,16 +11,19 @@
 // switch it back ON. See "Declaration Conventions".
 // https://ddot.it/off
 
-.About this document
-- Last Modified: 2026-08-07
-- Version: 1.3.0
-
-
 == Introduction
 This document defines some basic relations and types, to be used in {dd}.
 {ddd} itself is relation agnostic and can be used with any relations, including those defined in RDF.
 
 There are only two built-in relations, representing syntax shortcuts from the parsing layer: <<text>> (for text annotating a triple, after the `,,` marker) and <<links-to>> (the default relation for the untyped link shortcut `+++....+++`).
+
+.About this document
+- Last Modified: 2026-08-07
+- Version: 1.3.0
+
+.Contents
+toc::[]
+
 
 [[monotonicity]]
 === Monotonicity
@@ -1634,7 +1636,7 @@ Each also carries `..has type.. property`.
 
 == Versioning
 This vocabulary carries the version number of the {dd} specification suite -- all documents under
-`/spec/` are released together, and the link:../CHANGELOG.md[{ddd} changelog] covers them as one.
+`/spec/` are released together, and the link:/CHANGELOG.html[{ddd} changelog] covers them as one.
 Earlier releases numbered this document independently.
 
 .Version number
@@ -1658,7 +1660,7 @@ resolvable. Consumers should therefore pin the namespace, not the version number
 .Changes
 Because a minor release only ever *adds* built-ins, a consumer that ignores relations it does not
 know stays correct across minor upgrades. The per-release list of changes is kept in the
-link:../CHANGELOG.md[{ddd} changelog].
+link:/CHANGELOG.html[{ddd} changelog].
 
 NOTE: This is a property of the *release policy*, not the same thing as the <<monotonicity,monotonicity>>
 of the language itself. Both point the same way — nothing is ever taken back — but a major release

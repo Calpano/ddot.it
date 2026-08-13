@@ -1,0 +1,46 @@
+= Site Syntax
+:toc:
+
+== Jekyll core
+A deliberately small model. A site (config, site.pages, site.posts, site.collections, site.data, site.static_files) and per-page objects exposing
+page.url, page.path, page.content, page.excerpt, page.dir, page.name, page.collection. The only front-matter keys Jekyll itself gives meaning to are layout, permalink,
+published, date, categories, tags. Every other key is arbitrary — Jekyll parses your YAML and exposes it as page.<key> for templates, nothing more. Jekyll has no concept
+of parent, child, or navigation order at all.
+
+- jekyllrb.com/docs/front-matter/ — the predefined keys
+- jekyllrb.com/docs/variables/ — the full site/page object reference, which is the actual "information model" doc you're after
+- jekyllrb.com/docs/configuration/front-matter-defaults/ — your defaults: block at _config.yml:33
+
+== just-the-docs template
+Where nav semantics live. It reads these page-level keys:
+
+[cols="2,3"]
+|===
+|         Key          |                        Role
+| page-title                | nav label and page heading. AsciiDoc can set in AsciiDoc `= foo` a different local page title.
+| page-parent, grand_parent | tree position, matched by the parent's title string
+| page-has_children         | makes a page a section
+| page-nav_order            | sibling sort (numeric or string)
+| page-nav_exclude          | keep out of nav
+| page-child_nav_order      | sort direction for children
+| page-has_toc              | child list on a parent page
+| page-search_exclude       | keep out of the search index
+|===
+
+Documented at just-the-docs.com under "Navigation Structure". Since the tree is built in Liquid, the authoritative source for your version is the gem itself:
+
+  /opt/homebrew/lib/ruby/gems/4.0.0/gems/just-the-docs-0.12.0/_includes/components/.
+
+One correction to something implied by your question: there is no nav_title. I probed for it and got hits, but they're a local Liquid variable inside
+  children_nav.html:58, not a front-matter key. The nav label is always title — which is exactly why your spec files carry :page-title: Parse separately from the = The
+  ddot.it Parse Specification 1.3.0 heading. That's the only lever for a short nav label, and it's why page-title is worth keeping in the .adoc files even though
+  jekyll-asciidoc would otherwise derive title from the document heading.
+
+== Plugin
+Your plugins, which rewrite the model before the theme sees it — worth knowing since they explain why most of your .md files have no front matter at all:
+
+- jekyll-optional-front-matter (pages need no ---),
+- jekyll-titles-from-headings (synthesizes title from the first heading),
+- jekyll-readme-index,
+- jekyll-relative-links (Markdown-only link rewriting — the trap from earlier), and
+- jekyll-asciidoc (:page-* → front matter).
