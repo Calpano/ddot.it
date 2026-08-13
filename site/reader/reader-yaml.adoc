@@ -10,6 +10,7 @@ NOTE: Some examples use the link:../user-guide.html#this-command[ddot.it/this] c
 
 == Standard Syntax
 
+[[comments]]
 === Comments
 
 [source,yaml]
@@ -26,6 +27,7 @@ Multi-line comment block:
 # ..status.. active
 ----
 
+[[string-values]]
 === String Values
 
 Ddot.it triples inside scalar string values:

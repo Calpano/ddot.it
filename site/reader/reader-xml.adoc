@@ -10,6 +10,7 @@ NOTE: Some examples use the link:../user-guide.html#this-command[ddot.it/this] c
 
 == Standard Syntax
 
+[[comments]]
 === Comments
 
 [source,xml]
@@ -27,6 +28,7 @@ ddot.it/this ..project.. Code Red
 -->
 ----
 
+[[string-values]]
 === String Values
 
 Ddot.it triples inside element text content:

@@ -15,6 +15,7 @@
 link:syntax.html[Syntax Overview] sketches the shape of the syntax.
 The normative definition is the link:spec/ddot-it-parse.html[Parse Specification].
 
+[[reader]]
 == Reader
 
 A link:/[ddot] reader reads a kind of document and fires triple events.
@@ -50,6 +51,7 @@ ddot readers must
 * Process only included lines as defined by `ddot.it/on` and `ddot.it/off`.
 * fire events for each recognized triple, as defined in the next section.
 
+[[events]]
 == Events
 
 A reader reports each recognised triple as one *triple event*: a JSON object, streamed as JSON
@@ -119,6 +121,7 @@ value, newlines included.
 relation `links to`, not as a missing field. The examples are spaced for readability; real JSONL
 output has one event per line with no insignificant whitespace.)
 
+[[collector]]
 == Collector
 
 The collector combines all triple events and represents them as a single knowledge base, simply a JSON file with all events concatenated.

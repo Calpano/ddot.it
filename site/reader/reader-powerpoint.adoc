@@ -10,6 +10,7 @@ NOTE: Some examples use the link:../user-guide.html#this-command[ddot.it/this] c
 
 == Standard Syntax
 
+[[slide-text]]
 === Slide Text
 
 Any text box or shape text on a slide can contain ddot.it triples.
@@ -21,6 +22,7 @@ ddot.it/this ..project.. Code Red
 
 Triples can appear alongside normal slide content. The reader ignores lines that do not match ddot.it syntax.
 
+[[speaker-notes]]
 === Speaker Notes
 
 Speaker notes are the preferred location for ddot.it triples, as they do not affect the visual presentation of the slide.

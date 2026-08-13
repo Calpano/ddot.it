@@ -53,6 +53,56 @@ rm -f "$build_log"
 # --- links, anchors, images, assets ----------------------------------------
 run "links" ./check-links.sh
 
+# --- unresolved cross-references -------------------------------------------
+# A dangling `<<foo>>` renders as an ordinary-looking link, so it has to be
+# asked for: Asciidoctor reports it only at INFO level (hence -v), and only
+# when it writes a real file -- with `-o /dev/null` the check silently never
+# runs. One file per invocation, because the message carries no source location
+# and would otherwise be unattributable.
+#
+# This does NOT replace check-links.sh. It sees every source file and every
+# `<<...>>`, but it is blind to cross-file `xref:other.adoc#id` and to the
+# theme's navigation; only the built site shows those.
+#
+# "possible" is meant literally. An inline `[[id]]` is registered when its own
+# line is converted, so a reference appearing *earlier* in the file is reported
+# even though it resolves -- `dd-excluded` in ddot-it-highlight.adoc is one.
+# Those are filtered by asking whether the file defines the id anywhere at all.
+# The blind spot that leaves -- an id defined only inside a listing block, so
+# never registered -- is caught by check-links.sh against the built HTML.
+#
+# `idprefix`/`idseparator` mirror jekyll-asciidoc's DefaultAttributes, since
+# they decide the generated section ids that `<<...>>` resolves against; with
+# stock Asciidoctor defaults every multi-word title would mismatch. The other
+# attributes mirror _config.yml. asciidoctor-diagram is deliberately not
+# required: `[plantuml]` blocks then fall back to literal blocks, whose content
+# is not scanned for references anyway, and the check stays free of Java.
+check_xrefs() {
+  local out found=0 tmp rx f id
+  tmp=$(mktemp -d)
+  while IFS= read -r f; do
+    out=$(bundle exec asciidoctor -v -S unsafe -o "$tmp/out.html" \
+            -a idprefix= -a idseparator=- -a linkattrs=@ \
+            -a source-highlighter=rouge -a icons=font -a toc=macro \
+            -a sectanchors -a imagesdir=/images -a diagram-format=svg \
+            "$f" 2>&1 | sed -n 's/.*possible invalid reference: //p' | sort -u)
+    [[ -z "$out" ]] && continue
+    while IFS= read -r id; do
+      # Defined somewhere in the file? Then it resolves; only the order fooled
+      # the reporter. Matches `[[id]]`, `[[id,reftext]]`, `[#id]` and `[#id.role]`.
+      rx=$(printf '%s' "$id" | sed 's/[.[\*^$\\]/\\&/g')
+      grep -qE "\[\[${rx}(,|\]\])|\[#${rx}([],.%#])" "$f" && continue
+      printf '  %s: <<%s>> resolves to nothing\n' "$f" "$id"
+      found=1
+    done <<< "$out"
+  done < <(find site -name '*.adoc' | sort)
+  rm -rf "$tmp"
+  ((found)) && { echo "each reference above has no matching anchor or section title"; return 1; }
+  echo "every <<xref>> resolves"
+  return 0
+}
+run "xrefs" check_xrefs
+
 # --- unlexable code --------------------------------------------------------
 # Rouge emits `<span class="err">` for input it could not lex: either a
 # malformed code sample or a genuine lexer bug on valid input. Since the

@@ -10,6 +10,7 @@ NOTE: Some examples use the link:../user-guide.html#this-command[ddot.it/this] c
 
 == Standard Syntax
 
+[[plain-text]]
 === Plain Text
 
 ----
@@ -17,12 +18,14 @@ My nice document.
 ddot.it/this ..project.. Code Red
 ----
 
+[[comments]]
 === Comments
 
 ----
 <!-- ddot.it/this ..project.. Code Red -->
 ----
 
+[[code-blocks]]
 === Code Blocks
 
 ----
@@ -36,6 +39,7 @@ ddot.it/this ..project.. Code Red
 
 Ddot.it extracts triples from section attributes, too.
 
+[[section-attributes]]
 === Section Attributes
 
 Additionally, some extended Markdown dialects allow *custom attributes for sections*.

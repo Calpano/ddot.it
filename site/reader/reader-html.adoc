@@ -11,6 +11,7 @@ NOTE: Some examples use the link:../user-guide.html#this-command[ddot.it/this] c
 
 == Standard Syntax
 
+[[comments]]
 === Comments
 
 [source,html]
@@ -28,6 +29,7 @@ Multi-line comment:
 -->
 ----
 
+[[element-text]]
 === Element Text
 
 Ddot.it triples inside visible or metadata text elements:
@@ -43,6 +45,7 @@ Hidden is, of course, optional.
 
 == Extra Syntax
 
+[[data-attributes]]
 === Data Attributes
 
 HTML elements can carry ddot.it triples in `data-ddot` attributes.

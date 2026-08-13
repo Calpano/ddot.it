@@ -11,6 +11,7 @@ NOTE: Some examples use the link:../user-guide.html#this-command[ddot.it/this] c
 
 == Standard Syntax
 
+[[plain-text]]
 === Plain Text
 
 ----
@@ -18,6 +19,7 @@ My nice document.
 ddot.it/this ..project.. Code Red
 ----
 
+[[comments]]
 === Comments
 
 Single-line comment:
@@ -34,6 +36,7 @@ ddot.it/this ..project.. Code Red
 ////
 ----
 
+[[code-blocks]]
 === Code Blocks
 
 ----
@@ -46,6 +49,7 @@ ddot.it/this ..project.. Code Red
 
 Ddot.it extracts triples from block and section attributes, too.
 
+[[block-attributes]]
 === Block Attributes
 
 AsciiDoc supports custom IDs and roles on sections and blocks.

@@ -10,6 +10,7 @@ NOTE: Some examples use the link:../user-guide.html#this-command[ddot.it/this] c
 
 == Standard Syntax
 
+[[plain-text]]
 === Plain Text
 
 Any line in a plain text file can contain ddot.it triples.

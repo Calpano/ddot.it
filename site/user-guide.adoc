@@ -36,6 +36,7 @@ Typed Link with Meta Data:
 - Syntax: `aaa .. bbb .. ccc ,, ddd`
 - Effect: "aaa" links to "ccc" with link type "bbb" and the whole link has meta-data "ddd" attached.
 
+[[untyped-link]]
 == Untyped Link
 
 Just leave out the type.
@@ -47,6 +48,7 @@ Untyped Link with Meta Data
 - Syntax: `aaa .... ccc ,, ddd`
 - Effect: "aaa" links to "ccc" and the whole link has meta-data "ddd" attached.
 
+[[additional-properties]]
 == Additional Properties
 
 To state more properties on the same subject (`aaa`) add more lines leaving out the subject.
@@ -60,6 +62,7 @@ Dirk Hagemann .. works at .. SAP
 .. phone.. 123-456-789
 ----
 
+[[metadata]]
 == Metadata
 
 It is possible to use triple syntax in the metadata part.
@@ -96,6 +99,7 @@ Dirk Hagemann .. works at .. SAP ,,
 ,,
 ----
 
+[[commands]]
 == Commands
 
 Commands allow fine-tuning ddot.it behavior.
@@ -107,6 +111,7 @@ Commands allow fine-tuning ddot.it behavior.
 * Syntax: `ddot.it`
 * Effect: Marks a document as double-dotted. Helps human readers and agents to find the documentation.
 
+[[include-and-exclude]]
 === Include and Exclude
 
 *By default a ddot reader scans every file it is given.* ddot.it is meant to augment any text
@@ -120,21 +125,25 @@ optional *"exclude non-marked files"* mode.
 Within a file, `ddot.it/off` and `ddot.it/on` always apply — see
 <<includeexclude-regions,Include/Exclude Regions>>.
 
+[[include-command]]
 ==== Include Command
 
 * Syntax: `ddot.it/on` (or `!!on`)
 * Effect: Resume ddot.it processing from this line on.
 
+[[exclude-command]]
 ==== Exclude Command
 
 * Syntax: `ddot.it/off` (or `!!off`)
-* Effect: Stop ddot.it processing from this line on. Nothing between an `off` and the next `on`
- is parsed — not even commands.
+* Effect: Stop ddot.it processing from this line on.Nothing between an `off` and the next `on`
+is parsed — not even commands.
 
+[[includeexclude-regions]]
 === Include/Exclude Regions
 
 A document may use multiple `on` (<<include-command,include>>) and `off` (<<exclude-command,exclude>>) commands, indicating regions for double dot processing. The command goes from start of document until the end of the doc or a counter-command.
 
+[[this-command]]
 === This Command
 
 * Syntax: `ddot.it/this`
