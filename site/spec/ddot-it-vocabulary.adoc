@@ -1636,7 +1636,7 @@ Each also carries `..has type.. property`.
 
 == Versioning
 This vocabulary carries the version number of the {dd} specification suite -- all documents under
-`/spec/` are released together, and the link:/CHANGELOG.html[{ddd} changelog] covers them as one.
+`/spec/` are released together, and the link:/changelog[{ddd} changelog] covers them as one.
 Earlier releases numbered this document independently.
 
 .Version number
@@ -1660,7 +1660,7 @@ resolvable. Consumers should therefore pin the namespace, not the version number
 .Changes
 Because a minor release only ever *adds* built-ins, a consumer that ignores relations it does not
 know stays correct across minor upgrades. The per-release list of changes is kept in the
-link:/CHANGELOG.html[{ddd} changelog].
+link:/changelog[{ddd} changelog].
 
 NOTE: This is a property of the *release policy*, not the same thing as the <<monotonicity,monotonicity>>
 of the language itself. Both point the same way — nothing is ever taken back — but a major release
