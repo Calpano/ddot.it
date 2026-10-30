@@ -860,7 +860,7 @@ keeps its ordinary value -- the text stands for itself.
 .Spec: telling a ddot.it URI *value* from a command
 ****
 {ddd} URIs live under the same host as commands, so an object like
-`https://ddot.it/vocabulary/2026-07-20#entity` is command-*shaped*. The two-layer split above
+`+https://ddot.it/vocabulary/2026-07-20#entity+` is command-*shaped*. The two-layer split above
 resolves it without any new syntax:
 
 . The **parser** tags it as a `Command`, as it tags every command-shaped token. It does not

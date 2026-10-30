@@ -63,7 +63,7 @@ Source of truth: `de.xam.cds.CdsId` (names, labels, inverses, transitivity),
 Background: "Personal Knowledge Models with Semantic Technologies", page 148 pp.,
 available from http://xam.de/go/pkm[xam.de/go/pkm].
 
-Namespace: `http://www.semanticdesktop.org/ontologies/2007/09/01/cds#`
+Namespace: `+http://www.semanticdesktop.org/ontologies/2007/09/01/cds#+`
 
 
 [[relation-table]]
