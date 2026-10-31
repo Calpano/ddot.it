@@ -1,0 +1,259 @@
+= Domain, Range and Cardinality in ddot.it
+:toc: left
+:toclevels: 3
+:icons: font
+:dd: ddot.it
+:ddd: Ddot.it
+
+// Parsing is OFF for the whole document: every example below is illustration, not data.
+// https://ddot.it/off
+
+Status: *draft*, not yet part of the Vocabulary Specification.
+Describes how the relations `domain` and `range`, their documentation variants `doc:domain` and `doc:range`, and cardinality bounds work together, written against language version 1.3.0.
+
+.Sources
+* xref:../site/spec/ddot-it-vocabulary.adoc[Vocabulary Specification] -- sections _Monotonicity_, _Relation `prefix`_, _Relation `has alias`_ and _Cardinality_.
+* xref:../site/spec/ddot-it-cds.adoc[CDS & Standards Alignment] -- `rdfs:domain`, `rdfs:range` and the ECore cardinality model.
+
+[[problem]]
+== The Problem
+
+A relation connects two kinds of things.
+`has Maven group` connects a Maven module to a Maven group; it makes no sense between two persons.
+Authors want to say three things about such a relation:
+
+.What authors want to state
+* *What it starts from* -- its subjects are Maven modules.
+* *What it points to* -- its objects are Maven groups.
+* *How often* -- a Maven module has exactly one Maven group.
+
+`domain` states the first, `range` the second, and cardinality bounds the third.
+The `doc:` variants state the first two as documentation, without letting a reasoner draw conclusions from them.
+
+[[domain]]
+== Relation `domain`
+
+`rel ..domain.. T` states that every subject of `rel` is a `T`.
+
+.Example
+[source,ddot.it]
+----
+has Maven group ..domain.. Maven module
+----
+
+A reasoner uses it to infer the subject's type:
+
+.Given / Inferred
+[source,ddot.it]
+----
+rel ..domain.. T
+x ..rel.. y
+___________________________________
+x ..has type.. T
+----
+
+So `core ..has Maven group.. it.ddot` makes `core` a `Maven module`, even if no file says so.
+
+A relation may have several domains.
+Each one infers its type, so a subject becomes an instance of all of them, as with `rdfs:domain`.
+Use a common supertype instead when a subject may be one of several types.
+
+[[range]]
+== Relation `range`
+
+`rel ..range.. T` states that every object of `rel` is a `T`.
+
+.Example
+[source,ddot.it]
+----
+has Maven group ..range.. Maven group
+----
+
+.Given / Inferred
+[source,ddot.it]
+----
+rel ..range.. T
+x ..rel.. y
+___________________________________
+y ..has type.. T
+----
+
+So `core ..has Maven group.. it.ddot` makes `it.ddot` a `Maven group`.
+
+[[inference-risk]]
+=== What inference means here
+
+{ddd} is monotonic: an inferred type is never retracted.
+A `domain` or `range` that is too narrow therefore does not produce an error; it silently produces wrong types.
+If `has Maven group` is later used on something that is not a Maven module, that thing still becomes a Maven module.
+
+This is why `domain` and `range` belong on relations whose use is fully under control, such as an `inferred relation` that only tools write, and why there is a variant that infers nothing.
+
+[[doc-prefix]]
+== The `doc:` variants: `doc:domain` and `doc:range`
+
+`doc:domain` and `doc:range` state the same intent as `domain` and `range`, but *as documentation only*.
+They are written with the `doc:` prefix, so they read like their plain counterparts while staying clearly distinct.
+
+.Example
+[source,ddot.it]
+----
+has Maven parent ..has type.. relation
+has Maven parent ..has inverse.. is Maven parent of
+has Maven parent ..doc:domain.. Maven module
+has Maven parent ..doc:range.. Maven module ,, ..max cardinality.. 1
+----
+
+.What the `doc:` variants do and do not do
+* A reasoner infers *nothing* from them: `app ..has Maven parent.. parent` does not make `app` or `parent` a `Maven module`.
+* Readers and tools learn the intended subject and object types.
+* Tools use them to scope cardinality checks (see <<cardinality>>), and may use them for completion or for warnings about subjects and objects of an unexpected type.
+
+This mirrors `multi valued` in the Vocabulary Specification, which also documents intent without inferring anything.
+
+[[choosing]]
+=== Choosing between plain and `doc:`
+
+[cols="1,2,2",options="header"]
+|===
+| | `domain` / `range` | `doc:domain` / `doc:range`
+| Infers types | Yes: every subject gets the domain type, every object the range type. | No.
+| Scopes cardinality checks | Yes. | Yes.
+| A wrong use of the relation | Silently adds wrong types. | Changes nothing; a tool may warn.
+| Typical use | Relations whose triples are generated or tightly controlled, such as an `inferred relation`. | Relations written by hand, where the types are intent, not law.
+|===
+
+When in doubt, use the `doc:` variant.
+It can be turned into the inferring one later without changing any data; the other direction may leave inferred types behind in other tools.
+
+[[cardinality]]
+== Cardinality bounds
+
+A cardinality bound says how many distinct values a subject may have for a relation.
+The Vocabulary Specification defines the bounds `cardinality` (both bounds at once), `min cardinality` and `max cardinality`, each taking a whole number, and the shorthands `required` (at least 1) and `single valued` (at most 1).
+
+[[cardinality-where]]
+=== Where a bound is stated
+
+A bound is always stated *on the relation*.
+
+.Ways to state a bound
+As metadata of the range:: `has Maven group ..range.. Maven group ,, ..cardinality.. 1`
++
+The same works with `doc:range`, and with `min cardinality` and `max cardinality`, also combined: `,, ..min cardinality.. 1 ;; ..max cardinality.. 3`.
+As a property of the relation:: `has Maven group ..cardinality.. 1`, `..min cardinality.. 1`, `..max cardinality.. 1`
+As a type of the relation:: `has Maven group ..has type.. required`, `..has type.. single valued`
+
+Stating the bound on the range keeps the relation's whole contract -- what it points to, and how many -- on one line.
+
+[WARNING]
+====
+Do *not* state a bound as metadata of a triple about a type:
+
+[source,ddot.it]
+----
+Person ..has address.. Address ,, ..max cardinality.. 1
+----
+
+This is ordinary data: it says that the entity `Person` has the address `Address`, with a remark attached.
+It does not constrain the addresses of persons.
+====
+
+[[cardinality-scope]]
+=== Who a bound applies to
+
+A bound on `rel` applies to:
+
+.Scope of a bound
+. every instance of `rel`'s domain -- stated with `domain` or `doc:domain` -- including instances of its subtypes;
+. every subject that uses `rel`, whether or not it is an instance of the domain.
+
+The domain is what makes a *minimum* useful.
+Without a domain, only subjects that already use `rel` are checked, so a minimum can find too few values but never a missing one: nothing says who should have had a value.
+
+With plain `domain`, every subject of `rel` is also an instance of the domain by inference, so the two groups coincide.
+With `doc:domain`, instances are the entities typed explicitly, `x ..has type.. Maven module`, plus the subjects that use `rel`.
+
+[[cardinality-example]]
+=== Example
+
+.Schema
+[source,ddot.it]
+----
+has Maven group ..has type.. inferred relation
+has Maven group ..domain.. Maven module
+has Maven group ..range.. Maven group ,, ..cardinality.. 1
+Maven module ..has subtype.. Java module
+----
+
+.Data
+[source,ddot.it]
+----
+core ..has type.. Maven module
+core ..has Maven group.. it.ddot
+..has Maven group.. com.calpano
+web ..has type.. Java module
+app ..has type.. Maven module
+app ..has Maven group.. it.ddot
+----
+
+.Result
+* `core` has two Maven groups: *too many*.
+* `web` is a `Java module`, therefore a `Maven module`, and has none: *missing*.
+* `app` has exactly one: fine.
+
+[[cardinality-checks]]
+=== Checking, not inferring
+
+Cardinality bounds are *checks* over the triples at hand; they infer nothing.
+Because {dd} is monotonic and open-world, a violation is not a contradiction:
+
+.What a violation means
+* *Too few values* may be resolved by adding triples -- the data may simply be incomplete.
+* *Too many values* is a modelling issue: either the data or the bound is wrong.
+
+Tools therefore report violations as warnings, never as errors, and never reject a document because of them.
+
+Values are counted as *distinct* objects: the same triple stated twice counts once.
+
+[[aliases]]
+== Alternative names
+
+All names above are resolved through the alias relations of the Vocabulary Specification before any check:
+
+* `main ..has alias.. alt` and `alt ..is alias of.. main`;
+* `alt ..is replaced by.. main` and `main ..replaces.. alt`.
+
+So `lowerBound` counts as `min cardinality`, and `hasType` or `a` as `has type`, exactly where a file declares them so.
+The same holds for the relations being checked: with `email ..has alias.. mail`, `John ..mail.. x` counts toward `email`.
+
+[[alignment]]
+== Alignment with other standards
+
+[cols="1,2",options="header"]
+|===
+| Standard | {dd}
+| `rdfs:domain` | `domain` -- same inference.
+| `rdfs:range` | `range` -- same inference.
+| OWL `minCardinality`, `maxCardinality`, `cardinality` | `min cardinality`, `max cardinality`, `cardinality` -- but checked closed-world by tools, not used by a reasoner.
+| ECore `lowerBound`, `upperBound` | `min cardinality`, `max cardinality`; an absent `max cardinality` means unbounded, like ECore's `-1`.
+| UML multiplicity `0..1`, `1..1`, `1..*` | `single valued`, `required` + `single valued`, `required`.
+|===
+
+`doc:domain` and `doc:range` have no direct counterpart; they are closest to documenting a property's domain and range in comments.
+
+[[tooling]]
+== Tool support
+
+The ddot.it IntelliJ plugin implements the cardinality checks described here, across all `.ddot` files and ddot blocks in Markdown and AsciiDoc files of a project.
+Each violating line gets a warning that links to where the bound is stated.
+It does not yet infer types from `domain` and `range`: it counts explicitly typed instances and the subjects that use the relation.
+
+[[open-questions]]
+== Open questions
+
+.To decide before this goes into the Vocabulary Specification
+* *The `doc` namespace.* Under the prefix mechanism, `doc:domain` expands to a URI only with a declaration `doc ..prefix.. …`. Which namespace URI should that be, and is it a built-in?
+* *Built-in declarations* for `domain`, `range`, `doc:domain` and `doc:range`, with their `uri` and `has type` triples, following the Declaration Conventions.
+* *Type warnings.* Should tools warn when a subject or object is explicitly typed as something unrelated to a `doc:domain` or `doc:range`?
+* *Several domains.* Plain `domain` makes a subject an instance of every domain. Should a bound apply to instances of _any_ domain, as tools do today, or only to instances of _all_ of them?
