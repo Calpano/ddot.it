@@ -74,7 +74,7 @@ See the link:spec/ddot-it-vocabulary.html[Vocabulary Specification].
 == Commands
 
 A command is a URL under `ddot.it/`, with four interchangeable spellings — `!!name`,
-`ddot.it/name`, `http://ddot.it/name`, `https://ddot.it/name`. The *slash and a name are
+`ddot.it/name`, `+http://ddot.it/name+`, `+https://ddot.it/name+`. The *slash and a name are
 required*; bare `ddot.it` is a document marker, not a command.
 
 * link:this.html[`ddot.it/this`] — the current document, as a triple subject

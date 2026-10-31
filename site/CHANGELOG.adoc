@@ -35,8 +35,8 @@ CAUTION: any line containing the command triggers it — including prose
  inert, or accept that the rest of the file is excluded.
 
 * *A command requires the slash and a name.* Bare `ddot.it` is a _document
- marker_, not a command. The four spellings `https://ddot.it/NAME`,
- `http://ddot.it/NAME`, `ddot.it/NAME` and `!!NAME` are interchangeable. `?` and
+ marker_, not a command. The four spellings `+https://ddot.it/NAME+`,
+ `+http://ddot.it/NAME+`, `ddot.it/NAME` and `!!NAME` are interchangeable. `?` and
  `#` no longer terminate a command — they introduce its query and fragment, so
  `!!block?end=EOS` is a single command. A command is part of the text of the
  field holding it, not a replacement for that field.
@@ -251,7 +251,7 @@ An omitted `max cardinality` means unbounded — there is no `+*+` or `-1`
 
 * *`ddot.it/label` has no page of its own.* `label` is an ordinary relation, so it is
  documented with the other relations in the
- link:spec/ddot-it-vocabulary.html#label[Vocabulary Specification]; `https://ddot.it/label` no
+ link:spec/ddot-it-vocabulary.html#label[Vocabulary Specification]; `+https://ddot.it/label+` no
  longer resolves.
 
 * *`ddot.it/block` fills four positions, not three.* Subject, object, meta-object *and* the

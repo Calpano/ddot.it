@@ -175,7 +175,7 @@ end-of-line -- so `!!office` does not open a region. See corpus case `31-off-in-
 
 [[dd-commands]]
 ==== D6 -- All four command spellings recognised
-`!!name`, `ddot.it/name`, `http://ddot.it/name` and `https://ddot.it/name` are all highlighted as
+`!!name`, `ddot.it/name`, `+http://ddot.it/name+` and `+https://ddot.it/name+` are all highlighted as
 commands, per the regex in <<Token Building Blocks>>. A bare `ddot.it/foo` inside object text
 lights up too -- command shape is recognised wherever it occurs, see
 xref:ddot-it-parse.adoc#command-syntax-vs-vocabulary[Command syntax vs. vocabulary].

@@ -414,13 +414,13 @@ Commands extend {dd} capabilities in various ways while keeping the extra syntax
 
 All commands can be typed in several ways, which are interpreted identically:
 
-- `https://ddot.it/COMMAND_NAME`
-- `http://ddot.it/COMMAND_NAME`
+- `+https://ddot.it/COMMAND_NAME+`
+- `+http://ddot.it/COMMAND_NAME+`
 - `ddot.it/COMMAND_NAME`
 - `!!COMMAND_NAME`
 
 
-NOTE: The `!!COMMAND_NAME` is easy to type, whereas the `https://ddot.it/COMMAND_NAME` is the most self-documenting version.
+NOTE: The `!!COMMAND_NAME` is easy to type, whereas the `+https://ddot.it/COMMAND_NAME+` is the most self-documenting version.
 In practice, `ddot.it/COMMAND_NAME` provides the best balance between readability and self-documenting.
 The expansion from `!!` could be done by editor plugins at typing time or ddot.it CLI tools.
 
