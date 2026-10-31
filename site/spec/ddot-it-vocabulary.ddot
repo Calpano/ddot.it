@@ -28,6 +28,7 @@ has type ..has supertype.. has tag
 has type ..has inverse.. has instance
 has type ..uri.. https://ddot.it/vocabulary/2026-07-20#has-type
 has type ..has alias.. hasType
+a ..is alias of.. has type
 a ..is replaced by.. has type
 has instance ..has type.. relation
 has instance ..has supertype.. is tag of

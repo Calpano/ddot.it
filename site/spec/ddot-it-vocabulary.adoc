@@ -403,13 +403,18 @@ has type ..has type.. relation
 .The `a` shortcut
 In N3 (and other RDF syntaxes), the built-in `a` expresses typing, e.g. (`ex:Berlin`, `a`, `ex:City`).
 To keep {dd} self-documenting, the canonical name is `has type`, so we write `Berlin ..has type.. City`.
-But typing with just `a` is convenient, so `a` is declared to be <<replaces,replaced by>> `has type`:
-an editor may substitute the one for the other, and a reasoner treats both as the same relation.
+But typing with just `a` is convenient, so `a` is declared twice:
+
+* an <<is-alias-of,alias>> of `has type`, so a reasoner treats both as the same relation;
+* <<replaces,replaced by>> `has type`, so an editor substitutes the canonical name as you type.
+
+`is replaced by` alone would not be enough: it is an instruction to editors, and the two concepts remain distinct entities.
 
 // https://ddot.it/on
 .Built-in
 [source,ddot.it]
 ----
+a ..is alias of.. has type
 a ..is replaced by.. has type
 ----
 // https://ddot.it/off
@@ -829,7 +834,8 @@ Both remain distinct entities; use <<same-as,`same as`>> if they are in fact the
 .Usage in Interactive Tools (Editors)
 In an editor, when a user types a string `aaa` marked as `aaa ..is replaced by.. bbb`, the editor
 should replace `aaa` directly with `bbb`.
-This is how the `a` shortcut for <<has-type,`has type`>> is defined.
+This is how editors handle the `a` shortcut for <<has-type,`has type`>>.
+A reasoner does not read `is replaced by` as naming the same thing, so `a` is also declared an <<is-alias-of,alias>> of `has type`.
 
 
 // https://ddot.it/on
