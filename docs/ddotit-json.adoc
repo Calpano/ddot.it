@@ -1,0 +1,53 @@
+= ddot.it and JSON
+
+.STATUS
+****
+This doc is working notes.
+****
+
+
+Standard ddot.it lacks
+
+[ddot.it]
+----
+aaa ..foo.. [ bbb, ccc ]
+aaa ..foo.. ddd
+=>
+
+aaa ..foo.. bbb
+aaa ..foo.. ccc
+aaa ..foo.. ddd
+
+
+aaa ..foo.. [ eee ]   => aaa ..foo.. eee
+
+aaa ..foo.. []   => aaa ..foo.. !!null
+
+
+
+
+array :=  [ "foo", "bar", "bazzy, der Baer" ]
+
+array :=  [ foo, bar, "bazzy, der Baer" ]
+
+array :=  [ foo, bar, "bazzy, der Baer" ]
+
+{
+"s": ...
+"p": ...
+"o": ...
+"author": ...
+"time": ...
+"permissions": ...
+}
+
+
+aaa ..foo.. { p1:v1, p2:v2 }
+
+aaa ..foo.. !!anon?1
+
+!!anon?1 ..p1.. v1
+!!anon?1 ..p2.. v2
+
+----
+
