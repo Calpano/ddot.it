@@ -1,0 +1,958 @@
+= Order in ddot.it -- Brainstorm
+:toc: left
+:toclevels: 3
+:icons: font
+:dd: ddot.it
+:ddd: Ddot.it
+
+Status: *brainstorm*, not normative. Collects ideas and trade-offs on how to represent *order*
+in {dd}, written against language version 1.3.0.
+
+.Sources read for this
+* link:../site/manifesto.adoc[Manifesto] -- _"That's why ddot.it has no syntax for lists."_
+* link:../site/spec/ddot-it-parse.adoc[Parse Specification] -- events carry `location`; meta
+pairs are emitted _in source order_.
+* link:../site/spec/ddot-it-vocabulary.adoc[Vocabulary Specification] -- section _Order_:
+`has next` / `has previous`, both transitive; the monotonicity section.
+* link:../site/spec/ddot-it-cds.adoc[CDS & Standards Alignment] -- `hasAfter` / `hasBefore`;
+Ecore `ordered` marked as _"Not modelled: {dd} triples have no inherent order"_; `rdf:first`,
+`rdf:rest`, `rdf:nil` unmapped.
+* link:../site/spec/ddot-it-faq.adoc[FAQ] -- _"Users can use, e.g., JSON primitive syntax to
+express data types."_
+
+
+[[problem]]
+== The Problem
+
+A {dd} knowledge base is a *set* of triples. The collector merges triples from many chunks, and
+duplicates collapse. So whatever order the author typed is gone once the collector has done its work.
+
+That is fine for most facts, but some facts are about order:
+
+.Where order matters
+* *Author lists* -- the first author of a paper is not the third.
+* *Steps* -- a process, a recipe, a migration plan.
+* *Rankings and priorities* -- top 3 options, a backlog.
+* *Document structure* -- chapters, slides, sections.
+* *Sequences with repeats* -- a playlist that plays the same song twice.
+* *Timelines* -- versions, releases, events. These often already have a sortable key, such as a date.
+
+[[today]]
+== What ddot.it Has Today
+
+[[today-has-next]]
+=== `has next` / `has previous`
+
+[source,ddot.it]
+----
+Unpack ..has next.. Install
+Install ..has next.. Configure
+----
+
+.Weaknesses
+Transitive, so adjacency is lost::
+From `A has next B`, `B has next C` a reasoner infers `A has next C`. After closure you can
+no longer tell the _direct_ successor from an indirect one. You can still sort (it is a
+strict partial order), but you cannot answer "what is step 2?" without a
+transitive-reduction pass.
+Global, not scoped::
+`Alice ..has next.. Bob` states that Alice comes before Bob *everywhere*. If Alice is first
+author on paper X and Bob is first author on paper Y, the two chains merge into a cycle.
+Order is almost always *order within something*, and `has next` has no place to say what
+that something is.
+No membership, no head::
+The chain does not say which list it belongs to, where it starts, or whether it is complete.
+Verbose::
+You need n-1 triples for n items, and each item is typed twice.
+
+It works well for its current purpose: a *global* precedence between unique things, such as
+process steps that are themselves entities.
+
+[[today-location]]
+=== Source Order Already Exists -- Up to the Reader
+
+Every triple event carries `source` and `location`, and meta pairs are emitted in source order.
+So the *reader* layer has the typed order. Only the *collector* drops it, when it builds a set.
+This is important: a convention that says "for this relation, source order is significant" needs
+*no new syntax and no parser change*.
+
+[[today-manifesto]]
+=== Manifesto Constraint
+
+_"Less syntax is better. […] That's why ddot.it has no syntax for lists."_
+Every idea below is judged against that. The best candidates add *vocabulary* or a *value
+convention*, not new operators.
+
+
+[[prior-art]]
+== Prior Art
+
+[[json]]
+=== JSON Arrays
+
+[source,json]
+----
+{ "title": "Paper X", "authors": ["Alice", "Bob", "Carol"] }
+----
+
+* Order is *intrinsic* and implicit. Position is never written, so inserting an item needs no
+renumbering.
+* Items are *values*, not identities. `"Alice"` in one array has nothing to do with `"Alice"`
+in another unless a higher layer says so.
+* Repeats are natural: `["A", "B", "A"]`.
+* The array belongs to exactly one property of one object, so it is *scoped* by construction.
+* Nothing can be merged: two documents with different `authors` arrays are simply in conflict.
+Arrays are a closed-world construct.
+
+.JSON-LD: most JSON arrays are not ordered
+JSON-LD reads a plain array as an *unordered set*. Only `"@container": "@list"` (or an explicit
+`{"@list": [...]}`) keeps the order. The RDF people who mapped JSON onto triples found that
+most arrays in real JSON are sets that happen to be written in some order. Order is the
+exception and should be *opted into*. That is a useful default for {dd} too.
+
+[[rdf]]
+=== RDF
+
+RDF has four approaches. All of them are workarounds for the same problem: a triple store is a set.
+
+[[rdf-container]]
+Containers (`rdf:Seq`, `rdf:Bag`, `rdf:Alt`)::
++
+[source,turtle]
+----
+:paperX :authors [ a rdf:Seq ; rdf:_1 :alice ; rdf:_2 :bob ; rdf:_3 :carol ] .
+----
++
+An intermediate node holds the items, and the membership properties `rdf:_1`, `rdf:_2`, …
+carry the index. Easy to query ("give me `rdf:_2`"), open-ended (nothing says the list ends),
+and inserting an item means renumbering.
+
+[[rdf-collection]]
+Collections (`rdf:List`: `rdf:first` / `rdf:rest` / `rdf:nil`)::
++
+[source,turtle]
+----
+:paperX :authors ( :alice :bob :carol ) .
+# expands to
+:paperX :authors _:l1 .
+_:l1 rdf:first :alice ; rdf:rest _:l2 .
+_:l2 rdf:first :bob   ; rdf:rest _:l3 .
+_:l3 rdf:first :carol ; rdf:rest rdf:nil .
+----
++
+A cons list. It is closed: `rdf:nil` marks the end. The Turtle `( … )` sugar makes it pleasant
+to *write*, but it is painful to *query* (`rdf:rest*/rdf:first` gives the members but not their
+index), fragile to merge (two files that describe the same list make a malformed list), and it
+needs n blank nodes. OWL uses it for its own syntax, and hardly anyone else does.
+
+[[rdf-position]]
+Position as data (`schema:ItemList` / `schema:ListItem` / `schema:position`, OLO `olo:index`)::
++
+[source,turtle]
+----
+:top3 a schema:ItemList ;
+  schema:itemListElement [ a schema:ListItem ; schema:position 1 ; schema:item :dune ] ,
+                         [ a schema:ListItem ; schema:position 2 ; schema:item :solaris ] .
+----
++
+A *slot* node per entry carries the index and points to the item. This handles repeats and
+membership in several lists, and a query can sort by it. It is also the most verbose.
+
+[[rdf-12]]
+Statement annotation (RDF 1.2 triple terms / RDF-star, Wikidata qualifiers)::
++
+[source,turtle]
+----
+:paperX :author :alice {| :position 1 |} .
+:paperX :author :bob   {| :position 2 |} .
+----
++
+The position is a fact *about the statement* `(paperX, author, alice)`. This is exactly the
+Wikidata model: authors are `P50` statements with a `P1545` _series ordinal_ qualifier. The
+order is scoped to the subject and relation, needs no intermediate node, and every item is still
+a normal link in the graph.
+
+NOTE: {dd}'s `,,` meta *is* statement annotation (the Parse Specification calls it _"RDF 1.2 /
+RDF-Star"_). So the Wikidata / RDF 1.2 approach is already writable in {dd} 1.3 without any
+change.
+
+[[other-art]]
+=== Elsewhere
+
+* *Property graphs* (Neo4j, …): an `order` or `index` property on the edge. This is the same idea
+as statement annotation.
+* *Fractional indexing* (Figma, Linear, list CRDTs): positions are sortable strings such as
+`a0`, `a0V`, `a1`. You can always insert between two keys without renumbering. This
+suits merge-heavy, machine-written data.
+* *Markdown / AsciiDoc ordered lists*: `1.`, `2.`, … where the numbers are ignored, and the
+source order is the order.
+* *Dates as keys*: many "ordered" things are really sorted by a property they already have
+(`released`, `valid since`). In that case no order construct is needed, only a sort
+instruction.
+
+
+[[dimensions]]
+== Design Dimensions
+
+Each option below takes a position on these questions.
+
+[cols="1,3"]
+|===
+| Dimension | Question
+
+| Scope | Order of *what*? The objects of one (subject, relation) pair? The members of a named list? A global chain?
+| Adjacency vs. rank | Do we record "B directly follows A", or "A has rank 1"?
+| Repeats | Can the same item appear twice? Triple sets deduplicate, so repeats need a slot or a position.
+| Closedness | Can we say the list is complete? {dd} is open-world, and a list can always gain items from another file.
+| Merge | What happens when two chunks contribute to the same list?
+| Monotonicity | Adding a triple must never invalidate a conclusion. An *absolute index* ("Bob is #2") can break when an item is inserted. A *relative precedence* ("Alice before Bob") does not.
+| Typing cost | How many characters and repetitions for a list of five?
+| Graph value | Are the items still nodes that link across the knowledge base ("connect the dots")?
+|===
+
+TIP: The monotonicity row is the most important finding here. Derived *absolute indexes* are not
+monotonic, and derived *pairwise precedence* is. If a collector turns order into triples, it
+should turn it into precedence, and compute indexes only at query or display time.
+
+
+[[options]]
+== Options
+
+[[opt-meta-position]]
+=== A. Position as Meta (Wikidata style)
+
+[source,ddot.it]
+----
+Paper X ..has author.. Alice ,, ..position.. 1
+..has author.. Bob ,, ..position.. 2
+..has author.. Carol ,, ..position.. 3
+----
+
+Scoped to (subject, relation) by construction: Alice's rank on paper X says nothing about paper
+Y. It needs no new syntax. It maps directly to RDF 1.2 annotations, Wikidata `P1545` and
+`schema:position`.
+
+.Details to settle
+* *Name*: `position`, `rank`, `order`, `index`, `nr`, `#`. `position` matches schema.org and
+reads naturally. `rank` suggests quality rather than sequence.
+* *Sort semantics*: numeric if both keys parse as numbers, otherwise lexicographic (Unicode
+code point). Then `1.5` inserts between `1` and `2`, and fractional-index strings work
+unchanged. A single `.` is ordinary text in {dd}, so `1.5` is safe. Avoid ranges like
+`1..3`, as the CDS document already warns for cardinality.
+* *1-based*, like `location`.
+* *Ties and gaps* are allowed. Positions are *sort keys*, not array indexes. Break ties by
+object string.
+* *Repeats*: `Playlist ..has track.. Song A ,, ..position.. 1` and `… ,, ..position.. 3` merge
+into *one* triple with *two* position meta pairs. That works if a triple may carry several
+positions, but it is odd.
+
+Cost: moderate. You repeat the relation, or use omitted-subject lines, and you type numbers.
+
+[[opt-source-order]]
+=== B. Source Order, Opted in per Relation
+
+Declare once that a relation is *ordered*:
+
+[source,ddot.it]
+----
+has author ..has type.. ordered relation
+----
+
+Then the order of the lines *is* the order:
+
+[source,ddot.it]
+----
+Paper X ..has author.. Alice
+..has author.. Bob
+..has author.. Carol
+----
+
+The collector takes `(source, location)` from the events and emits a derived order for each
+(subject, relation) group *within one chunk*.
+
+.Pros
+* Zero extra typing. It reads exactly like a Markdown list, which is how humans already think.
+* Same approach as JSON-LD: order is opted into per property, and plain relations stay sets.
+* Uses information the reader layer *already* delivers. No parser change.
+
+.Cons and rules needed
+* *Across chunks* the order is undefined. Two files that each list authors of paper X give
+two partial orders. The collector should merge them as precedence (monotonic) and not
+invent a total order.
+* Moving a line changes the meaning. That is intended, but it is a new kind of fragility: for
+every other relation, line order does not matter.
+* An explicit `,, ..position..` (option A) should win over source order when both are present.
+* Hosts without meaningful lines (HTML attributes, PowerPoint shapes) have a weaker notion of
+"source order".
+
+[[opt-json]]
+=== C. JSON Array as the Object Value
+
+[source,ddot.it]
+----
+Paper X ..has authors.. ["Alice", "Bob", "Carol"]
+Recipe ..has steps.. !!block?end=END
+[
+  "Preheat oven to 200 °C",
+  "Mix flour, sugar and eggs",
+  "Bake 25 minutes"
+]
+END
+----
+
+The parser sees one opaque string, which is fine: the FAQ already allows JSON values
+_"interpreted by higher layers"_. A higher layer then *expands* it.
+
+.Expansion rule (sketch)
+If the object of a triple is a JSON array (it starts with `[` and parses as JSON), a list-aware
+collector MAY expand
+`S ..R.. [o1, o2, …]` into `S ..R.. o1 ,, ..position.. 1`, `S ..R.. o2 ,, ..position.. 2`, …
+It SHOULD keep the original triple as well. This makes C *sugar for A*.
+
+Whether to expand could depend on the *value* (it looks like JSON) or on the *relation*
+(`R ..has type.. list relation`). The second is safer, because the text `[1, 2]` might just be
+a literal someone wrote down.
+
+.Pros
+* Compact. Every developer and every LLM reads it. Easy to emit from programs.
+* Repeats work naturally.
+* A list is complete in one place, so it is effectively closed.
+* No new {dd} syntax: it is a value convention, so it stays true to the manifesto.
+
+.Cons
+* Items are strings inside a string. Until something expands them, `"Alice"` is not the node
+`Alice`, and the triple does not connect the dots.
+* Quoting and escaping come back: `"` and `\` inside items, and `,,` inside a string ends the
+object early (`["a,,b"]`). A `!!block` avoids that, at the cost of more lines.
+* Two files with different arrays for the same (S, R) give two triples that both hold. They
+do not merge.
+* Highlighting and auto-completion do not look inside the array.
+* Where does it stop? Once arrays are in, people will want objects (`{…}`) as well, and that
+leads to embedding JSON in {dd}. The manifesto says _"Be a nice guest"_, which argues for
+the reverse direction.
+
+Variant: a *non-JSON* list value, such as `Alice ;; Bob ;; Carol`. This does not work: `;;` is
+only a separator inside inline meta, and inside an object it would be confusing. Another variant
+is a Markdown-style list in a `!!block`. Both have the same opaque-string problem and no
+standard parser, so JSON is the better candidate for a value convention.
+
+[[opt-bracket]]
+=== C'. Bracket List Value (lightweight, no mandatory quotes)
+
+A variant of <<opt-json,C>> that gets rid of most of JSON's quoting:
+
+[source,ddot.it]
+----
+has songs ..has type.. list relation
+x ..has songs.. [ foo, bar, 'blah' ]
+x ..has members.. [ item one, 'item with braces[]', item 3, '  keeps its spaces  ' ]
+----
+
+The declaration goes on the *relation*, not on the subject. `x` does not have to be a list
+node. It can be a playlist, an album or a person. The ordered values are scoped to the pair
+(`x`, `has songs`), and one declaration covers every use of that relation in every file.
+An earlier variant typed the subject instead (`x ..has type.. list`). That also works, but it
+has to be repeated for every list, and it cannot tell which relation of `x` holds the members.
+
+NOTE: *Name*: `list relation` rather than `list`. It follows the existing
+`transitive relation` / `symmetric relation` naming, and it keeps `list` free as the type of
+list nodes (<<opt-list-node,D>>). `has songs ..has type.. list` would read as "the relation
+*is* a list".
+
+Items are separated by `,` and trimmed, exactly like {dd} fields are trimmed. Quotes are only
+needed where an item would otherwise be misread.
+
+.Why this fits {dd}
+* It follows the same rule as the rest of the language: *operators delimit, whitespace is
+trimmed, no escaping unless unavoidable*. `item one` needs no quotes, just as `Project Eagle`
+needs none in a subject.
+* Quoted items are *JSON strings* (plus single quotes, as in JSON5). Every JSON array of strings
+is a valid list and yields the same values. Option C therefore becomes a special case of this
+one and needs no rules of its own.
+* It needs no parser change. The object slot already accepts everything except `,,` and a
+newline, including `..` (corpus case `20-object-dotdot`), `[`, `]` and single commas.
+
+[[bracket-parsing]]
+.Parsing a list value
+The input is the *object* of a triple whose relation is a `list relation`.
+
+. *Trim* the value. This is the ordinary {dd} rule for every object, so the parser has already
+done it.
+. *Detect*: if the value starts with `[` *and* ends with `]`, it is a list. Strip these two
+characters. The rest is the *body*. Otherwise the value is a <<bracket-bare-value,bare value>>,
+which is a one-item list whose item is the whole value, verbatim.
+. *Scan* the body item by item:
+.. Skip whitespace.
+.. If the next character is `'` or `"`, *try* a quoted item. Scan to the next *unescaped*
+occurrence of the same quote character (inside, `\` escapes the next character, so `\'`,
+`\"` and `\\` do not close). The item *is* quoted only if that closing quote exists *and*
+nothing but whitespace follows it up to the next `,` or the end of the body. Then unescape
+the content: that is the item.
+.. Otherwise, including every failed quote attempt, the item is *plain*: everything up to the
+next `,` or the end of the body. Trim it. A failed opening quote is just an ordinary
+character, and it stays part of the item.
+.. Skip the `,` and continue with the next item.
+. *Drop empty items*. {dd} has no empty objects, so a list has no empty items either.
+
+A quote is special only at the *start* of an item (whitespace before it is tolerated). In the
+middle of a plain item it is an ordinary character, so `[ Max's song, bar ]` needs no quoting.
+This goes beyond JSON, which has no unquoted strings and so never faces the question. It is the
+only rule that has to be added to "do what JSON does".
+
+The scanner needs no backtracking beyond the current item. A failed quote attempt only rescans
+that item as plain.
+
+[[bracket-escapes]]
+.Escapes -- the JSON set, plus `\'`
+Inside a quoted item the escapes are exactly those of a JSON string, plus `\'` for
+single-quoted items (as in JSON5):
+
+[cols="1l,3"]
+|===
+| Escape | Result
+
+| \\ | `\`
+| \" | `"`
+| \' | `'`
+| \/ | `/`
+| \b \f \n \r \t | backspace, form feed, newline, carriage return, tab
+| \uXXXX | the UTF-16 code unit `XXXX` (surrogate pairs as in JSON)
+| \ + any other character | kept literally, both characters (JSON would reject it; {dd} has no parse errors)
+|===
+
+*Plain* (unquoted) items have no escapes at all: a `\` is just a character, so
+`[ C:\temp, D:\data ]` works as expected.
+
+.Examples
+[cols="3l,3",options="header"]
+|===
+| Object | Items
+
+| [ foo, bar, 'blah' ] | `foo`, `bar`, `blah`
+| ["foo", "bar"] | `foo`, `bar` -- a JSON array
+| [ 'Mix flour, sugar and eggs', Bake ] | `Mix flour, sugar and eggs`, `Bake`
+| [ Max's song, bar ] | `Max's song`, `bar` -- a quote mid-item is ordinary
+| [ 'it\'s', "say \"hi\"" ] | `it's`, `say "hi"`
+| [ '  padded  ', x ] | `␣␣padded␣␣`, `x`
+| [ a[1], b ] | `a[1]`, `b` -- only the outer brackets are stripped
+| [ C:\temp, 'C:\\temp' ] | `C:\temp`, `C:\temp`
+| [ '\d' ] | `\d` -- unknown escape kept
+| [ 'foo, bar ] | `'foo`, `bar` -- no closing quote, so not quoted
+| [ 'a' b, c ] | `'a' b`, `c` -- text after the closing quote, so not quoted
+| [ "a, b" x, c ] | `"a`, `b" x`, `c` -- the same rule, splitting at the comma
+| [ a, , b, ] | `a`, `b` -- empty items dropped
+| [ '' , a ] | `a` -- an empty quoted item is empty too
+| [] | the empty list
+| [ , ] | the empty list (all items were empty)
+| baz | `baz` -- a bare value, one-item list
+|===
+
+[[bracket-empty-list]]
+.Decided: the empty list is allowed
+`x ..has songs.. []` is a normal value: *x has a song list, and that list is empty*. This is
+a positive statement about an existing (empty) list. It does *not* say "x has no songs", so it
+does not introduce negation, and it cannot contradict `x ..has songs.. [ foo ]`. That
+triple just attaches a second list (<<bracket-one-list>>). Monotonicity is safe.
+The canonical form is `[]`.
+
+[[bracket-whitespace]]
+.Decided: where whitespace is significant
+* *Between items*, meaning before and after each item and around the commas, whitespace is
+insignificant. This includes *newlines*, so a whole list can be written as a `!!block`, one
+item per line:
++
+[source,ddot.it]
+----
+Recipe ..has steps.. !!block?end=END
+[
+  'Preheat the oven to 200 °C',
+  'Mix flour, sugar and eggs',
+  "Pour into the tin
+   and smooth the top",
+  Bake 25 minutes
+]
+END
+----
+* *Inside a quoted item*, everything is significant: spaces, tabs and newlines are kept
+verbatim (the third step above keeps its line break and indentation), as is everything
+produced by escapes.
+* *Inside a plain item*, only the ends are trimmed. Inner whitespace, including a newline
+inside a block list, is kept as it is. If an item has to span lines, quote it.
+
+NOTE: A `!!block` *as a single item* inside the brackets (`[ foo, !!block …`) is not possible,
+and does not need to be. The Parse Specification opens a `!!block` only when it fills the
+*entire* field and ends its line, so inside `[ … ]` it is inert text. A multi-line item is
+written as a quoted item inside a block list, as above, or with `\n` in a one-line list.
+Allowing blocks inside brackets would force rules for how a list continues after the block
+terminator, which is the kind of glue rule the spec deliberately avoids.
+
+[[bracket-no-nesting]]
+.No nested blocks -- one block level is always enough
+`!!block` never nests. Inside a block body every command is inert, so a `!!block` written there
+is just text, and it would be a *list item*, not a second block. It is never needed, either:
+
+* The block's job is to get the whole list past the {dd} *line* parser: newlines, `,,`, etc.
+* The *quotes'* job is to keep structure inside one *item*: commas, newlines, whitespace.
+
+These are two layers, each with one mechanism, so there is nothing left for a second block to do.
+
+The layers touch at one point only: *the block's terminator is found before the list is
+parsed*. A quoted item cannot "protect" a line from ending the block:
+
+* With the default terminator, a *blank line* inside a quoted multi-line item ends the block.
+Use `!!block?end=END` for such lists, as the example above does.
+* With `?end=END`, a line consisting only of `END` inside a quoted item ends the block.
+Choose a marker that does not occur in the data, or write the line break as `\n`.
+
+TIP: A multi-line alternative without brackets, commas and quotes, a `!!list` command, is
+<<under-discussion,under discussion>>.
+
+[[bracket-other-rules]]
+.Other rules
+[cols="2,3"]
+|===
+| Case | Rule
+
+| *Brackets inside items*: `[ a[1], b ]`
+| Only the outer pair is stripped, so inner brackets need no quotes. Lists stay *flat for
+good*. Nesting (`[ a, [ b, c ] ]`) is modelled with named lists (<<opt-list-node,D>>).
+
+| *`,,` inside an item*
+| Impossible, even quoted or escaped: the {dd} parser ends the object at `,,` before the
+list is looked at. Use a `!!block` for the whole list.
+
+| *Non-string JSON*: `[1, 2.5, true, null]`
+| Items are the strings `1`, `2.5`, `true`, `null`. {dd} has no datatypes. Arrays of JSON
+*objects* (`[ {"a":1, "b":2} ]`) are not supported: the comma inside the braces splits them.
+|===
+
+
+.When is an object a list?
+The hard question is not the grammar but *detection*. `Doc ..status.. [WIP]` or a Markdown
+link label `[see here]` would otherwise turn into one-item lists. Possible gates:
+
+. *Shape alone*: the object starts with `[` and ends with `]`. Simple, but has false positives.
+. *Subject type*: only when the subject `..has type.. list`, as in the example above. The type
+then does real work instead of just documenting.
+. *Relation type*: only when the relation is declared `..has type.. list relation` (or
+`ordered relation`). This is the most robust option, and a declaration covers every use of that
+relation.
+
+Suggestion: *relation type* (`has songs ..has type.. list relation`). Shape alone is too eager
+for a language whose design says that unexpected triples are fine but unexpected structure is not.
+A subject type is redundant once the relation is declared.
+
+A useful consequence: the declaration can live in a different file from its uses, just like
+any other vocabulary declaration. A reader that has not seen it still emits the plain string
+`[ foo, bar, 'blah' ]` and loses nothing. The collector does the expansion once it knows the
+relation.
+
+[[bracket-one-list]]
+.Decided: one value is one list
+A bracket value is *one* list. Several triples with the same subject and relation attach
+*several* lists:
+
+[source,ddot.it]
+----
+x ..has songs.. [ foo, bar, 'blah' ]
+x ..has songs.. [ baz, foo ]
+----
+
+Here `x` has *two* song lists. They are never concatenated, interleaved or merged into one.
+This is the only reading that stays consistent with the rest of {dd}. Every triple is an
+independent statement, and a relation with several objects simply has several values. A list
+relation behaves the same way, except that each of its values is a list.
+
+It also keeps {dd} monotonic. A second list added in another file does not change the first
+one, and no merge or conflict rule is needed.
+
+[[bracket-bare-value]]
+.Decided: a bare value is a one-item list
+For a list relation, a value *without* brackets is a new list with exactly one item:
+
+[source,ddot.it]
+----
+x ..has songs.. [ foo, bar, 'blah' ]
+x ..has songs.. baz
+----
+
+means the same as
+
+[source,ddot.it]
+----
+x ..has songs.. [ foo, bar, 'blah' ]
+x ..has songs.. [ baz ]
+----
+
+So `x` has two lists. `baz` is *not* appended to the first one, and does not get position 4.
+Every value of a list relation is a list, without exception, so consumers never have to handle
+a mix of list values and plain values under one relation. The canonical form of `baz` is
+`[ baz ]`, so both spellings name the same list node.
+
+NOTE: This also answers the question "where does a separately added item sort?": nowhere,
+because it sorts only within its own list. Adding an item to an *existing* list means editing
+that list's value. Values are the unit of identity.
+
+[[bracket-list-node]]
+.Expansion: one node per list
+The consequence: the collector *cannot* flatten items onto `x`. With
+`x ..has song.. foo ,, ..position.. 1` from both lists, `x` would end up with two items at
+position 1, and nothing would say which list each one belongs to. Every list value therefore
+becomes a *list node* of its own (<<opt-list-node,D>>), and the items hang off that node.
+
+The obvious name for that node is the *list value itself*. In {dd} an object is already a node
+named by its string, so no blank node or generated id is needed:
+
+[source,ddot.it]
+----
+x ..has songs.. [ foo, bar, 'blah' ]
+
+[ foo, bar, 'blah' ] ..has type.. list
+[ foo, bar, 'blah' ] ..has item.. foo ,, ..position.. 1
+[ foo, bar, 'blah' ] ..has item.. bar ,, ..position.. 2
+[ foo, bar, 'blah' ] ..has item.. blah ,, ..position.. 3
+----
+
+(The derived triples are shown in {dd} notation for readability. A collector produces them in
+its output model. A list string containing `..` could not be typed as a subject like this.)
+
+.Consequences of naming the node by its value
+* *A list is a value, like a JSON array*. Its identity is its content. Two files that both
+state `x ..has songs.. [ foo, bar ]` state the *same* triple, which deduplicates as usual:
+that is one list, not two. `[ foo, bar ]` and `[ bar, foo ]` are two lists.
+* *Normalisation is needed*: `[foo,bar]`, `[ foo, bar ]`, `[ 'foo', "bar" ]` and `["foo","bar"]`
+must be the same list, because they have the same items. The collector names the node by a
+*canonical form*: `[ ` + items joined by `, ` + ` ]`. An item is written plain when that is
+safe (non-empty, no leading or trailing whitespace, does not start with a quote, no `,`, no
+control characters). Otherwise it is written as a double-quoted JSON string. The original
+spelling stays on the source triple.
+* *The same list can be shared*: `y ..has songs.. [ foo, bar, 'blah' ]` points to the same
+list node as `x`. That is correct for values: two playlists with identical content have equal
+lists.
+* *Lists cannot be edited in place*. To "change" a list, you state a different one. If that is
+not wanted, the list needs a name, which is plain option D: a named node (`My Mix`) with its
+own `has item` triples, or with one `..has items.. [ … ]` bracket value.
+* *Repeats*: `[ foo, bar, foo ]` produces `has item foo` twice, with positions 1 and 3. These
+merge into one triple with two `position` meta pairs, which is acceptable for a value node, if
+not pretty. Slot nodes would avoid it, but are overkill here.
+
+.Open points specific to this option
+* *Relation for items*: the derived `has item` is generic and the same for every list. The
+user-facing relation (`has songs`) only connects `x` to the list, so the plural or singular
+question disappears.
+* *Canonical form*: the sketch above has to be pinned down exactly, because it decides list
+identity. A golden-corpus case with many spellings of one list would fix it.
+
+[[opt-list-node]]
+=== D. Explicit List Node (container / ItemList style)
+
+Use this when the list is a thing in its own right, with a name, an owner and a date:
+
+[source,ddot.it]
+----
+Top 3 SF Novels ..has type.. ordered list
+..has item.. Dune ,, ..position.. 1
+..has item.. Solaris ,, ..position.. 2
+..has item.. Neuromancer ,, ..position.. 3
+..author.. Max
+Max ..likes.. Top 3 SF Novels
+----
+
+This is really option A (or B) applied to a list node with a generic `has item` relation. It
+maps to `rdf:Seq` (`has item` + position is equivalent to `rdf:_n`) and to `schema:ItemList`.
+Nothing new is needed, except perhaps `ordered list` as a type and `has item` as a relation.
+
+Variant: numbered relations `..item 1.. Dune`, `..item 2.. Solaris`. These are like `rdf:_1`
+and easy to type, but they create a new relation per index. A collector could normalise the
+pattern `<name> <integer>` to `<name>` plus `,, ..position.. <integer>`, but that is a naming
+rule inside relation names, which {dd} has so far avoided (`^` is the only such rule).
+
+[[opt-chain]]
+=== E. Chains with `has next` -- Repaired
+
+Keep chains for sequences of *unique entities* (process steps, versions), and fix the two
+weaknesses:
+
+. *Adjacency*: add a non-transitive sub-relation, for example `has direct next` /
+`is directly followed by`, with `has next` as its transitive super-relation. Authors write the
+direct form, and reasoners infer the transitive one. This is the standard
+`skos:broader` / `skos:broaderTransitive` pattern, and CDS `hasAfter` stays aligned.
+. *Scope*: a meta pair names the sequence:
++
+[source,ddot.it]
+----
+Unpack ..has direct next.. Install ,, ..in.. Setup Guide
+Install ..has direct next.. Configure ,, ..in.. Setup Guide
+----
++
+This works, but it is heavy. If the items are unique to the sequence anyway, leave the scope out.
+
+Chains do not handle repeats, and they are the most verbose option for plain lists. But they
+merge well: each link is a local, monotonic fact.
+
+[[opt-sortkey]]
+=== F. Sort by an Existing Property
+
+[source,ddot.it]
+----
+Release History ..sorted by.. released
+v1.0 ..released.. 2025-03-01
+v1.1 ..released.. 2025-09-12
+----
+
+Often the order is not extra information. It is a property the items already have, so do not
+store it twice. The only new thing is a declaration of *how* to order something, which is a
+view concern. It fits `sorted by` (on a list node) or a relation-level `..ordered by..`.
+
+
+[[comparison]]
+== Comparison
+
+[cols="2,1,1,1,1,1,1,1",options="header"]
+|===
+| | A meta position | B source order | C JSON array | C' bracket list | D list node | E chain | F sort key
+
+| New syntax | none | none | none (value convention) | none (value convention) | none | none | none
+| New vocabulary | `position` | `ordered relation` | `list relation` (optional) | `list` / `list relation` | `ordered list`, `has item` | `has direct next` | `sorted by`
+| Scope | (S, R) | (S, R), per chunk | (S, R) | each value (own list node) | list node | global or `,, ..in..` | list / relation
+| Items are graph nodes | yes | yes | after expansion | yes, after expansion | yes | yes | yes
+| Repeats | awkward | awkward | yes | ok (two positions) | awkward | no | n/a
+| Insert without renumbering | with fractional keys | yes | yes | yes | with fractional keys | yes | yes
+| Merge across files | ok (ties possible) | partial order only | conflicting values | several lists; equal lists dedupe | ok | good | good
+| Typing cost | medium | lowest | low | lowest | medium | high | lowest
+|===
+
+
+[[recommendation]]
+== Tentative Recommendation
+
+One *core* mechanism, plus two opt-in conveniences that desugar into it:
+
+. *Core -- meta `position`* (<<opt-meta-position,A>>).
+Define `position` as a meta relation whose value is a *sort key* among the triples that share
+subject and relation. It is numeric where both keys are numeric and lexicographic otherwise.
+This is the Wikidata / RDF 1.2 model, it needs no syntax, and it gives the RDF export a clear
+target: annotate the triple with `schema:position`, or build an `rdf:Seq` on export.
+
+. *Convenience 1 -- `ordered relation`* (<<opt-source-order,B>>).
+For relations of this type the collector derives order from `location` within a chunk. It
+emits *precedence*, not indexes, so the result stays monotonic. Explicit `position` wins.
+This is the option that matches how people actually type lists.
+
+. *Convenience 2 -- bracket list values* (<<opt-bracket,C'>>), parsed as described in
+<<bracket-parsing>>: plain or quoted items, where quoted items are JSON strings (with `'` or `"`).
+Every JSON array of strings is therefore a valid list (<<opt-json,C>>). This applies *only* to relations
+declared as `list relation`. *Each value is one list*: several values attach several
+lists. Each list becomes a list node, named by its canonical value, with `has item` plus
+`position` triples (options D + A). It helps short inline lists and machine-written {dd} alike.
+Keep lists flat, and do not go beyond arrays.
+
+. *Keep `has next`* for global sequences of unique things, and add a non-transitive
+`has direct next` beneath it (<<opt-chain,E>>) so that adjacency survives inference.
+
+. *Named lists* (<<opt-list-node,D>>) are not a mechanism of their own. They are option A applied
+to a list node with `has item`, documented as a pattern.
+
+. *Ecore `ordered`* in the CDS mapping moves from "Not modelled" to the `ordered relation` type.
+
+
+[[under-discussion]]
+== Under Discussion
+
+Ideas that are not settled enough for the options above. They build on the bracket list value
+(<<opt-bracket,C'>>) and would add new pre-parse syntax.
+
+[[set-and-list]]
+NOTE: We might end up with *both* `!!set` and `!!list`. They would share the same body
+syntax (one item per line, the same <<list-command-lines,line styles>>) and differ only in
+meaning. `!!list` is ordered, and each value is one list node with `position`s.
+`!!set` is unordered, and duplicates collapse. A `!!set` would be the first *multi-object
+shorthand* {dd} has. The Parse Specification currently states "There is no shorthand for
+expressing multiple objects for the same subject-relation combination". That raises its own
+question: does `x ..tags.. !!set` with lines `a` and `b` simply mean `x ..tags.. a` and
+`x ..tags.. b`, or does it create a set *node*, which, following <<bracket-one-list>>, would
+make several `!!set` values several sets? The first reading is the more {dd}-like one, since a
+relation with several objects already *is* a set. Whether a bracket form exists for sets too
+(`{ a, b }`?) is open as well.
+
+[[list-command]]
+=== The `!!list` Command
+Wrapping a bracket list in a `!!block` works, but it stacks two mechanisms: a block for the
+lines, and brackets, commas and quotes for the items. A dedicated command does both in one step:
+*one line is one item*.
+
+[source,ddot.it]
+----
+Recipe ..has steps.. !!list
+Preheat the oven to 200 °C
+Mix flour, sugar and eggs
+Pour into the tin, "smooth" the top
+Bake 25 minutes
+
+Recipe ..serves.. 4
+----
+
+It is a pre-parse command shaped exactly like <<block-as-field,`!!block`>>:
+
+* It opens only when it fills a whole field (subject, object, meta object) and ends its line.
+* Its body runs to the first blank line, or to the `?end=` marker (`!!list?end=END`).
+* Inside the body, commands are inert and nothing is parsed: `..`, `,,`, `;;` are literal.
+* *Each body line is one item*, trimmed. Bullet markers and trailing commas are optional
+decoration, see <<list-command-lines>>.
+
+.What it buys
+No quoting at all::
+Commas, quotes, apostrophes, brackets and even `,,` are ordinary characters, because the
+separator is the newline. The list above needs no quote, although it contains commas and
+double quotes.
+Explicit, so no detection needed::
+The command *says* "this value is a list". A `list relation` declaration is no longer required
+to recognise it, and there are no false positives like `[WIP]`.
+Empty items cannot occur::
+A blank line ends the list (default terminator), and with `?end=` blank lines are simply dropped.
+This matches <<bracket-parsing,"no empty items">> without a special rule.
+Self-documenting::
+`ddot.it/list` resolves to a documentation page, like every command.
+No nesting question::
+`!!list` inside `!!list` or `!!block` is inert text, the same as for blocks.
+
+.What it costs
+A new pre-parse command::
+Pre-parse commands are the most expensive kind of syntax: parser, highlighter,
+auto-completion and golden corpus must all learn it. There are currently only three
+(off, on, `!!block`). Still, `!!list` is `!!block` with a different split rule, so
+implementations can share almost all of the code.
+Items cannot span lines::
+One line is one item, with no way around it. Within this design, an item that needs a newline
+or significant leading or trailing whitespace uses the bracket form with a quoted item. A
+possible extension: if a body line starts and ends with the same quote character, it is a JSON
+string (`"line one\nline two"`) and gets unquoted. That reuses the bracket rules for exactly
+this case.
+The event format::
+What does a parser emit in `to` for a `!!list` object? Options:
+. The *canonical bracket string* (`[ Preheat the oven to 200 °C, "Mix flour, sugar and eggs", … ]`).
+The event schema is unchanged, and `!!list` becomes pure sugar for a bracket value. But the
+event no longer says that it *is* a list, unless the relation is declared.
+. A *JSON array* in `to` (`"to":["Preheat …","Mix …"]`). This is explicit and lossless, but it
+changes the normative event schema (`to` becomes string _or_ array), which is a breaking change
+for every consumer.
+. A string in `to` plus a new optional event field, `"list":true`. This is additive and
+non-breaking, and it keeps the explicitness.
++
+Option 3 looks like the best balance.
+
+[[list-command-lines]]
+=== Line Styles in a `!!list` Body
+People type multi-line lists in several habitual styles, and all of them should just work:
+
+[cols="1,1,1,1,1"]
+|===
+| Plain | Dash bullets | Star bullets | Trailing commas | Numbered
+
+a|
+----
+aaa
+bbb
+ccc
+----
+a|
+----
+- aaa
+- bbb
+- ccc
+----
+a|
+----
+* aaa
+* bbb
+* ccc
+----
+a|
+----
+aaa,
+bbb,
+ccc
+----
+a|
+----
+1. aaa
+2. bbb
+3. ccc
+----
+|===
+
+All five mean the list `[ aaa, bbb, ccc ]`. Each body line is processed like this:
+
+. *Trim* the line. Skip it if it is empty.
+. *Strip one leading marker*, if present: `-`, `*` or `+`, *followed by whitespace*; or a
+number followed by `.` or `)` and whitespace (`1.`, `2)`). This makes Markdown and AsciiDoc
+lists copy-paste compatible. The whitespace after the marker is required, so `-5 °C`,
+`*nix` and `2.5 kg` stay intact.
+. *Strip one trailing `,`*. This is what pasting the lines of a JSON array or a comma-separated
+column produces.
+. *Trim* again.
+. *Quoted line*: if what is left starts and ends with the same quote character, it is a JSON
+string (<<bracket-escapes,same escapes>>), and it is unquoted. This is the escape hatch for
+items that really start with `- `, end with `,`, need a newline (`\n`) or keep leading or
+trailing whitespace: `"- not a bullet"`, `"Smith,"`.
+
+The numbers of a numbered list are *ignored*, as in Markdown: the line order is the order.
+`1.`, `1.`, `1.` is fine. Numbers are not checked against positions.
+
+*Mixed styles* in one list are tolerated, because each line is handled on its own. A pasted
+JSON array body (`"aaa",` / `"bbb",` / `"ccc"`) therefore works too: the trailing comma is
+stripped, then the quotes. Lines consisting only of `[` or `]` could also be skipped. That
+makes a whole pasted JSON array valid, but it adds one more rule.
+
+*Indentation is not structure*. Indented sub-bullets are trimmed and become ordinary items of
+the same flat list. Nesting is out of scope (<<bracket-other-rules>>).
+
+.Why decoration stripping rather than "one style per list"
+A stricter rule would detect the style from the first line and require every line to follow it,
+as Markdown does. That is more predictable at the edges, but a list pasted from two sources
+would silently change meaning halfway through. Per-line stripping with a quoted-line escape is
+simpler to explain: *a bullet in front and a comma at the end are decoration.*
+
+[[list-command-recommendation]]
+=== Brackets and `!!list` Side by Side
+
+.Suggested split of roles
+[cols="1,2,2"]
+|===
+| Form | Use for | Marked as a list by
+
+| `[ a, b, 'c' ]` | short, inline lists; machine-written JSON | `list relation` declaration
+| `!!list` + one item per line | long, hand-written lists; items full of punctuation | the command itself
+| a bare value | a single item | `list relation` declaration
+|===
+
+Both forms produce the same *list value* (the same canonical form, the same list node, the
+same `has item` / `position` expansion). So `x ..has songs.. [ a, b ]` and a `!!list` with
+lines `a` and `b` state the *same* triple.
+
+Open: should an inline marker exist as well (`x ..has songs.. !!list [ a, b ]`), so that inline
+lists no longer need the relation declaration? It is cheap, since it is an in-text command, but
+it gives the reader two ways to mark the same thing.
+
+
+[[open-questions]]
+== Open Questions
+
+* *Repeats*: is a playlist with a repeated song a real use case for {dd}, or do we tell people
+to use slot nodes (`Track 3 ..plays.. Song A`)?
+* *Is `position` 1-based and integer-only, or a free sort key?* A free key is more flexible and
+makes fractional indexing possible. Integers are more readable and easier to validate.
+* *Meta pair order*: the Parse Specification emits meta pairs "in source order". Is that order
+*semantic* (for example for several `text` notes) or only a serialisation detail? The answer
+should match whatever we decide for triples.
+* *Closedness*: do we need a way to say "this list is complete" (`,, ..count.. 3`, or
+`..has item count.. 3`)? It would be monotonic as a *claim*, but checking it is closed-world.
+* *Cross-chunk source order* (option B): only within a chunk, or also within a whole file when a
+reader splits files into several chunks (YAML documents, PowerPoint slide and notes)?
+* *Collector output*: does the Connected JSON (CJ) output get a native array for ordered
+groups, or do positions stay as meta pairs?
+* *Highlighting*: should an editor show a derived position (`#1`, `#2`) as an inlay hint on
+lines of an `ordered relation`? This would make option B's hidden semantics visible.
+* *Name clash*: `position` could also mean a geographic position or a job position. Is
+`list position` or `ordinal` a safer built-in name? Wikidata chose _series ordinal_ for this
+reason.

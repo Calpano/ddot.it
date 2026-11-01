@@ -1,0 +1,67 @@
+= ddot.it
+
+Specification, documentation website and shared test corpus for ddot.it ("double dot"), a minimal plain-text syntax for writing typed links and properties anywhere text can be entered, forming a decentralized knowledge graph.
+
+[[purpose]]
+== Goal, purpose, area
+
+ddot.it defines a line-oriented triple syntax (subject, relation and object separated by double dots) plus metadata introduced by a double comma.
+The idea (from `README.md`): readers extract triples from many kinds of sources (such as Markdown, YAML, AsciiDoc and HTML), a collector combines them into one knowledge graph in Connected JSON format, and humans and AI agents can share it across tool boundaries.
+This repository holds the normative spec, user and developer guides, a manifesto, and a cross-implementation test suite that parsers (such as the VS Code extension) check themselves against.
+Area: knowledge graphs, personal and enterprise knowledge management, notation design.
+
+[[nature]]
+== Personal or business?
+
+Business / open-source product of Max Völkel's brand ddot.it, hosted under the Calpano GitHub organisation.
+Evidence: remote `Calpano/ddot.it`, the public domain `ddot.it` (`CNAME`, `_config.yml`), an Apache 2.0 `LICENSE`, and release-style versioning ("Release specification 1.3.0").
+Commits are by Dr. Max Völkel plus a few by dependabot; not a fork.
+
+[[structure]]
+== Major parts and entry points
+
+.Parts
+* `site/` -- Jekyll source of https://ddot.it (theme just-the-docs); `index.adoc`, `syntax.adoc`, `user-guide.adoc`, `developer-guide.adoc`, `manifesto.adoc`, `spec/`, `reader/` (per-format reader docs), `llms.txt`
+* `docs/` -- internal docs for parser developers (`parsing-procedure.adoc`, `parser-devs.adoc`, `syntax-summary.adoc` and more)
+* `test-data/` -- shared test corpus: numbered `cases/` (about 40), an EBNF grammar `ddot.ebnf`, `tokens.md`, and `regenerate-html.rb`
+* `tools/scope-map.json` -- mapping of grammar scopes (likely for syntax highlighters)
+* `check.sh`, `check-links.sh`, `check-vocabulary.sh` -- quality checks on the site
+* `serve.sh` -- local Jekyll preview; `render-images.sh` -- renders diagrams (PlantUML)
+* `_config.yml`, `Gemfile` -- Jekyll site configuration
+* `.github/workflows/pages.yml`, `vocabulary.yml` -- GitHub Pages deployment and vocabulary check
+
+[[content]]
+== Content types
+
+.Content
+* Docs: AsciiDoc (~34 files), Markdown (README files), HTML (expected outputs of test cases and site templates)
+* Code: shell scripts (5), a Ruby helper, Jekyll templates and Sass/CSS
+* Media: SVG (~19) and PNG images, PlantUML sources (8)
+* Data/config: ddot test inputs (~44 `.ddot`), expected outputs in JSON (~45) and JSONL (~42), EBNF grammars, YAML
+
+[[timeline]]
+== Timeline
+
+Started 2026-02-20 and last changed 2026-08-13 (107 commits).
+Steady work from February to June 2026, with the largest burst in July 2026 (39 commits) leading to the release of specification 1.3.0 on 2026-08-07, followed by a migration of the site from Markdown to AsciiDoc in August 2026.
+
+[[facts]]
+== Facts
+
+[source,ddot]
+----
+ddot.it/this ..describes.. ddot.it
+ddot.it ..has type.. project
+..started.. 2026-02-20
+..last active.. 2026-08-13
+..area.. knowledge graphs
+..area.. notation design
+..nature.. business
+..main content.. docs
+..main content.. data
+..language.. AsciiDoc
+..license.. Apache-2.0
+..website.. https://ddot.it
+..repository.. https://github.com/Calpano/ddot.it
+..status.. active
+----
